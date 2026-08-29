@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\Claude\ClaudeClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Клиент собирается из конфига, поэтому контейнер сам его
+        // не построит — объясняем, как именно.
+        $this->app->singleton(ClaudeClient::class, fn () => ClaudeClient::make());
     }
 
     /**
