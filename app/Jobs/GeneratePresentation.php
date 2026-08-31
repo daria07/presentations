@@ -36,14 +36,24 @@ class GeneratePresentation implements ShouldQueue
     {
         $this->presentation->update(['status' => PresentationStatus::Generating]);
 
-        $outline = $planner->buildOutline($this->presentation);
+        // Структура могла быть куплена на прошлой попытке — если тогда
+        // не напечатался файл, платить за неё второй раз незачем.
+        if (blank($this->presentation->outline['slides'] ?? null)) {
+            try {
+                $outline = $planner->buildOutline($this->presentation);
+            } catch (ClaudeException $e) {
+                $this->stopUnlessRetryable($e);
 
-        $this->presentation->update([
-            'outline' => $outline,
-            'title' => $outline['title'] ?? null,
-        ]);
+                return;
+            }
 
-        $path = $renderer->pdf($this->presentation, $this->theme);
+            $this->presentation->update([
+                'outline' => $outline,
+                'title' => $outline['title'] ?? null,
+            ]);
+        }
+
+        $path = $renderer->pdf($this->presentation->refresh(), $this->theme);
 
         $this->presentation->update([
             'file_path' => $path,
@@ -52,6 +62,19 @@ class GeneratePresentation implements ShouldQueue
             'generated_at' => now(),
             'error_message' => null,
         ]);
+    }
+
+    /**
+     * Повторять есть смысл только временные сбои. Кривой запрос или
+     * пустой баланс от повтора не починятся, а расходы удвоят.
+     */
+    protected function stopUnlessRetryable(ClaudeException $e): void
+    {
+        if ($e->isRetryable()) {
+            throw $e;
+        }
+
+        $this->fail($e);
     }
 
     public function failed(Throwable $e): void

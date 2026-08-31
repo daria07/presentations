@@ -53,14 +53,24 @@ class ListPresentations extends Command
             }
 
             $this->line(sprintf(
-                '       слайдов: %d · кредитов у автора: %d · пробная: %s',
+                '       <fg=gray>%s · %d слайдов · %s</>',
+                $p->user?->email ?? 'автор удалён',
                 count($p->outline['slides'] ?? []),
-                $p->user?->credits ?? 0,
-                $p->user?->trial_used ? 'использована' : 'доступна',
+                $p->created_at?->diffForHumans() ?? '',
             ));
         }
 
         $this->newLine();
+
+        // Баланс — свойство пользователя, а не презентации,
+        // поэтому он один раз внизу, а не в каждой строке
+        foreach ($items->pluck('user')->filter()->unique('id') as $user) {
+            $this->components->twoColumnDetail(
+                $user->email,
+                $user->credits.' генераций'
+                    .($user->trial_used ? '' : ' + пробная'),
+            );
+        }
 
         return self::SUCCESS;
     }

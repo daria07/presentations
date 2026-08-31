@@ -12,6 +12,7 @@ use App\Models\Presentation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -45,6 +46,15 @@ class PresentationController extends Controller
     /** Создаём черновик и уходим спрашивать уточнения */
     public function store(StorePresentationRequest $request): RedirectResponse
     {
+        // Уточняющие вопросы — платный вызов. Проверяем возможность
+        // заплатить до него, а не после, иначе деньги уходят впустую.
+        if (! $request->user()->hasCredits()) {
+            return back()->with('toast', [
+                'type' => 'warning',
+                'message' => 'Генерации закончились — пополните счёт, чтобы продолжить.',
+            ]);
+        }
+
         $presentation = $request->user()->presentations()->create([
             'topic' => $request->string('topic')->trim(),
             'slide_count' => $request->integer('slide_count'),
@@ -82,40 +92,58 @@ class PresentationController extends Controller
     {
         $this->authorize('update', $presentation);
 
-        if ($presentation->status !== PresentationStatus::Asking) {
-            return back()->with('toast', [
-                'type' => 'info',
-                'message' => 'Эта презентация уже в работе.',
-            ]);
-        }
-
+        $answers = $request->collect('answers');
         $user = $request->user();
 
-        if (! $user->spendCredit()) {
-            return back()->with('toast', [
+        // Всё в одной транзакции с блокировкой строки: иначе двойной
+        // клик успевает списать два кредита и запустить две генерации.
+        $outcome = DB::transaction(function () use ($presentation, $user, $answers): string {
+            $locked = Presentation::query()
+                ->whereKey($presentation->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if ($locked->status !== PresentationStatus::Asking) {
+                return 'busy';
+            }
+
+            if (! $user->spendCredit()) {
+                return 'no-credits';
+            }
+
+            $clarifications = collect($locked->clarifications ?? [])
+                ->map(fn (array $item, int $i) => [
+                    ...$item,
+                    'answer' => $answers->get($item['key'] ?? $i) ?? $answers->get((string) $i),
+                ])
+                ->all();
+
+            $locked->update([
+                'clarifications' => $clarifications,
+                'status' => PresentationStatus::Queued,
+                'error_message' => null,
+            ]);
+
+            return 'queued';
+        });
+
+        return match ($outcome) {
+            'busy' => back()->with('toast', [
+                'type' => 'info',
+                'message' => 'Эта презентация уже в работе.',
+            ]),
+            'no-credits' => back()->with('toast', [
                 'type' => 'warning',
                 'message' => 'Генерации закончились — пополните счёт, чтобы продолжить.',
-            ]);
-        }
-
-        $answers = $request->collect('answers');
-
-        $clarifications = collect($presentation->clarifications ?? [])
-            ->map(fn (array $item, int $i) => [
-                ...$item,
-                'answer' => $answers->get($item['key'] ?? $i) ?? $answers->get((string) $i),
-            ])
-            ->all();
-
-        $presentation->update([
-            'clarifications' => $clarifications,
-            'status' => PresentationStatus::Queued,
-            'error_message' => null,
-        ]);
-
-        GeneratePresentation::dispatch($presentation, $request->input('theme'));
-
-        return to_route('presentations.show', $presentation);
+            ]),
+            default => tap(
+                to_route('presentations.show', $presentation),
+                fn () => GeneratePresentation::dispatch(
+                    $presentation->refresh(),
+                    $request->input('theme'),
+                ),
+            ),
+        };
     }
 
     /** Повторная попытка после сбоя */
@@ -123,29 +151,45 @@ class PresentationController extends Controller
     {
         $this->authorize('update', $presentation);
 
-        if ($presentation->status !== PresentationStatus::Failed) {
-            return back()->with('toast', [
+        $user = $request->user();
+
+        $outcome = DB::transaction(function () use ($presentation, $user): string {
+            $locked = Presentation::query()
+                ->whereKey($presentation->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if ($locked->status !== PresentationStatus::Failed) {
+                return 'not-failed';
+            }
+
+            if (! $user->spendCredit()) {
+                return 'no-credits';
+            }
+
+            $locked->update([
+                'status' => PresentationStatus::Queued,
+                'error_message' => null,
+            ]);
+
+            return 'queued';
+        });
+
+        return match ($outcome) {
+            'not-failed' => back()->with('toast', [
                 'type' => 'info',
                 'message' => 'Повторять нечего — презентация в состоянии «'
                     .$presentation->status->label().'».',
-            ]);
-        }
-
-        if (! $request->user()->spendCredit()) {
-            return back()->with('toast', [
+            ]),
+            'no-credits' => back()->with('toast', [
                 'type' => 'warning',
                 'message' => 'Генерации закончились — пополните счёт, чтобы продолжить.',
-            ]);
-        }
-
-        $presentation->update([
-            'status' => PresentationStatus::Queued,
-            'error_message' => null,
-        ]);
-
-        GeneratePresentation::dispatch($presentation);
-
-        return to_route('presentations.show', $presentation);
+            ]),
+            default => tap(
+                to_route('presentations.show', $presentation),
+                fn () => GeneratePresentation::dispatch($presentation->refresh()),
+            ),
+        };
     }
 
     public function download(Presentation $presentation): StreamedResponse
@@ -167,10 +211,7 @@ class PresentationController extends Controller
     {
         $this->authorize('delete', $presentation);
 
-        if ($presentation->file_path) {
-            Storage::disk(config('deck.disk'))->delete($presentation->file_path);
-        }
-
+        // Файл уберёт сама модель в событии deleting
         $presentation->delete();
 
         return to_route('presentations.index')->with('toast', [

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -47,6 +48,22 @@ class Presentation extends Model
         static::creating(function (Presentation $presentation) {
             $presentation->share_token ??= Str::lower(Str::random(12));
         });
+
+        // Удаление записи забирает с собой файл — где бы удаление
+        // ни случилось: в контроллере, в консоли или каскадом.
+        static::deleting(function (Presentation $presentation) {
+            $presentation->deleteFile();
+        });
+    }
+
+    /** Убирает готовый PDF с диска, если он там есть */
+    public function deleteFile(): void
+    {
+        if (blank($this->file_path)) {
+            return;
+        }
+
+        Storage::disk(config('deck.disk'))->delete($this->file_path);
     }
 
     public function user(): BelongsTo

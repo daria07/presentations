@@ -51,16 +51,22 @@ class DeckRenderer
 
         // Browsershot умеет писать только в реальный путь, поэтому
         // печатаем во временный файл и уже его кладём на диск.
-        $temp = tempnam(sys_get_temp_dir(), 'deck').'.pdf';
+        // Расширение обязательно, иначе Chrome не поймёт формат — но
+        // дописывать его к результату tempnam() нельзя: исходный файл
+        // тогда останется в /tmp навсегда.
+        $temp = tempnam(sys_get_temp_dir(), 'deck');
+        $pdf = $temp.'.pdf';
 
         try {
-            $this->browser($presentation, $theme)->savePdf($temp);
-            $disk->put($relative, file_get_contents($temp));
+            $this->browser($presentation, $theme)->savePdf($pdf);
+            $disk->put($relative, file_get_contents($pdf));
         } catch (Throwable $e) {
             throw new RuntimeException('Не удалось напечатать PDF: '.$e->getMessage(), previous: $e);
         } finally {
-            if (file_exists($temp)) {
-                unlink($temp);
+            foreach ([$temp, $pdf] as $path) {
+                if (is_file($path)) {
+                    unlink($path);
+                }
             }
         }
 

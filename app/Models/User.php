@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -52,6 +53,15 @@ class User extends Authenticatable implements PasskeyUser
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Внешний ключ снёс бы презентации каскадом на уровне базы,
+        // в обход событий модели — и PDF остались бы на диске.
+        static::deleting(function (User $user) {
+            $user->presentations()->cursor()->each->delete();
+        });
+    }
+
     public function presentations(): HasMany
     {
         return $this->hasMany(Presentation::class)->latest();
@@ -75,22 +85,43 @@ class User extends Authenticatable implements PasskeyUser
     /**
      * Списывает одну генерацию. Первая — за счёт пробного доступа.
      * Возвращает false, если списывать нечего.
+     *
+     * Всё внутри транзакции с блокировкой строки: без неё два
+     * одновременных запроса успевают оба пройти проверку остатка
+     * и списать по кредиту с одного и того же баланса.
      */
     public function spendCredit(): bool
     {
-        if (! $this->trial_used) {
-            $this->forceFill(['trial_used' => true])->save();
+        $spent = DB::transaction(function (): bool {
+            $locked = static::query()
+                ->whereKey($this->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if (! $locked) {
+                return false;
+            }
+
+            if (! $locked->trial_used) {
+                $locked->forceFill(['trial_used' => true])->save();
+
+                return true;
+            }
+
+            if ($locked->credits < 1) {
+                return false;
+            }
+
+            $locked->decrement('credits');
 
             return true;
+        });
+
+        if ($spent) {
+            $this->refresh();
         }
 
-        if ($this->credits < 1) {
-            return false;
-        }
-
-        $this->decrement('credits');
-
-        return true;
+        return $spent;
     }
 
     /** Возврат кредита, если генерация упала по нашей вине */

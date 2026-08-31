@@ -12,7 +12,8 @@ use Throwable;
 
 /**
  * Спрашивает у модели уточняющие вопросы по теме.
- * Кредит на этом шаге не списывается — человек ещё не получил результат.
+ * Кредит здесь не списывается — человек ещё не получил результат,
+ * но возможность заплатить проверена в контроллере до постановки.
  */
 class PrepareQuestions implements ShouldQueue
 {
@@ -26,7 +27,13 @@ class PrepareQuestions implements ShouldQueue
 
     public function handle(PresentationPlanner $planner): void
     {
-        $questions = $planner->askClarifyingQuestions($this->presentation);
+        try {
+            $questions = $planner->askClarifyingQuestions($this->presentation);
+        } catch (ClaudeException $e) {
+            $this->stopUnlessRetryable($e);
+
+            return;
+        }
 
         $this->presentation->update([
             'clarifications' => array_map(fn ($q) => [
@@ -37,6 +44,19 @@ class PrepareQuestions implements ShouldQueue
             ], $questions),
             'status' => PresentationStatus::Asking,
         ]);
+    }
+
+    /**
+     * Повторять есть смысл только временные сбои. Кривой запрос или
+     * пустой баланс от повтора не починятся, а расходы удвоят.
+     */
+    protected function stopUnlessRetryable(ClaudeException $e): void
+    {
+        if ($e->isRetryable()) {
+            throw $e;
+        }
+
+        $this->fail($e);
     }
 
     public function failed(Throwable $e): void

@@ -2,7 +2,9 @@
 
 namespace App\Services\Claude;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -87,7 +89,10 @@ class ClaudeClient
                 'error' => $error,
             ]);
 
-            throw new ClaudeException("API вернул {$response->status()}: {$error}");
+            throw new ClaudeException(
+                "API вернул {$response->status()}: {$error}",
+                code: $response->status(),
+            );
         }
 
         $body = $response->json();
@@ -160,6 +165,27 @@ class ClaudeClient
         ])
             ->timeout(180)
             ->connectTimeout(15)
-            ->retry(2, 2000, throw: false);
+            ->retry(2, 2000, $this->shouldRetry(...), throw: false);
+    }
+
+    /**
+     * Повторять есть смысл только то, что может пройти со второй
+     * попытки: обрыв связи, лимит провайдера, сбой на их стороне.
+     * Кривой запрос и пустой баланс от повтора не починятся, а вот
+     * денег и времени сожгут вдвое больше.
+     */
+    private function shouldRetry(Throwable $e): bool
+    {
+        if ($e instanceof ConnectionException) {
+            return true;
+        }
+
+        if (! $e instanceof RequestException) {
+            return false;
+        }
+
+        $status = $e->response->status();
+
+        return $status === 429 || $status >= 500;
     }
 }
