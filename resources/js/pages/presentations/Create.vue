@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -35,16 +34,18 @@ const topic = ref('');
 <template>
     <Head title="Новая презентация" />
 
-    <div class="mx-auto w-full max-w-2xl p-4">
-        <Heading
-            title="О чём презентация?"
-            description="Опишите тему своими словами. Дальше уточним детали парой вопросов."
-        />
+    <div class="mx-auto w-full max-w-2xl px-4 py-8">
+        <div class="border-rule border-b pb-6">
+            <h1 class="text-3xl font-extrabold">О чём презентация?</h1>
+            <p class="text-muted-foreground mt-1.5 max-w-[46ch] leading-relaxed">
+                Опишите тему своими словами. Дальше уточним детали парой вопросов.
+            </p>
+        </div>
 
         <Form
             action="/presentations"
             method="post"
-            class="mt-8 space-y-8"
+            class="mt-8 space-y-9"
             v-slot="{ errors, processing }"
         >
             <div class="space-y-2">
@@ -84,7 +85,7 @@ const topic = ref('');
                         class="border-border h-11 flex-1 rounded-lg border text-sm font-medium transition-colors"
                         :class="
                             slideCount === n
-                                ? 'border-foreground bg-foreground text-background'
+                                ? 'border-brand bg-brand text-white'
                                 : 'hover:border-foreground/40'
                         "
                         @click="slideCount = n"

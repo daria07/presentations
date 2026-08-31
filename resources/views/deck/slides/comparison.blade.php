@@ -5,7 +5,7 @@
             <p class="subheading">{{ $slide['subheading'] }}</p>
         @endif
     </div>
-    <div class="body">
+    <div class="body body--center">
         <div class="compare">
             @foreach (array_slice($slide['bullets'] ?? [], 0, 2) as $b)
                 <div class="compare-col">

@@ -79,7 +79,14 @@
         flex: none;
     }
 
-    .body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    /*
+       Текст читается сверху вниз, поэтому содержательная часть начинается
+       сразу под заголовком, а свободное место остаётся снизу. Слайды с
+       одним цельным объектом — цифрами, таймлайном, цитатой — наоборот
+       выигрывают от центрирования.
+    */
+    .body { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
+    .body--center { justify-content: center; }
 
     /* ---------- метки и номера ---------- */
 
@@ -113,7 +120,7 @@
 
     /* ---------- bullets ---------- */
 
-    .bullets { display: flex; flex-direction: column; gap: 6mm; }
+    .bullets { display: flex; flex-direction: column; gap: 8mm; padding-top: 2mm; }
 
     .bullet { display: flex; gap: 6mm; align-items: flex-start; }
 
@@ -238,13 +245,17 @@
 
     /* ---------- comparison ---------- */
 
-    .compare { display: flex; gap: 10mm; }
+    .compare { display: flex; gap: 10mm; align-items: stretch; }
 
+    /* Минимальная высота не даёт коротким текстам выглядеть обрубками */
     .compare-col {
         flex: 1;
-        padding: 9mm;
+        min-height: 52mm;
+        padding: 10mm;
         border-radius: 3mm;
         background: {{ $theme['accent_soft'] }};
+        display: flex;
+        flex-direction: column;
     }
     .compare-col + .compare-col {
         background: {{ $theme['cover_bg'] }};

@@ -2,7 +2,7 @@
     <div class="head">
         <h2>{{ $slide['heading'] }}</h2>
     </div>
-    <div class="body">
+    <div class="body body--center">
         <div class="quote-mark">«</div>
         <div class="quote-text">{{ $slide['quote']['text'] ?? '' }}</div>
         @if (filled($slide['quote']['author'] ?? null))

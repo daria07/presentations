@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { FileText, Plus } from '@lucide/vue';
-import Heading from '@/components/Heading.vue';
-import { Badge } from '@/components/ui/badge';
+import { Plus } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 
 type Item = {
@@ -16,7 +14,7 @@ type Item = {
 };
 
 defineProps<{
-    presentations: { data: Item[]; links: unknown };
+    presentations: { data: Item[] };
     credits: number;
     trialAvailable: boolean;
 }>();
@@ -27,11 +25,6 @@ defineOptions({
     },
 });
 
-const tone: Record<string, string> = {
-    ready: 'default',
-    failed: 'destructive',
-};
-
 function formatDate(iso: string | null): string {
     if (!iso) return '';
 
@@ -40,21 +33,33 @@ function formatDate(iso: string | null): string {
         month: 'long',
     });
 }
+
+const statusTone: Record<string, string> = {
+    failed: 'text-destructive',
+    ready: 'text-muted-foreground',
+};
 </script>
 
 <template>
     <Head title="Презентации" />
 
-    <div class="mx-auto w-full max-w-4xl p-4">
-        <div class="flex items-start justify-between gap-4">
-            <Heading
-                title="Презентации"
-                :description="
-                    trialAvailable
-                        ? 'Первая презентация — бесплатно.'
-                        : `Осталось генераций: ${credits}`
-                "
-            />
+    <div class="mx-auto w-full max-w-3xl px-4 py-8">
+        <div class="border-rule flex items-end justify-between gap-6 border-b pb-6">
+            <div>
+                <h1 class="text-3xl font-extrabold">Презентации</h1>
+                <p class="text-muted-foreground mt-1.5 text-sm">
+                    <template v-if="trialAvailable">
+                        Первая — бесплатно, карта не нужна.
+                    </template>
+                    <template v-else>
+                        Осталось генераций:
+                        <span class="text-foreground font-medium tabular-nums">
+                            {{ credits }}
+                        </span>
+                    </template>
+                </p>
+            </div>
+
             <Button as-child class="flex-none">
                 <Link href="/presentations/new">
                     <Plus class="size-4" />
@@ -63,40 +68,44 @@ function formatDate(iso: string | null): string {
             </Button>
         </div>
 
-        <div v-if="presentations.data.length" class="mt-6 flex flex-col gap-2">
-            <Link
-                v-for="item in presentations.data"
-                :key="item.id"
-                :href="item.url"
-                class="border-border hover:border-foreground/30 group flex items-center gap-4 rounded-xl border px-5 py-4 transition-colors"
-            >
-                <FileText class="text-muted-foreground size-5 flex-none" />
-
-                <div class="min-w-0 flex-1">
-                    <p class="truncate font-medium">{{ item.title }}</p>
-                    <p class="text-muted-foreground text-sm">
-                        {{ item.slideCount }} слайдов · {{ formatDate(item.createdAt) }}
-                    </p>
-                </div>
-
-                <Badge
-                    v-if="item.status !== 'ready'"
-                    :variant="(tone[item.status] as never) ?? 'secondary'"
-                    class="flex-none"
+        <!-- Список строками с волосяными линейками — по-редакторски,
+             без визуального шума от карточек -->
+        <ul v-if="presentations.data.length" class="divide-rule divide-y">
+            <li v-for="item in presentations.data" :key="item.id">
+                <Link
+                    :href="item.url"
+                    class="group flex items-baseline gap-4 py-5 transition-colors"
                 >
-                    {{ item.statusLabel }}
-                </Badge>
-            </Link>
-        </div>
+                    <div class="min-w-0 flex-1">
+                        <p
+                            class="group-hover:text-brand-ink truncate font-medium transition-colors"
+                        >
+                            {{ item.title }}
+                        </p>
+                        <p class="text-muted-foreground mt-1 text-sm">
+                            <span :class="statusTone[item.status] ?? 'text-brand-ink'">
+                                {{ item.statusLabel }}
+                            </span>
+                            <span class="mx-1.5">·</span>
+                            {{ item.slideCount }} слайдов
+                        </p>
+                    </div>
 
-        <div
-            v-else
-            class="border-border mt-6 flex flex-col items-center gap-4 rounded-xl border border-dashed py-20 text-center"
-        >
-            <p class="text-muted-foreground text-sm">
-                Пока пусто. Опишите тему — остальное соберём сами.
+                    <span
+                        class="text-muted-foreground flex-none text-sm tabular-nums"
+                    >
+                        {{ formatDate(item.createdAt) }}
+                    </span>
+                </Link>
+            </li>
+        </ul>
+
+        <div v-else class="py-24 text-center">
+            <p class="text-muted-foreground mx-auto max-w-[38ch] leading-relaxed">
+                Пока пусто. Опишите тему одной строкой — структуру, факты и вёрстку
+                возьмём на себя.
             </p>
-            <Button as-child variant="outline">
+            <Button as-child variant="outline" class="mt-6">
                 <Link href="/presentations/new">Создать первую</Link>
             </Button>
         </div>

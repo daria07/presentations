@@ -2,7 +2,6 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { CheckCircle2, Download, ExternalLink, Link2, RotateCcw } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -109,7 +108,7 @@ function copyShare() {
 <template>
     <Head :title="current.title" />
 
-    <div class="mx-auto w-full max-w-3xl p-4">
+    <div class="mx-auto w-full max-w-3xl px-4 py-8">
         <!-- Ждём: готовим вопросы или генерируем -->
         <div v-if="current.isPending" class="flex flex-col items-center gap-5 py-24 text-center">
             <Spinner class="size-7" />
@@ -128,10 +127,12 @@ function copyShare() {
 
         <!-- Уточняющие вопросы -->
         <div v-else-if="current.questions?.length" class="space-y-8">
-            <Heading
-                title="Уточним детали"
-                description="Пара ответов — и структура получится точнее."
-            />
+            <div class="border-rule border-b pb-6">
+                <h1 class="text-3xl font-extrabold">Уточним детали</h1>
+                <p class="text-muted-foreground mt-1.5 leading-relaxed">
+                    Пара ответов — и структура получится точнее.
+                </p>
+            </div>
 
             <div class="space-y-7">
                 <div v-for="(q, i) in current.questions" :key="q.key ?? i" class="space-y-3">
@@ -144,7 +145,7 @@ function copyShare() {
                             class="border-border rounded-lg border px-4 py-2 text-sm transition-colors"
                             :class="
                                 answers[q.key ?? String(i)] === option
-                                    ? 'border-foreground bg-foreground text-background'
+                                    ? 'border-brand bg-brand text-white'
                                     : 'hover:border-foreground/40'
                             "
                             @click="answers[q.key ?? String(i)] = option"
@@ -190,7 +191,7 @@ function copyShare() {
                         <CheckCircle2 class="size-4" />
                         Готово · {{ current.slideCount }} слайдов
                     </p>
-                    <h1 class="text-2xl font-semibold tracking-tight">{{ current.title }}</h1>
+                    <h1 class="text-2xl font-extrabold">{{ current.title }}</h1>
                 </div>
 
                 <div class="flex flex-none gap-2">

@@ -5,7 +5,7 @@
             <p class="subheading">{{ $slide['subheading'] }}</p>
         @endif
     </div>
-    <div class="body">
+    <div class="body body--center">
         <div class="stats">
             @foreach ($slide['stats'] ?? [] as $s)
                 <div class="stat">
