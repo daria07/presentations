@@ -46,26 +46,26 @@ const pinInputContainerRef = useTemplateRef('pinInputContainerRef');
 const modalConfig = computed<TwoFactorConfigContent>(() => {
     if (props.twoFactorEnabled) {
         return {
-            title: 'Two-factor authentication enabled',
+            title: 'Двухфакторная проверка включена',
             description:
-                'Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.',
-            buttonText: 'Close',
+                'Отсканируйте QR-код или введите ключ в приложении-аутентификаторе.',
+            buttonText: 'Закрыть',
         };
     }
 
     if (showVerificationStep.value) {
         return {
-            title: 'Verify authentication code',
+            title: 'Подтвердите код',
             description: 'Enter the 6-digit code from your authenticator app',
-            buttonText: 'Continue',
+            buttonText: 'Дальше',
         };
     }
 
     return {
-        title: 'Enable two-factor authentication',
+        title: 'Включить двухфакторную проверку',
         description:
-            'To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app',
-        buttonText: 'Continue',
+            'Отсканируйте QR-код или введите ключ в приложении-аутентификаторе',
+        buttonText: 'Дальше',
     };
 });
 

@@ -77,6 +77,19 @@
         padding-bottom: 6mm;
         margin-bottom: 9mm;
         flex: none;
+        position: relative;
+    }
+
+    /* Короткий цветной отрезок поверх линейки — связывает слайды
+       между собой, не перетягивая внимание на себя */
+    .head::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: -0.5mm;
+        width: 16mm;
+        height: 0.5mm;
+        background: {{ $theme['accent'] }};
     }
 
     /*
@@ -275,7 +288,155 @@
     .compare-col .compare-text { color: {{ $theme['ink'] }}; }
     .compare-col + .compare-col .compare-text { color: rgba(255,255,255,.85); }
 
+
+    /* ---------- process: этапы со стрелками ---------- */
+
+    .process { display: flex; align-items: stretch; gap: 0; }
+
+    .step {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 9mm 7mm;
+        background: {{ $theme['accent_soft'] }};
+        border-radius: 2.5mm;
+        position: relative;
+    }
+
+    /* Стрелка между этапами — треугольник из границ, без картинок */
+    .step + .step { margin-left: 7mm; }
+
+    .step + .step::before {
+        content: "";
+        position: absolute;
+        left: -5.6mm;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-top: 2.4mm solid transparent;
+        border-bottom: 2.4mm solid transparent;
+        border-left: 3.2mm solid {{ $theme['accent'] }};
+        opacity: .5;
+    }
+
+    .step-num {
+        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-size: 10pt;
+        font-weight: 700;
+        color: {{ $theme['accent'] }};
+        letter-spacing: .1em;
+        margin-bottom: 4mm;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .step-title {
+        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-size: 13pt;
+        font-weight: 700;
+        margin-bottom: 3mm;
+    }
+
+    .step-text { font-size: 11pt; line-height: 1.45; color: {{ $theme['muted'] }}; }
+
+    /* ---------- matrix: четыре поля по двум осям ---------- */
+
+    .matrix {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6mm;
+    }
+
+    .cell {
+        padding: 9mm;
+        border-radius: 2.5mm;
+        border: 0.4mm solid {{ $theme['rule'] }};
+        display: flex;
+        flex-direction: column;
+        min-height: 40mm;
+    }
+
+    /* По диагонали заливаем — сетка читается как матрица, а не как список */
+    .cell:nth-child(1), .cell:nth-child(4) {
+        background: {{ $theme['accent_soft'] }};
+        border-color: transparent;
+    }
+
+    .cell-title {
+        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-size: 12.5pt;
+        font-weight: 700;
+        margin-bottom: 3mm;
+    }
+    .cell:nth-child(1) .cell-title, .cell:nth-child(4) .cell-title {
+        color: {{ $theme['accent_ink'] ?? $theme['accent'] }};
+    }
+
+    .cell-text { font-size: 11pt; line-height: 1.45; color: {{ $theme['muted'] }}; }
+
+    /* ---------- bignumber: одно число во весь слайд ---------- */
+
+    .bignum {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .bignum-value {
+        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-size: 120pt;
+        font-weight: 800;
+        line-height: .88;
+        letter-spacing: -.045em;
+        color: {{ $theme['accent'] }};
+        font-variant-numeric: tabular-nums;
+    }
+
+    .bignum-label {
+        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-size: 19pt;
+        font-weight: 700;
+        margin-top: 6mm;
+        max-width: 70%;
+    }
+
+    .bignum-note {
+        font-size: 12.5pt;
+        line-height: 1.5;
+        color: {{ $theme['muted'] }};
+        margin-top: 4mm;
+        max-width: 62%;
+    }
+
+    /* ---------- декоративная геометрия обложки ---------- */
+
+    /* Дуга в углу: намёк на объём, который не спорит с текстом */
+    .slide--cover::after {
+        content: "";
+        position: absolute;
+        right: -30mm;
+        bottom: -46mm;
+        width: 130mm;
+        height: 130mm;
+        border-radius: 50%;
+        border: 1mm solid {{ $theme['cover_accent'] }};
+        opacity: .16;
+    }
+
+    .slide--cover::before {
+        content: "";
+        position: absolute;
+        right: 14mm;
+        bottom: 22mm;
+        width: 34mm;
+        height: 34mm;
+        border-radius: 50%;
+        background: {{ $theme['cover_accent'] }};
+        opacity: .1;
+    }
+
     /* ---------- quote ---------- */
+
 
     .quote-mark {
         font-family: Georgia, serif;

@@ -8,6 +8,7 @@ use App\Http\Requests\Presentations\AnswerQuestionsRequest;
 use App\Http\Requests\Presentations\StorePresentationRequest;
 use App\Jobs\GeneratePresentation;
 use App\Jobs\PrepareQuestions;
+use App\Jobs\RenderPresentation;
 use App\Models\Presentation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,11 +24,21 @@ class PresentationController extends Controller
     /** Список презентаций в кабинете */
     public function index(Request $request): Response
     {
+        $presentations = $request->user()
+            ->presentations()
+            ->paginate(12)
+            ->withQueryString()
+            ->through(fn (Presentation $p) => $this->summary($p));
+
         return Inertia::render('presentations/Index', [
-            'presentations' => $request->user()
-                ->presentations()
-                ->paginate(12)
-                ->through(fn (Presentation $p) => $this->summary($p)),
+            'presentations' => [
+                'data' => $presentations->items(),
+                'currentPage' => $presentations->currentPage(),
+                'lastPage' => $presentations->lastPage(),
+                'total' => $presentations->total(),
+                'prevUrl' => $presentations->previousPageUrl(),
+                'nextUrl' => $presentations->nextPageUrl(),
+            ],
             'credits' => $request->user()->credits,
             'trialAvailable' => ! $request->user()->trial_used,
         ]);
@@ -37,6 +48,7 @@ class PresentationController extends Controller
     public function create(Request $request): Response
     {
         return Inertia::render('presentations/Create', [
+            'maxSource' => \App\Http\Requests\Presentations\StorePresentationRequest::MAX_SOURCE,
             'credits' => $request->user()->credits,
             'trialAvailable' => ! $request->user()->trial_used,
             'themes' => $this->themes(),
@@ -49,14 +61,22 @@ class PresentationController extends Controller
         // Уточняющие вопросы — платный вызов. Проверяем возможность
         // заплатить до него, а не после, иначе деньги уходят впустую.
         if (! $request->user()->hasCredits()) {
-            return back()->with('toast', [
+            return to_route('billing.index')->with('toast', [
                 'type' => 'warning',
-                'message' => 'Генерации закончились — пополните счёт, чтобы продолжить.',
+                'message' => 'Генерации закончились — выберите пакет, чтобы продолжить.',
             ]);
         }
 
+        $source = $request->string('source_text')->trim();
+        $topic = $request->string('topic')->trim();
+
         $presentation = $request->user()->presentations()->create([
-            'topic' => $request->string('topic')->trim(),
+            // Если человек дал только текст, темой становится его начало —
+            // она нужна для заголовка в списке, пока не готова структура.
+            'topic' => $topic->isNotEmpty()
+                ? $topic->value()
+                : $source->limit(120)->value(),
+            'source_text' => $source->isNotEmpty() ? $source->value() : null,
             'slide_count' => $request->integer('slide_count'),
             'status' => PresentationStatus::Draft,
         ]);
@@ -132,9 +152,9 @@ class PresentationController extends Controller
                 'type' => 'info',
                 'message' => 'Эта презентация уже в работе.',
             ]),
-            'no-credits' => back()->with('toast', [
+            'no-credits' => to_route('billing.index')->with('toast', [
                 'type' => 'warning',
-                'message' => 'Генерации закончились — пополните счёт, чтобы продолжить.',
+                'message' => 'Генерации закончились — выберите пакет, чтобы продолжить.',
             ]),
             default => tap(
                 to_route('presentations.show', $presentation),
@@ -181,15 +201,49 @@ class PresentationController extends Controller
                 'message' => 'Повторять нечего — презентация в состоянии «'
                     .$presentation->status->label().'».',
             ]),
-            'no-credits' => back()->with('toast', [
+            'no-credits' => to_route('billing.index')->with('toast', [
                 'type' => 'warning',
-                'message' => 'Генерации закончились — пополните счёт, чтобы продолжить.',
+                'message' => 'Генерации закончились — выберите пакет, чтобы продолжить.',
             ]),
             default => tap(
                 to_route('presentations.show', $presentation),
                 fn () => GeneratePresentation::dispatch($presentation->refresh()),
             ),
         };
+    }
+
+    /**
+     * Смена оформления у готовой презентации.
+     *
+     * Структура уже куплена и лежит в базе, поэтому перепечатка
+     * не стоит ни обращения к модели, ни генерации у человека.
+     */
+    public function theme(Request $request, Presentation $presentation): RedirectResponse
+    {
+        $this->authorize('update', $presentation);
+
+        $request->validate([
+            'theme' => ['required', 'string', 'in:'.implode(',', array_keys(config('deck.themes')))],
+        ]);
+
+        if (! $presentation->isReady()) {
+            return back()->with('toast', [
+                'type' => 'info',
+                'message' => 'Сменить оформление можно у готовой презентации.',
+            ]);
+        }
+
+        $theme = $request->string('theme')->value();
+
+        if ($theme === $presentation->theme) {
+            return back();
+        }
+
+        $presentation->update(['theme' => $theme]);
+
+        RenderPresentation::dispatch($presentation);
+
+        return back();
     }
 
     public function download(Presentation $presentation): StreamedResponse
@@ -242,6 +296,8 @@ class PresentationController extends Controller
         return [
             ...$this->summary($presentation),
             'topic' => $presentation->topic,
+            'fromText' => $presentation->hasSourceText(),
+            'theme' => $presentation->theme ?? config('deck.default_theme'),
             'questions' => $presentation->status === PresentationStatus::Asking
                 ? $presentation->clarifications
                 : null,

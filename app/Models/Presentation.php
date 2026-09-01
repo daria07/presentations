@@ -16,20 +16,22 @@ use Illuminate\Support\Str;
  * @property int $user_id
  * @property string|null $title
  * @property string $topic
+ * @property string|null $source_text
  * @property int $slide_count
  * @property array|null $clarifications
  * @property array|null $outline
  * @property PresentationStatus $status
  * @property string|null $file_path
  * @property string|null $file_format
+ * @property string|null $theme
  * @property string $share_token
  * @property string|null $error_message
  * @property Carbon|null $generated_at
  */
 #[Fillable([
-    'user_id', 'title', 'topic', 'slide_count',
+    'user_id', 'title', 'topic', 'source_text', 'slide_count',
     'clarifications', 'outline', 'status',
-    'file_path', 'file_format', 'generated_at', 'error_message',
+    'file_path', 'file_format', 'theme', 'generated_at', 'error_message',
 ])]
 class Presentation extends Model
 {
@@ -80,6 +82,12 @@ class Presentation extends Model
     public function shareUrl(): string
     {
         return url('/p/'.$this->share_token);
+    }
+
+    /** Собираем по готовому тексту, а не по одной теме */
+    public function hasSourceText(): bool
+    {
+        return filled($this->source_text);
     }
 
     public function isReady(): bool

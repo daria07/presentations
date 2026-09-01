@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Presentation;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -32,6 +33,23 @@ class ListPresentations extends Command
         $disk = Storage::disk(config('deck.disk'));
 
         $this->newLine();
+
+        // Задачи в очереди без работающего воркера — самая частая
+        // причина «презентация висит и ничего не происходит»
+        $waiting = DB::table('jobs')->count();
+        $failed = DB::table('failed_jobs')->count();
+
+        if ($waiting > 0) {
+            $this->components->warn(
+                "В очереди ждёт задач: {$waiting}. Запущен ли php artisan queue:work?"
+            );
+        }
+
+        if ($failed > 0) {
+            $this->components->error(
+                "Упавших задач: {$failed}. Подробности: php artisan queue:failed"
+            );
+        }
 
         foreach ($items as $p) {
             $fileState = match (true) {

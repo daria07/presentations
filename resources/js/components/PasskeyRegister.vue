@@ -74,7 +74,7 @@ const handleCancel = () => {
         class="border-border bg-muted/50 space-y-4 rounded-lg border p-4"
     >
         <div class="grid gap-2">
-            <Label for="passkey-name">Passkey name</Label>
+            <Label for="passkey-name">Название ключа</Label>
             <Input
                 id="passkey-name"
                 type="text"
@@ -92,7 +92,7 @@ const handleCancel = () => {
 
         <div class="flex gap-2">
             <Button type="submit" :disabled="isLoading || !name.trim()">
-                {{ isLoading ? 'Registering...' : 'Register passkey' }}
+                {{ isLoading ? 'Добавляем…' : 'Добавить ключ' }}
             </Button>
             <Button type="button" variant="ghost" @click="handleCancel">
                 Cancel

@@ -12,7 +12,10 @@ use App\Models\Presentation;
  */
 class PresentationPlanner
 {
-    private const LAYOUTS = ['title', 'bullets', 'stats', 'timeline', 'quote', 'comparison', 'closing'];
+    private const LAYOUTS = [
+        'title', 'bullets', 'stats', 'timeline', 'quote',
+        'comparison', 'process', 'matrix', 'bignumber', 'closing',
+    ];
 
     /** Сырой ответ последнего вызова — для отладки */
     public ?array $lastRaw = null;
@@ -32,8 +35,8 @@ class PresentationPlanner
     public function askClarifyingQuestions(Presentation $presentation): array
     {
         $result = $this->claude->structured(
-            system: $this->clarifySystemPrompt(),
-            prompt: "Тема презентации: {$presentation->topic}\nПланируемое количество слайдов: {$presentation->slide_count}",
+            system: $this->clarifySystemPrompt($presentation->hasSourceText()),
+            prompt: $this->clarifyPrompt($presentation),
             schema: Schemas::clarifyingQuestions(),
             toolName: 'ask_questions',
             toolDescription: 'Задать уточняющие вопросы по теме презентации.',
@@ -51,7 +54,7 @@ class PresentationPlanner
     public function buildOutline(Presentation $presentation): array
     {
         $result = $this->claude->structured(
-            system: $this->outlineSystemPrompt($presentation->slide_count),
+            system: $this->outlineSystemPrompt($presentation->slide_count, $presentation->hasSourceText()),
             prompt: $this->outlinePrompt($presentation),
             schema: Schemas::outline(),
             toolName: 'build_outline',
@@ -160,8 +163,26 @@ class PresentationPlanner
     // Промпты
     // ---------------------------------------------------------------
 
-    private function clarifySystemPrompt(): string
+    private function clarifySystemPrompt(bool $fromText): string
     {
+        if ($fromText) {
+            // По готовому тексту содержание уже известно — спрашивать
+            // про него бессмысленно. Уточнять надо подачу.
+            return <<<'TXT'
+            Человек принёс готовый текст, из которого нужно собрать презентацию.
+            Содержание уже есть — твоя задача уточнить, как его подать.
+
+            Правила:
+            - Не больше трёх вопросов, обычно хватает двух.
+            - Не спрашивай о том, что и так видно из текста.
+            - Каждый вопрос — с готовыми вариантами ответа.
+            - Не спрашивай про цвета и шрифты.
+
+            Хорошие направления: кто аудитория, что вынести на первый план,
+            насколько подробно раскрывать, нужны ли выводы в конце.
+            TXT;
+        }
+
         return <<<'TXT'
         Ты помогаешь собрать презентацию. Твоя задача на этом шаге —
         задать минимум вопросов, которые сильнее всего повлияют на содержание.
@@ -179,17 +200,59 @@ class PresentationPlanner
         TXT;
     }
 
-    private function outlineSystemPrompt(int $slideCount): string
+    private function clarifyPrompt(Presentation $presentation): string
     {
+        $lines = [];
+
+        if ($presentation->hasSourceText()) {
+            $lines[] = 'Текст, по которому собираем презентацию:';
+            $lines[] = '';
+            $lines[] = $presentation->source_text;
+            $lines[] = '';
+        }
+
+        $lines[] = "Тема: {$presentation->topic}";
+        $lines[] = "Планируемое количество слайдов: {$presentation->slide_count}";
+
+        return implode("\n", $lines);
+    }
+
+    private function outlineSystemPrompt(int $slideCount, bool $fromText): string
+    {
+        $source = $fromText
+            ? <<<'TXT'
+
+            Работай строго по присланному тексту. Не добавляй фактов, дат,
+            цифр и имён, которых в нём нет — даже если уверен, что они верные.
+            Твоя работа здесь — отобрать главное и разложить по слайдам,
+            а не дополнить материал.
+
+            Если текста хватает не на все слайды, лучше сделай меньше:
+            плотные слайды честнее, чем растянутые.
+            TXT
+            : '';
+
         return <<<TXT
         Ты собираешь структуру презентации на {$slideCount} слайдов.
+        {$source}
 
-        Как думать о композиции:
-        - Первый слайд всегда layout title, последний — closing.
-        - Между ними чередуй типы вёрстки: подряд идущие bullets утомляют.
-        - stats — для чисел и дат, timeline — для последовательности событий,
-          comparison — когда сравниваются два подхода, quote — для цитаты,
-          если она уместна и подлинная.
+        Вёрстку выбирай по форме содержания, а не для разнообразия.
+        Если материал — перечисление, это bullets, даже если bullets уже был.
+
+        - bullets — перечисление равноправных пунктов, от трёх до пяти.
+        - stats — от двух до четырёх чисел, которые стоит поставить рядом.
+        - bignumber — одно число, ради которого существует весь слайд.
+          Ровно один элемент в stats, в subheading — что оно означает.
+        - timeline — события, привязанные к годам, в хронологии.
+        - process — этапы, идущие один за другим, где важен порядок.
+          От трёх до пяти пунктов в bullets.
+        - comparison — ровно два подхода или периода рядом. Два bullets.
+        - matrix — четыре категории, которые делятся по двум признакам.
+          Ровно четыре bullets, в subheading назови оси деления.
+        - quote — только подлинная цитата с настоящим автором.
+
+        Первый слайд всегда title, последний — closing.
+        Подряд три одинаковые вёрстки — повод пересобрать содержание.
 
         Как писать текст:
         - Заголовок слайда — до 50 знаков, без точки в конце.
@@ -206,7 +269,18 @@ class PresentationPlanner
 
     private function outlinePrompt(Presentation $presentation): string
     {
-        $lines = ["Тема: {$presentation->topic}"];
+        $lines = [];
+
+        if ($presentation->hasSourceText()) {
+            $lines[] = 'Исходный текст:';
+            $lines[] = '';
+            $lines[] = $presentation->source_text;
+            $lines[] = '';
+            $lines[] = '---';
+            $lines[] = '';
+        }
+
+        $lines[] = "Тема: {$presentation->topic}";
 
         foreach ($presentation->clarifications ?? [] as $item) {
             if (filled($item['question'] ?? null) && filled($item['answer'] ?? null)) {

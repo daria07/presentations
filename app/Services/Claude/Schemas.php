@@ -64,8 +64,17 @@ class Schemas
                         'properties' => [
                             'layout' => [
                                 'type' => 'string',
-                                'enum' => ['title', 'bullets', 'stats', 'timeline', 'quote', 'comparison', 'closing'],
-                                'description' => 'Тип вёрстки слайда.',
+                                'enum' => [
+                                    'title', 'bullets', 'stats', 'timeline',
+                                    'quote', 'comparison', 'process', 'matrix',
+                                    'bignumber', 'closing',
+                                ],
+                                'description' => 'Тип вёрстки. bullets — перечисление; '
+                                    .'stats — несколько чисел; bignumber — одно число, '
+                                    .'которое стоит выделить; timeline — события по годам; '
+                                    .'process — этапы, идущие один за другим; '
+                                    .'comparison — два подхода рядом; matrix — четыре '
+                                    .'категории по двум осям; quote — цитата.',
                             ],
                             'heading' => [
                                 'type' => 'string',
@@ -78,7 +87,8 @@ class Schemas
                             'bullets' => [
                                 'type' => 'array',
                                 'maxItems' => 5,
-                                'description' => 'Для layout bullets и comparison.',
+                                'description' => 'Для bullets, comparison, process и matrix. '
+                                    .'В comparison ровно два, в matrix ровно четыре.',
                                 'items' => [
                                     'type' => 'object',
                                     'properties' => [
@@ -91,7 +101,8 @@ class Schemas
                             'stats' => [
                                 'type' => 'array',
                                 'maxItems' => 4,
-                                'description' => 'Для layout stats и timeline: число или год плюс подпись.',
+                                'description' => 'Для stats, timeline и bignumber: число или год '
+                                    .'плюс подпись. В bignumber ровно один.',
                                 'items' => [
                                     'type' => 'object',
                                     'properties' => [

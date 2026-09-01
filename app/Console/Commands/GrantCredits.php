@@ -6,8 +6,10 @@ use App\Models\User;
 use Illuminate\Console\Command;
 
 /**
- * Начислить генерации вручную — для тестов и поддержки:
- *   php artisan credits:grant d.ilina@ffintech.com 20
+ * Управление генерациями вручную — для тестов и поддержки:
+ *   php artisan credits:grant admin@ya.ru 20        начислить 20
+ *   php artisan credits:grant admin@ya.ru 0 --set   обнулить
+ *   php artisan credits:grant admin@ya.ru --use-trial
  *   php artisan credits:grant --all 5
  */
 class GrantCredits extends Command
@@ -16,9 +18,11 @@ class GrantCredits extends Command
                             {email? : Кому начислить}
                             {amount=10 : Сколько генераций}
                             {--all : Всем пользователям}
-                            {--reset-trial : Заодно вернуть бесплатную первую генерацию}';
+                            {--set : Выставить точное значение, а не прибавить}
+                            {--reset-trial : Вернуть бесплатную первую генерацию}
+                            {--use-trial : Пометить пробную как использованную}';
 
-    protected $description = 'Начисляет генерации пользователю';
+    protected $description = 'Начисляет или выставляет генерации пользователю';
 
     public function handle(): int
     {
@@ -35,15 +39,26 @@ class GrantCredits extends Command
         }
 
         foreach ($users as $user) {
-            $user->increment('credits', $amount);
+            if ($this->option('set')) {
+                $user->forceFill(['credits' => max(0, $amount)])->save();
+            } else {
+                $user->increment('credits', $amount);
+            }
 
             if ($this->option('reset-trial')) {
                 $user->forceFill(['trial_used' => false])->save();
             }
 
+            if ($this->option('use-trial')) {
+                $user->forceFill(['trial_used' => true])->save();
+            }
+
+            $fresh = $user->fresh();
+
             $this->components->twoColumnDetail(
-                $user->email,
-                $user->fresh()->credits.' генераций',
+                $fresh->email,
+                $fresh->credits.' генераций'
+                    .($fresh->trial_used ? '' : ' + пробная'),
             );
         }
 

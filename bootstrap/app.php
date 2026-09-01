@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        // Вебхук платёжного провайдера приходит от сервера, а не из
+        // браузера — CSRF-токена у него нет и быть не может.
+        $middleware->validateCsrfTokens(except: ['billing/webhook']);
+
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,

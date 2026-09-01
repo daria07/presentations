@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\PresentationStatus;
 use App\Models\Presentation;
+use App\Notifications\PresentationReady;
 use App\Services\Claude\ClaudeException;
 use App\Services\Claude\PresentationPlanner;
 use App\Services\Deck\DeckRenderer;
@@ -34,7 +35,10 @@ class GeneratePresentation implements ShouldQueue
 
     public function handle(PresentationPlanner $planner, DeckRenderer $renderer): void
     {
-        $this->presentation->update(['status' => PresentationStatus::Generating]);
+        $this->presentation->update([
+            'status' => PresentationStatus::Generating,
+            'theme' => $this->theme ?? $this->presentation->theme ?? config('deck.default_theme'),
+        ]);
 
         // Структура могла быть куплена на прошлой попытке — если тогда
         // не напечатался файл, платить за неё второй раз незачем.
@@ -53,7 +57,9 @@ class GeneratePresentation implements ShouldQueue
             ]);
         }
 
-        $path = $renderer->pdf($this->presentation->refresh(), $this->theme);
+        $presentation = $this->presentation->refresh();
+
+        $path = $renderer->pdf($presentation, $presentation->theme);
 
         $this->presentation->update([
             'file_path' => $path,
@@ -62,6 +68,12 @@ class GeneratePresentation implements ShouldQueue
             'generated_at' => now(),
             'error_message' => null,
         ]);
+
+        // Письмо уходит отдельной задачей: сбой почты не должен
+        // отменять успешную генерацию.
+        $this->presentation->user->notify(
+            new PresentationReady($this->presentation->refresh())
+        );
     }
 
     /**

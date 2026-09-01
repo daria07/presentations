@@ -14,15 +14,15 @@ import PasskeyVerify from '@/components/PasskeyVerify.vue';
 
 defineOptions({
     layout: {
-        title: 'Confirm password',
+        title: 'Подтвердите пароль',
         description:
-            'This is a secure area of the application. Please confirm your password before continuing.',
+            'Это защищённый раздел. Введите пароль, чтобы продолжить.',
     },
 });
 </script>
 
 <template>
-    <Head title="Confirm password" />
+    <Head title="Подтверждение пароля" />
 
     <PasskeyVerify
         :routes="{
@@ -31,7 +31,7 @@ defineOptions({
         }"
         label="Confirm with passkey"
         loading-label="Confirming..."
-        separator="Or confirm with password"
+        separator="Или подтвердите паролем"
     />
 
     <Form
@@ -41,7 +41,7 @@ defineOptions({
     >
         <div class="space-y-6">
             <div class="grid gap-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Пароль</Label>
                 <PasswordInput
                     id="password"
                     name="password"
@@ -61,7 +61,7 @@ defineOptions({
                     data-test="confirm-password-button"
                 >
                     <Spinner v-if="processing" />
-                    Confirm password
+                    Подтвердить
                 </Button>
             </div>
         </div>

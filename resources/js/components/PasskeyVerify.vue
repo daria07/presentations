@@ -50,7 +50,7 @@ const { verify, isLoading, error, isSupported } = usePasskeyVerify({
                 {{
                     isLoading
                         ? (props.loadingLabel ?? 'Authenticating...')
-                        : (props.label ?? 'Sign in with a passkey')
+                        : (props.label ?? 'Войти по ключу доступа')
                 }}
             </Button>
 

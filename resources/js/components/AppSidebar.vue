@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Presentation } from '@lucide/vue';
+import { CreditCard, Presentation } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -21,6 +21,11 @@ const mainNavItems: NavItem[] = [
         title: 'Презентации',
         href: '/presentations',
         icon: Presentation,
+    },
+    {
+        title: 'Генерации',
+        href: '/billing',
+        icon: CreditCard,
     },
 ];
 </script>

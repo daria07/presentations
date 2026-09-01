@@ -31,8 +31,8 @@ onUnmounted(() => clearTwoFactorAuthData());
     <div v-if="canManageTwoFactor" class="space-y-6">
         <Heading
             variant="small"
-            title="Two-factor authentication"
-            description="Manage your two-factor authentication settings"
+            title="Двухфакторная проверка"
+            description="Второй шаг при входе — код из приложения"
         />
 
         <div

@@ -18,18 +18,18 @@ const code = ref<string>('');
 const authConfigContent = computed<TwoFactorConfigContent>(() => {
     if (showRecoveryInput.value) {
         return {
-            title: 'Recovery code',
+            title: 'Резервный код',
             description:
-                'Please confirm access to your account by entering one of your emergency recovery codes.',
-            buttonText: 'login using an authentication code',
+                'Введите один из резервных кодов, которые вы сохранили при настройке.',
+            buttonText: 'войти по коду из приложения',
         };
     }
 
     return {
-        title: 'Authentication code',
+        title: 'Код подтверждения',
         description:
-            'Enter the authentication code provided by your authenticator application.',
-        buttonText: 'login using a recovery code',
+            'Введите код из приложения-аутентификатора.',
+        buttonText: 'войти по резервному коду',
     };
 });
 
@@ -48,7 +48,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
 </script>
 
 <template>
-    <Head title="Two-factor authentication" />
+    <Head title="Двухфакторная проверка" />
 
     <div class="space-y-6">
         <template v-if="!showRecoveryInput">

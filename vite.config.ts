@@ -11,6 +11,10 @@ export default defineConfig({
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.ts'],
             refresh: true,
+            // Подхватывает сертификат Herd: без этого dev-сервер
+            // остаётся на http, и браузер режет ассеты как
+            // смешанный контент.
+            detectTls: 'presentations.test',
             fonts: [
                 bunny('Golos Text', {
                     weights: [400, 500, 600, 700],

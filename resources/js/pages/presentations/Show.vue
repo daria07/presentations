@@ -1,8 +1,25 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { CheckCircle2, Download, ExternalLink, Link2, RotateCcw } from '@lucide/vue';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import {
+    CheckCircle2,
+    Download,
+    ExternalLink,
+    Link2,
+    RotateCcw,
+    Trash2,
+} from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 
 type Question = {
@@ -27,6 +44,7 @@ type Presentation = {
     error: string | null;
     shareUrl: string | null;
     downloadUrl: string | null;
+    theme: string;
 };
 
 const props = defineProps<{
@@ -45,8 +63,9 @@ const current = ref<Presentation>(props.presentation);
 /* ---------- Ответы на уточняющие вопросы ---------- */
 
 const answers = ref<Record<string, string>>({});
-const theme = ref(props.themes[0]?.key ?? 'graphite');
+const theme = ref(props.presentation.theme ?? props.themes[0]?.key ?? 'clay');
 const sending = ref(false);
+const formError = ref<string | null>(null);
 
 const allAnswered = computed(
     () => (current.value.questions ?? []).every((q, i) => answers.value[q.key ?? String(i)]),
@@ -54,55 +73,199 @@ const allAnswered = computed(
 
 function submitAnswers() {
     sending.value = true;
+    formError.value = null;
 
     router.post(
         `/presentations/${current.value.id}/answers`,
         { answers: answers.value, theme: theme.value },
-        { onFinish: () => (sending.value = false) },
+        {
+            onError: (errors) => {
+                formError.value =
+                    Object.values(errors)[0] ??
+                    'Не получилось отправить. Попробуйте ещё раз.';
+            },
+            onFinish: () => (sending.value = false),
+        },
     );
 }
 
 /* ---------- Опрос статуса, пока идёт генерация ---------- */
 
+/*
+   Ограничение по времени обязательно: если воркер не запущен или
+   упал молча, без него человек будет бесконечно смотреть на
+   крутящийся индикатор и не поймёт, что случилось.
+*/
+const POLL_INTERVAL = 2500;
+const POLL_LIMIT_MS = 4 * 60 * 1000;
+
 let timer: number | undefined;
+let startedAt = Date.now();
+
+const stalled = ref(false);
+const offline = ref(false);
+
+function stopPolling() {
+    window.clearInterval(timer);
+    timer = undefined;
+}
+
+function startPolling() {
+    if (timer) return;
+
+    startedAt = Date.now();
+    stalled.value = false;
+    timer = window.setInterval(poll, POLL_INTERVAL);
+}
 
 async function poll() {
-    const response = await fetch(`/presentations/${current.value.id}/status`, {
-        headers: { Accept: 'application/json' },
-    });
+    if (Date.now() - startedAt > POLL_LIMIT_MS) {
+        stopPolling();
+        stalled.value = true;
 
-    if (!response.ok) return;
+        return;
+    }
 
-    const fresh: Presentation = await response.json();
+    let fresh: Presentation;
+
+    try {
+        const response = await fetch(`/presentations/${current.value.id}/status`, {
+            headers: { Accept: 'application/json' },
+        });
+
+        if (!response.ok) return;
+
+        fresh = await response.json();
+        offline.value = false;
+    } catch {
+        // Сеть отвалилась — молчим и пробуем на следующем тике
+        offline.value = true;
+
+        return;
+    }
+
     const changed = fresh.status !== current.value.status;
     current.value = fresh;
 
-    // Статус сменился на конечный — перезагружаем страницу целиком,
-    // чтобы подтянуть готовые данные и остановить опрос
+    // Статус стал конечным — перезагружаем страницу целиком,
+    // чтобы подтянуть готовые данные, и прекращаем опрос
     if (changed && !fresh.isPending) {
+        stopPolling();
         router.reload();
     }
 }
 
+/*
+   Inertia не пересоздаёт компонент при переходе на ту же страницу,
+   поэтому локальную копию нужно синхронизировать руками. Без этого
+   после отправки ответов экран так и остаётся на вопросах.
+*/
+watch(
+    () => props.presentation,
+    (fresh) => {
+        current.value = fresh;
+
+        if (fresh.isPending) {
+            startPolling();
+        } else {
+            stopPolling();
+        }
+    },
+);
+
 onMounted(() => {
     if (current.value.isPending) {
-        timer = window.setInterval(poll, 2500);
+        startPolling();
     }
 });
 
-onBeforeUnmount(() => window.clearInterval(timer));
+onBeforeUnmount(stopPolling);
+
+/* ---------- Смена оформления у готовой презентации ---------- */
+
+const switching = ref<string | null>(null);
+
+function switchTheme(key: string) {
+    if (key === current.value.theme || switching.value) return;
+
+    switching.value = key;
+    router.post(
+        `/presentations/${current.value.id}/theme`,
+        { theme: key },
+        { onFinish: () => (switching.value = null) },
+    );
+}
+
+/* ---------- Удаление ---------- */
+
+const deleting = ref(false);
+
+function destroy() {
+    deleting.value = true;
+    router.delete(`/presentations/${current.value.id}`, {
+        onFinish: () => (deleting.value = false),
+    });
+}
 
 /* ---------- Публичная ссылка ---------- */
 
 const copied = ref(false);
+const copyFailed = ref(false);
 
-function copyShare() {
+/*
+   navigator.clipboard существует только в защищённом контексте:
+   по http его нет вообще. Поэтому запасной путь через скрытое поле
+   и execCommand — он старый, но работает везде.
+*/
+async function copyToClipboard(text: string): Promise<boolean> {
+    if (navigator.clipboard && window.isSecureContext) {
+        try {
+            await navigator.clipboard.writeText(text);
+
+            return true;
+        } catch {
+            // Пользователь мог не дать разрешение — пробуем иначе
+        }
+    }
+
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('readonly', '');
+    field.style.position = 'fixed';
+    field.style.opacity = '0';
+    document.body.appendChild(field);
+    field.select();
+
+    let ok = false;
+
+    try {
+        ok = document.execCommand('copy');
+    } catch {
+        ok = false;
+    }
+
+    document.body.removeChild(field);
+
+    return ok;
+}
+
+async function copyShare() {
     if (!current.value.shareUrl) return;
 
-    void navigator.clipboard.writeText(current.value.shareUrl);
-    copied.value = true;
-    window.setTimeout(() => (copied.value = false), 2000);
+    const ok = await copyToClipboard(current.value.shareUrl);
+
+    if (ok) {
+        copied.value = true;
+        copyFailed.value = false;
+        window.setTimeout(() => (copied.value = false), 2000);
+
+        return;
+    }
+
+    // Скопировать не вышло — показываем ссылку, чтобы взять руками
+    copyFailed.value = true;
 }
+
 </script>
 
 <template>
@@ -111,18 +274,40 @@ function copyShare() {
     <div class="mx-auto w-full max-w-3xl px-4 py-8">
         <!-- Ждём: готовим вопросы или генерируем -->
         <div v-if="current.isPending" class="flex flex-col items-center gap-5 py-24 text-center">
-            <Spinner class="size-7" />
-            <div class="space-y-1">
-                <p class="text-lg font-medium">{{ current.statusLabel }}…</p>
-                <p class="text-muted-foreground text-sm">
-                    {{
-                        current.status === 'draft'
-                            ? 'Читаем тему и подбираем вопросы'
-                            : 'Собираем слайды и печатаем файл. Обычно это меньше минуты.'
-                    }}
+            <template v-if="stalled">
+                <p class="text-lg font-medium">Что-то затянулось</p>
+                <p class="text-muted-foreground max-w-md text-sm leading-relaxed">
+                    Обычно всё занимает меньше минуты. Мы продолжим работу в
+                    фоне — обновите страницу через пару минут или вернитесь к
+                    списку, презентация появится там сама.
                 </p>
-            </div>
-            <p class="text-muted-foreground max-w-md text-sm">{{ current.topic }}</p>
+                <div class="flex gap-2">
+                    <Button variant="outline" @click="router.reload()">
+                        Обновить
+                    </Button>
+                    <Button variant="ghost" as-child>
+                        <Link href="/presentations">К списку</Link>
+                    </Button>
+                </div>
+            </template>
+
+            <template v-else>
+                <Spinner class="size-7" />
+                <div class="space-y-1">
+                    <p class="text-lg font-medium">{{ current.statusLabel }}…</p>
+                    <p class="text-muted-foreground text-sm">
+                        {{
+                            current.status === 'draft'
+                                ? 'Читаем тему и подбираем вопросы'
+                                : 'Собираем слайды и печатаем файл. Обычно это меньше минуты.'
+                        }}
+                    </p>
+                </div>
+                <p class="text-muted-foreground max-w-md text-sm">{{ current.topic }}</p>
+                <p v-if="offline" class="text-muted-foreground text-xs">
+                    Связь пропала — ждём восстановления
+                </p>
+            </template>
         </div>
 
         <!-- Уточняющие вопросы -->
@@ -158,7 +343,7 @@ function copyShare() {
 
             <div class="space-y-3 border-t pt-6">
                 <p class="font-medium">Оформление</p>
-                <div class="flex gap-3">
+                <div class="flex flex-wrap gap-2">
                     <button
                         v-for="t in themes"
                         :key="t.key"
@@ -176,7 +361,10 @@ function copyShare() {
                 </div>
             </div>
 
-            <div class="flex justify-end border-t pt-6">
+            <div class="flex items-center justify-end gap-4 border-t pt-6">
+                <p v-if="formError" class="text-destructive flex-1 text-sm">
+                    {{ formError }}
+                </p>
                 <Button size="lg" :disabled="!allAnswered || sending" @click="submitAnswers">
                     {{ sending ? 'Отправляем…' : 'Собрать презентацию' }}
                 </Button>
@@ -211,7 +399,55 @@ function copyShare() {
                             Скачать
                         </a>
                     </Button>
+
+                    <Dialog>
+                        <DialogTrigger as-child>
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label="Удалить презентацию"
+                            >
+                                <Trash2 class="size-4" />
+                            </Button>
+                        </DialogTrigger>
+
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Удалить презентацию?</DialogTitle>
+                                <DialogDescription>
+                                    Файл и публичная ссылка перестанут работать.
+                                    Отменить это действие нельзя.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <DialogFooter class="gap-2">
+                                <DialogClose as-child>
+                                    <Button variant="outline">Оставить</Button>
+                                </DialogClose>
+                                <Button
+                                    variant="destructive"
+                                    :disabled="deleting"
+                                    @click="destroy"
+                                >
+                                    Удалить
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </div>
+            </div>
+
+            <div
+                v-if="copyFailed"
+                class="border-rule bg-secondary flex items-center gap-3 rounded-lg border px-4 py-3"
+            >
+                <p class="text-muted-foreground flex-none text-sm">Ссылка:</p>
+                <input
+                    :value="current.shareUrl"
+                    readonly
+                    class="w-full flex-1 bg-transparent font-mono text-sm outline-none"
+                    @focus="($event.target as HTMLInputElement).select()"
+                />
             </div>
 
             <div class="border-border group relative overflow-hidden rounded-xl border bg-neutral-100 dark:bg-neutral-900">
@@ -230,6 +466,34 @@ function copyShare() {
                     <ExternalLink class="size-3.5" />
                     Во весь экран
                 </a>
+            </div>
+
+            <!-- Оформление меняется бесплатно: структура уже готова,
+                 перепечатывается только файл -->
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-3">
+                <p class="text-muted-foreground text-sm">Оформление</p>
+
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        v-for="t in themes"
+                        :key="t.key"
+                        type="button"
+                        class="border-border flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+                        :class="
+                            current.theme === t.key
+                                ? 'border-foreground'
+                                : 'hover:border-foreground/40'
+                        "
+                        :disabled="switching !== null"
+                        @click="switchTheme(t.key)"
+                    >
+                        <span class="flex gap-1">
+                            <span class="size-3.5 rounded-full" :style="{ background: t.cover }" />
+                            <span class="size-3.5 rounded-full" :style="{ background: t.accent }" />
+                        </span>
+                        {{ switching === t.key ? 'Меняем…' : t.name }}
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -255,6 +519,15 @@ function copyShare() {
                 </Button>
                 <Button variant="ghost" as-child>
                     <Link href="/presentations">К списку</Link>
+                </Button>
+                <Button
+                    variant="ghost"
+                    class="text-muted-foreground"
+                    :disabled="deleting"
+                    @click="destroy"
+                >
+                    <Trash2 class="size-4" />
+                    Удалить
                 </Button>
             </div>
         </div>

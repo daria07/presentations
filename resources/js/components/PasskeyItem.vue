@@ -67,26 +67,26 @@ const handleDelete = () => {
                     class="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                     <Trash2 class="h-4 w-4" />
-                    <span class="sr-only">Remove</span>
+                    <span class="sr-only">Удалить</span>
                 </Button>
             </DialogTrigger>
 
             <DialogContent>
-                <DialogTitle>Remove passkey</DialogTitle>
+                <DialogTitle>Удалить ключ доступа?</DialogTitle>
                 <DialogDescription>
                     Are you sure you want to remove the "{{ passkey.name }}"
                     passkey? You will no longer be able to use it to sign in.
                 </DialogDescription>
                 <DialogFooter class="gap-2">
                     <DialogClose as-child>
-                        <Button variant="secondary">Cancel</Button>
+                        <Button variant="secondary">Отмена</Button>
                     </DialogClose>
                     <Button
                         variant="destructive"
                         :disabled="isDeleting"
                         @click="handleDelete"
                     >
-                        {{ isDeleting ? 'Removing...' : 'Remove passkey' }}
+                        {{ isDeleting ? 'Удаляем…' : 'Удалить ключ' }}
                     </Button>
                 </DialogFooter>
             </DialogContent>
