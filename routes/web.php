@@ -62,6 +62,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('throttle:120,1')
             ->name('status');
 
+        Route::get('{presentation}/edit', [PresentationController::class, 'edit'])->name('edit');
+        Route::put('{presentation}/outline', [PresentationController::class, 'updateOutline'])
+            ->middleware('throttle:60,1')
+            ->name('outline');
+        // GET — сохранённая версия, POST — черновик из редактора
+        Route::match(['get', 'post'], '{presentation}/preview', [PresentationController::class, 'preview'])
+            ->middleware('throttle:240,1')
+            ->name('preview');
+
         Route::get('{presentation}/download', [PresentationController::class, 'download'])->name('download');
         Route::delete('{presentation}', [PresentationController::class, 'destroy'])->name('destroy');
     });

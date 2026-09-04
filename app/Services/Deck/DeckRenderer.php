@@ -18,7 +18,7 @@ use Throwable;
  */
 class DeckRenderer
 {
-    public function html(Presentation $presentation, ?string $theme = null): string
+    public function html(Presentation $presentation, ?string $theme = null, bool $forScreen = false): string
     {
         $outline = $presentation->outline ?? [];
 
@@ -38,6 +38,9 @@ class DeckRenderer
             ])),
             'width' => config('deck.width'),
             'height' => config('deck.height'),
+            // На экране слайды нужно уместить по ширине колонки,
+            // в печати — оставить натуральный размер
+            'forScreen' => $forScreen,
         ])->render();
     }
 

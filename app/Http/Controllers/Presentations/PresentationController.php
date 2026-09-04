@@ -6,10 +6,12 @@ use App\Enums\PresentationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Presentations\AnswerQuestionsRequest;
 use App\Http\Requests\Presentations\StorePresentationRequest;
+use App\Http\Requests\Presentations\UpdateOutlineRequest;
 use App\Jobs\GeneratePresentation;
 use App\Jobs\PrepareQuestions;
 use App\Jobs\RenderPresentation;
 use App\Models\Presentation;
+use App\Services\Deck\DeckRenderer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -239,11 +241,97 @@ class PresentationController extends Controller
             return back();
         }
 
-        $presentation->update(['theme' => $theme]);
+        $presentation->update([
+            'theme' => $theme,
+            'status' => PresentationStatus::Generating,
+        ]);
 
         RenderPresentation::dispatch($presentation);
 
         return back();
+    }
+
+    /** Редактор структуры */
+    public function edit(Presentation $presentation): Response
+    {
+        $this->authorize('update', $presentation);
+
+        abort_unless(filled($presentation->outline['slides'] ?? null), 404);
+
+        return Inertia::render('presentations/Edit', [
+            'presentation' => [
+                'id' => $presentation->id,
+                'title' => $presentation->outline['title'] ?? $presentation->topic,
+                'subtitle' => $presentation->outline['subtitle'] ?? null,
+                'slides' => $presentation->outline['slides'],
+                'previewUrl' => route('presentations.preview', $presentation),
+                'showUrl' => route('presentations.show', $presentation),
+            ],
+            'layouts' => $this->layouts(),
+        ]);
+    }
+
+    /**
+     * Сохранение правок.
+     *
+     * HTML-превью обновляется сразу — оно рисуется тем же Blade без
+     * запуска браузера. PDF перепечатывается в фоне: он нужен только
+     * при скачивании, и заставлять ждать его ради опечатки незачем.
+     */
+    public function updateOutline(UpdateOutlineRequest $request, Presentation $presentation): RedirectResponse
+    {
+        $this->authorize('update', $presentation);
+
+        $title = $request->string('title')->trim()->value();
+
+        $presentation->update([
+            'outline' => [
+                'title' => $title,
+                'subtitle' => $request->input('subtitle'),
+                'slides' => array_values($request->input('slides')),
+            ],
+            'title' => $title,
+            // Пока файл не перепечатан, презентация считается
+            // незавершённой: иначе на странице покажется старый PDF,
+            // и человек решит, что правки не сохранились.
+            'status' => PresentationStatus::Generating,
+        ]);
+
+        RenderPresentation::dispatch($presentation);
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Сохранили. Печатаем файл заново.',
+        ]);
+    }
+
+    /**
+     * HTML-превью для редактора: те же шаблоны, что идут в печать.
+     *
+     * Если в запросе пришла структура — рисуем её, ничего не сохраняя.
+     * Это позволяет показывать правки сразу, пока человек печатает,
+     * и при этом не трогать то, что лежит в базе.
+     */
+    public function preview(Request $request, Presentation $presentation, DeckRenderer $renderer): \Illuminate\Http\Response
+    {
+        $this->authorize('view', $presentation);
+
+        $draft = $request->input('slides');
+
+        if (is_array($draft) && $draft !== []) {
+            // Копия в памяти: до базы эти данные не доедут
+            $presentation = clone $presentation;
+            $presentation->outline = [
+                'title' => $request->input('title') ?: $presentation->topic,
+                'subtitle' => $request->input('subtitle'),
+                'slides' => array_values($draft),
+            ];
+        }
+
+        abort_unless(filled($presentation->outline['slides'] ?? null), 404);
+
+        return response($renderer->html($presentation, $presentation->theme, forScreen: true))
+            ->header('Content-Type', 'text/html; charset=utf-8');
     }
 
     public function download(Presentation $presentation): StreamedResponse
@@ -307,9 +395,32 @@ class PresentationController extends Controller
             'isReady' => $presentation->isReady(),
             'error' => $presentation->error_message,
             'shareUrl' => $presentation->isReady() ? $presentation->shareUrl() : null,
+            'previewUrl' => $presentation->isReady()
+                ? $presentation->shareUrl().'?v='.$presentation->generated_at?->timestamp
+                : null,
             'downloadUrl' => $presentation->isReady()
                 ? route('presentations.download', $presentation)
                 : null,
+            'editUrl' => filled($presentation->outline['slides'] ?? null)
+                ? route('presentations.edit', $presentation)
+                : null,
+        ];
+    }
+
+    /** Типы вёрстки с человеческими названиями — для выбора в редакторе */
+    private function layouts(): array
+    {
+        return [
+            ['key' => 'title', 'name' => 'Титульный'],
+            ['key' => 'bullets', 'name' => 'Пункты'],
+            ['key' => 'stats', 'name' => 'Числа'],
+            ['key' => 'bignumber', 'name' => 'Крупная цифра'],
+            ['key' => 'timeline', 'name' => 'Хронология'],
+            ['key' => 'process', 'name' => 'Этапы'],
+            ['key' => 'comparison', 'name' => 'Сравнение'],
+            ['key' => 'matrix', 'name' => 'Матрица'],
+            ['key' => 'quote', 'name' => 'Цитата'],
+            ['key' => 'closing', 'name' => 'Финальный'],
         ];
     }
 

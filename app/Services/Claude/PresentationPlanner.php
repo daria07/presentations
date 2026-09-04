@@ -4,9 +4,10 @@ namespace App\Services\Claude;
 
 use App\Models\ApiCall;
 use App\Models\Presentation;
+use Illuminate\Support\Facades\Log;
 
 /**
- *Два шага общения с моделью:
+ * Два шага общения с моделью:
  *   1) уточняющие вопросы по теме,
  *   2) готовая структура слайдов с учётом ответов.
  */
@@ -59,14 +60,31 @@ class PresentationPlanner
             schema: Schemas::outline(),
             toolName: 'build_outline',
             toolDescription: 'Собрать структуру презентации по слайдам.',
-            maxTokens: 12000,
+            maxTokens: 16000,
         );
 
         $this->record($presentation, 'outline', $result);
 
         $this->lastRaw = $result->raw;
 
-        return $this->normalizeOutline($result->data, $presentation);
+        $outline = $this->normalizeOutline($result->data, $presentation);
+
+        // Пустая структура — это всегда неожиданность, и разбираться
+        // в ней без сырого ответа невозможно. Сохраняем его целиком.
+        if ($outline['slides'] === []) {
+            Log::error('Модель вернула структуру без слайдов', [
+                'presentation' => $presentation->id,
+                'stop_reason' => $result->raw['stop_reason'] ?? null,
+                'usage' => $result->raw['usage'] ?? null,
+                'data' => $result->data,
+            ]);
+
+            throw new ClaudeException(
+                'Модель вернула пустую структуру. Подробности в логе.'
+            );
+        }
+
+        return $outline;
     }
 
     /**
@@ -87,13 +105,44 @@ class PresentationPlanner
             }
         }
 
+        $title = $data['title']
+            ?? $slides[0]['heading']
+            ?? $presentation->topic;
+
+        $subtitle = $data['subtitle'] ?? $data['subheading'] ?? null;
+
         return [
-            'title' => $data['title']
-                ?? $slides[0]['heading']
-                ?? $presentation->topic,
-            'subtitle' => $data['subtitle'] ?? $data['subheading'] ?? null,
-            'slides' => $slides,
+            'title' => $title,
+            'subtitle' => $subtitle,
+            'slides' => $this->ensureTitleSlide($slides, $title, $subtitle),
         ];
+    }
+
+    /**
+     * Титульный слайд обязателен, а его содержание нам и так известно.
+     * Модель это правило периодически теряет — особенно когда работает
+     * по длинному тексту, — поэтому не полагаемся на неё.
+     *
+     * @param  array<int, array>  $slides
+     * @return array<int, array>
+     */
+    private function ensureTitleSlide(array $slides, string $title, ?string $subtitle): array
+    {
+        if (($slides[0]['layout'] ?? null) === 'title') {
+            return $slides;
+        }
+
+        array_unshift($slides, [
+            'layout' => 'title',
+            'heading' => $title,
+            'subheading' => $subtitle,
+            'bullets' => [],
+            'stats' => [],
+            'quote' => null,
+            'notes' => null,
+        ]);
+
+        return $slides;
     }
 
     /**
@@ -200,14 +249,31 @@ class PresentationPlanner
         TXT;
     }
 
+    /** Сколько знаков текста показать на шаге уточнений */
+    private const CLARIFY_EXCERPT = 3000;
+
     private function clarifyPrompt(Presentation $presentation): string
     {
         $lines = [];
 
         if ($presentation->hasSourceText()) {
-            $lines[] = 'Текст, по которому собираем презентацию:';
+            $text = $presentation->source_text;
+            $full = mb_strlen($text);
+
+            // Вопросы касаются подачи, а не содержания — начала текста
+            // достаточно, чтобы понять, о чём он. Гонять сорок страниц
+            // ради трёх вопросов незачем.
+            $excerpt = mb_substr($text, 0, self::CLARIFY_EXCERPT);
+
+            $lines[] = 'Начало текста, по которому собираем презентацию:';
             $lines[] = '';
-            $lines[] = $presentation->source_text;
+            $lines[] = $excerpt;
+
+            if ($full > self::CLARIFY_EXCERPT) {
+                $lines[] = '';
+                $lines[] = "[…всего в тексте {$full} знаков]";
+            }
+
             $lines[] = '';
         }
 
@@ -236,7 +302,10 @@ class PresentationPlanner
         Ты собираешь структуру презентации на {$slideCount} слайдов.
         {$source}
 
-        Вёрстку выбирай по форме содержания, а не для разнообразия.
+        Первый слайд всегда layout title, последний — closing.
+        Это не обсуждается.
+
+        Вёрстку остальных выбирай по форме содержания, а не для разнообразия.
         Если материал — перечисление, это bullets, даже если bullets уже был.
 
         - bullets — перечисление равноправных пунктов, от трёх до пяти.
@@ -251,7 +320,6 @@ class PresentationPlanner
           Ровно четыре bullets, в subheading назови оси деления.
         - quote — только подлинная цитата с настоящим автором.
 
-        Первый слайд всегда title, последний — closing.
         Подряд три одинаковые вёрстки — повод пересобрать содержание.
 
         Как писать текст:
@@ -260,8 +328,8 @@ class PresentationPlanner
         - Никакой воды и канцелярита. Конкретные факты, числа, имена.
         - Не выдумывай цитаты и статистику. Если точных данных нет,
           обойдись без них.
-        - notes пиши для того, кто будет выступать: что сказать вслух,
-          чего нет на слайде.
+        - notes — одна фраза для того, кто выступает: что сказать вслух,
+          чего нет на слайде. Не пересказывай слайд своими словами.
 
         Отвечай на русском языке.
         TXT;

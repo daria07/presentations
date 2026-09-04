@@ -35,33 +35,38 @@ class GeneratePresentation implements ShouldQueue
 
     public function handle(PresentationPlanner $planner, DeckRenderer $renderer): void
     {
-        $this->presentation->update([
+        // Между постановкой в очередь и выполнением могло пройти время,
+        // поэтому работаем с актуальным состоянием, а не с тем,
+        // что было сериализовано вместе с задачей.
+        $presentation = $this->presentation->refresh();
+
+        $presentation->update([
             'status' => PresentationStatus::Generating,
-            'theme' => $this->theme ?? $this->presentation->theme ?? config('deck.default_theme'),
+            'theme' => $this->theme ?? $presentation->theme ?? config('deck.default_theme'),
         ]);
 
         // Структура могла быть куплена на прошлой попытке — если тогда
         // не напечатался файл, платить за неё второй раз незачем.
-        if (blank($this->presentation->outline['slides'] ?? null)) {
+        if (! $this->hasSlides($presentation)) {
             try {
-                $outline = $planner->buildOutline($this->presentation);
+                $outline = $planner->buildOutline($presentation);
             } catch (ClaudeException $e) {
                 $this->stopUnlessRetryable($e);
 
                 return;
             }
 
-            $this->presentation->update([
+            $presentation->update([
                 'outline' => $outline,
                 'title' => $outline['title'] ?? null,
             ]);
-        }
 
-        $presentation = $this->presentation->refresh();
+            $presentation->refresh();
+        }
 
         $path = $renderer->pdf($presentation, $presentation->theme);
 
-        $this->presentation->update([
+        $presentation->update([
             'file_path' => $path,
             'file_format' => 'pdf',
             'status' => PresentationStatus::Ready,
@@ -71,9 +76,15 @@ class GeneratePresentation implements ShouldQueue
 
         // Письмо уходит отдельной задачей: сбой почты не должен
         // отменять успешную генерацию.
-        $this->presentation->user->notify(
-            new PresentationReady($this->presentation->refresh())
-        );
+        $presentation->user->notify(new PresentationReady($presentation->refresh()));
+    }
+
+    /** Есть ли в структуре хотя бы один пригодный слайд */
+    private function hasSlides(Presentation $presentation): bool
+    {
+        $slides = $presentation->outline['slides'] ?? null;
+
+        return is_array($slides) && $slides !== [];
     }
 
     /**

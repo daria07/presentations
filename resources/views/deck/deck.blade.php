@@ -462,6 +462,46 @@
         margin-top: 7mm;
     }
 </style>
+
+@if ($forScreen ?? false)
+{{-- Экранный просмотр: те же слайды, но подогнанные по ширине
+     и разложенные как отдельные листы. В печать это не попадает. --}}
+<style>
+    html {
+        background: {{ $theme['rule'] }};
+        padding: 4mm 0;
+    }
+
+    body { margin: 0; }
+
+    .slide {
+        margin: 0 auto 4mm;
+        box-shadow: 0 0.5mm 2mm rgba(0, 0, 0, .18);
+        border-radius: 1mm;
+    }
+</style>
+
+<script>
+    // Слайд шире любой колонки редактора, поэтому масштабируем
+    // документ целиком — так вёрстка остаётся ровно той же,
+    // просто уменьшенной.
+    (function () {
+        var SLIDE_MM = {{ $width }};
+        var PX_PER_MM = 96 / 25.4;
+
+        function fit() {
+            var available = document.documentElement.clientWidth - 16;
+            var ratio = available / (SLIDE_MM * PX_PER_MM);
+
+            document.body.style.zoom = Math.min(ratio, 1);
+        }
+
+        // Скрипт объявлен в head, тела ещё нет — ждём разбора документа
+        document.addEventListener('DOMContentLoaded', fit);
+        window.addEventListener('resize', fit);
+    })();
+</script>
+@endif
 </head>
 <body>
 @foreach ($slides as $i => $slide)

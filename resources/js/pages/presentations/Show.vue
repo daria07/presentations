@@ -5,6 +5,7 @@ import {
     Download,
     ExternalLink,
     Link2,
+    Pencil,
     RotateCcw,
     Trash2,
 } from '@lucide/vue';
@@ -43,7 +44,9 @@ type Presentation = {
     isReady: boolean;
     error: string | null;
     shareUrl: string | null;
+    previewUrl: string | null;
     downloadUrl: string | null;
+    editUrl: string | null;
     theme: string;
 };
 
@@ -383,6 +386,12 @@ async function copyShare() {
                 </div>
 
                 <div class="flex flex-none gap-2">
+                    <Button v-if="current.editUrl" variant="outline" size="sm" as-child>
+                        <Link :href="current.editUrl">
+                            <Pencil class="size-4" />
+                            Править
+                        </Link>
+                    </Button>
                     <Button variant="outline" size="sm" @click="copyShare">
                         <Link2 class="size-4" />
                         {{ copied ? 'Скопировано' : 'Ссылка' }}
@@ -452,7 +461,8 @@ async function copyShare() {
 
             <div class="border-border group relative overflow-hidden rounded-xl border bg-neutral-100 dark:bg-neutral-900">
                 <iframe
-                    :src="current.shareUrl!"
+                    :key="current.previewUrl!"
+                    :src="current.previewUrl!"
                     class="aspect-video w-full"
                     title="Просмотр презентации"
                 />

@@ -74,6 +74,8 @@ class ClaudeClient
             'tool_choice' => ['type' => 'tool', 'name' => $toolName],
         ];
 
+        $startedAt = microtime(true);
+
         try {
             $response = $this->request()->post($this->baseUrl.'/v1/messages', $payload);
         } catch (Throwable $e) {
@@ -116,6 +118,18 @@ class ClaudeClient
         $inputTokens = (int) ($usage['input_tokens'] ?? 0);
         $outputTokens = (int) ($usage['output_tokens'] ?? 0);
         $cachedTokens = (int) ($usage['cache_read_input_tokens'] ?? 0);
+
+        $seconds = round(microtime(true) - $startedAt, 1);
+
+        Log::info('Claude: ответ получен', [
+            'tool' => $toolName,
+            'seconds' => $seconds,
+            'input' => $inputTokens,
+            'output' => $outputTokens,
+            // Главный показатель скорости: сколько токенов в секунду
+            // выдаёт модель. Вход на время почти не влияет.
+            'tokens_per_second' => $seconds > 0 ? round($outputTokens / $seconds) : null,
+        ]);
 
         return new ClaudeResult(
             data: $data,
@@ -163,9 +177,11 @@ class ClaudeClient
             'anthropic-version' => self::VERSION,
             'content-type' => 'application/json',
         ])
-            ->timeout(180)
-            ->connectTimeout(15)
-            ->retry(2, 2000, $this->shouldRetry(...), throw: false);
+            ->timeout(240)
+            ->connectTimeout(20)
+            // Шлюз регулярно рвёт соединение на середине. Обрыв — вещь
+            // случайная, поэтому попыток три и пауза растёт: 1с, 3с.
+            ->retry([1000, 3000], when: $this->shouldRetry(...), throw: false);
     }
 
     /**
@@ -176,7 +192,13 @@ class ClaudeClient
      */
     private function shouldRetry(Throwable $e): bool
     {
+        // Обрыв соединения, недоступность, таймаут — всё это
+        // с хорошими шансами пройдёт со второй попытки
         if ($e instanceof ConnectionException) {
+            Log::warning('Claude: соединение оборвалось, пробуем снова', [
+                'error' => $e->getMessage(),
+            ]);
+
             return true;
         }
 
