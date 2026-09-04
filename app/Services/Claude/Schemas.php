@@ -2,6 +2,9 @@
 
 namespace App\Services\Claude;
 
+use App\Services\Deck\Icons;
+use App\Services\Deck\Motifs;
+
 /**
  * JSON-схемы, по которым модель обязана вернуть ответ.
  */
@@ -57,6 +60,15 @@ class Schemas
                     'type' => 'string',
                     'description' => 'Подзаголовок для титульного слайда.',
                 ],
+                'motif' => [
+                    'type' => 'string',
+                    'enum' => [...Motifs::names(), 'none'],
+                    'description' => 'Фоновый узор обложки по духу темы, '
+                        .'или none, если тема не просит узора. '
+                        .collect(Motifs::MEANINGS)
+                            ->map(fn ($m, $k) => "{$k} — {$m}")
+                            ->implode('; '),
+                ],
                 'slides' => [
                     'type' => 'array',
                     'items' => [
@@ -94,8 +106,17 @@ class Schemas
                                     'properties' => [
                                         'title' => ['type' => 'string'],
                                         'text' => ['type' => 'string'],
+                                        'icon' => [
+                                            'type' => 'string',
+                                            // none в словаре нужен, чтобы поле можно было
+                                            // сделать обязательным: необязательные поля
+                                            // модель систематически пропускает
+                                            'enum' => [...Icons::names(), 'none'],
+                                            'description' => 'Пиктограмма по смыслу пункта. '
+                                                .'Если ничего не подходит — none.',
+                                        ],
                                     ],
-                                    'required' => ['title', 'text'],
+                                    'required' => ['title', 'text', 'icon'],
                                 ],
                             ],
                             'stats' => [

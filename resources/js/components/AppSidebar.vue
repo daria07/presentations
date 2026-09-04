@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { CreditCard, Presentation } from '@lucide/vue';
+import { CreditCard, Plus, Presentation } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -8,6 +8,7 @@ import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
+    SidebarGroup,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -23,7 +24,7 @@ const mainNavItems: NavItem[] = [
         icon: Presentation,
     },
     {
-        title: 'Генерации',
+        title: 'Тарифы',
         href: '/billing',
         icon: CreditCard,
     },
@@ -45,6 +46,23 @@ const mainNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
+            <SidebarGroup class="px-2 pt-0 pb-2">
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            as-child
+                            tooltip="Создать"
+                            class="bg-foreground text-background hover:bg-foreground/90 hover:text-background active:bg-foreground/90 active:text-background"
+                        >
+                            <Link href="/presentations/new">
+                                <Plus />
+                                <span>Создать</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarGroup>
+
             <NavMain :items="mainNavItems" />
         </SidebarContent>
 

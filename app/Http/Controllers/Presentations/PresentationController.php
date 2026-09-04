@@ -169,6 +169,15 @@ class PresentationController extends Controller
     }
 
     /** Повторная попытка после сбоя */
+    /**
+     * Повторный запуск.
+     *
+     * Работает в двух случаях. После сбоя — тогда генерация списывается
+     * заново, потому что при провале её вернули на счёт. И для задачи,
+     * которая зависла: если воркер умер посреди работы, статус остаётся
+     * «генерируем» навсегда, а перезагрузка страницы тут бессильна.
+     * За такую задачу уже заплачено, второй раз списывать нельзя.
+     */
     public function retry(Request $request, Presentation $presentation): RedirectResponse
     {
         $this->authorize('update', $presentation);
@@ -181,11 +190,17 @@ class PresentationController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if ($locked->status !== PresentationStatus::Failed) {
-                return 'not-failed';
+            $failed = $locked->status === PresentationStatus::Failed;
+
+            // Три минуты с запасом: обычная генерация занимает около минуты
+            $stuck = $locked->status->isPending()
+                && $locked->updated_at?->lt(now()->subMinutes(3));
+
+            if (! $failed && ! $stuck) {
+                return 'nothing-to-do';
             }
 
-            if (! $user->spendCredit()) {
+            if ($failed && ! $user->spendCredit()) {
                 return 'no-credits';
             }
 
@@ -194,21 +209,25 @@ class PresentationController extends Controller
                 'error_message' => null,
             ]);
 
-            return 'queued';
+            return $failed ? 'restarted' : 'unstuck';
         });
 
         return match ($outcome) {
-            'not-failed' => back()->with('toast', [
+            'nothing-to-do' => back()->with('toast', [
                 'type' => 'info',
-                'message' => 'Повторять нечего — презентация в состоянии «'
-                    .$presentation->status->label().'».',
+                'message' => 'Пока нечего перезапускать — подождите немного.',
             ]),
             'no-credits' => to_route('billing.index')->with('toast', [
                 'type' => 'warning',
                 'message' => 'Генерации закончились — выберите пакет, чтобы продолжить.',
             ]),
             default => tap(
-                to_route('presentations.show', $presentation),
+                to_route('presentations.show', $presentation)->with('toast', [
+                    'type' => 'info',
+                    'message' => $outcome === 'unstuck'
+                        ? 'Задача потерялась, запускаем заново. Генерация не списывается.'
+                        : 'Запустили заново.',
+                ]),
                 fn () => GeneratePresentation::dispatch($presentation->refresh()),
             ),
         };
@@ -268,6 +287,7 @@ class PresentationController extends Controller
                 'showUrl' => route('presentations.show', $presentation),
             ],
             'layouts' => $this->layouts(),
+            'icons' => \App\Services\Deck\Icons::names(),
         ]);
     }
 
@@ -288,6 +308,9 @@ class PresentationController extends Controller
             'outline' => [
                 'title' => $title,
                 'subtitle' => $request->input('subtitle'),
+                // Мотив в форме редактора не участвует — сохраняем прежний,
+                // иначе первая же правка текста стёрла бы фон обложки
+                'motif' => $presentation->outline['motif'] ?? null,
                 'slides' => array_values($request->input('slides')),
             ],
             'title' => $title,
@@ -324,6 +347,7 @@ class PresentationController extends Controller
             $presentation->outline = [
                 'title' => $request->input('title') ?: $presentation->topic,
                 'subtitle' => $request->input('subtitle'),
+                'motif' => $presentation->outline['motif'] ?? null,
                 'slides' => array_values($draft),
             ];
         }
@@ -430,6 +454,7 @@ class PresentationController extends Controller
             ->map(fn ($theme, $key) => [
                 'key' => $key,
                 'name' => $theme['name'],
+                'note' => $theme['note'] ?? '',
                 'accent' => $theme['accent'],
                 'cover' => $theme['cover_bg'],
             ])

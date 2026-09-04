@@ -32,7 +32,7 @@ defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Генерации', href: '/billing' }],
+        breadcrumbs: [{ title: 'Тарифы', href: '/billing' }],
     },
 });
 
@@ -56,11 +56,11 @@ function formatDate(iso: string | null): string {
 </script>
 
 <template>
-    <Head title="Генерации" />
+    <Head title="Тарифы" />
 
     <div class="mx-auto w-full max-w-3xl px-4 py-8">
         <div class="border-rule border-b pb-6">
-            <h1 class="text-3xl font-extrabold">Генерации</h1>
+            <h1 class="text-3xl font-extrabold">Тарифы</h1>
             <p class="text-muted-foreground mt-1.5">
                 <template v-if="trialAvailable">
                     У вас есть бесплатная пробная генерация.

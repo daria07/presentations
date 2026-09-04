@@ -30,7 +30,13 @@ type Question = {
     answer: string | null;
 };
 
-type Theme = { key: string; name: string; accent: string; cover: string };
+type Theme = {
+    key: string;
+    name: string;
+    note: string;
+    accent: string;
+    cover: string;
+};
 
 type Presentation = {
     id: number;
@@ -280,13 +286,17 @@ async function copyShare() {
             <template v-if="stalled">
                 <p class="text-lg font-medium">Что-то затянулось</p>
                 <p class="text-muted-foreground max-w-md text-sm leading-relaxed">
-                    Обычно всё занимает меньше минуты. Мы продолжим работу в
-                    фоне — обновите страницу через пару минут или вернитесь к
-                    списку, презентация появится там сама.
+                    Обычно всё занимает меньше минуты. Похоже, задача
+                    потерялась — можно запустить её заново, генерация при
+                    этом не спишется.
                 </p>
                 <div class="flex gap-2">
-                    <Button variant="outline" @click="router.reload()">
-                        Обновить
+                    <Button
+                        variant="outline"
+                        @click="router.post(`/presentations/${current.id}/retry`)"
+                    >
+                        <RotateCcw class="size-4" />
+                        Запустить заново
                     </Button>
                     <Button variant="ghost" as-child>
                         <Link href="/presentations">К списку</Link>
@@ -345,7 +355,7 @@ async function copyShare() {
             </div>
 
             <div class="space-y-3 border-t pt-6">
-                <p class="font-medium">Оформление</p>
+                <p class="font-medium">Шаблон</p>
                 <div class="flex flex-wrap gap-2">
                     <button
                         v-for="t in themes"
@@ -481,7 +491,7 @@ async function copyShare() {
             <!-- Оформление меняется бесплатно: структура уже готова,
                  перепечатывается только файл -->
             <div class="flex flex-wrap items-center gap-x-4 gap-y-3">
-                <p class="text-muted-foreground text-sm">Оформление</p>
+                <p class="text-muted-foreground text-sm">Шаблон</p>
 
                 <div class="flex flex-wrap gap-2">
                     <button
@@ -501,7 +511,12 @@ async function copyShare() {
                             <span class="size-3.5 rounded-full" :style="{ background: t.cover }" />
                             <span class="size-3.5 rounded-full" :style="{ background: t.accent }" />
                         </span>
-                        {{ switching === t.key ? 'Меняем…' : t.name }}
+                        <span class="text-left">
+                            {{ switching === t.key ? 'Меняем…' : t.name }}
+                            <span class="text-muted-foreground block text-xs">
+                                {{ t.note }}
+                            </span>
+                        </span>
                     </button>
                 </div>
             </div>

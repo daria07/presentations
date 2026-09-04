@@ -4,6 +4,8 @@ namespace App\Services\Claude;
 
 use App\Models\ApiCall;
 use App\Models\Presentation;
+use App\Services\Deck\Icons;
+use App\Services\Deck\Motifs;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -111,11 +113,88 @@ class PresentationPlanner
 
         $subtitle = $data['subtitle'] ?? $data['subheading'] ?? null;
 
+        $motif = $data['motif'] ?? null;
+
+        // Узор идёт по всей обложке, а заголовок в четыре строки занимает
+        // её целиком: полосы и сетки начинают перечёркивать буквы.
+        // Длинное название важнее украшения, поэтому узор снимаем.
+        if (mb_strlen((string) $title) > 42) {
+            $motif = null;
+        }
+
         return [
             'title' => $title,
             'subtitle' => $subtitle,
-            'slides' => $this->ensureTitleSlide($slides, $title, $subtitle),
+            'motif' => Motifs::has($motif) ? $motif : null,
+            'slides' => $this->thinIcons(
+                $this->ensureTitleSlide($slides, $title, $subtitle)
+            ),
         ];
+    }
+
+    /**
+     * Модель ставит значок к каждому пункту каждого слайда, сколько бы
+     * её об этом ни просили. Значки на всех слайдах подряд превращаются
+     * в пестроту, поэтому решение принимаем сами, а не промптом.
+     *
+     * @param  array<int, array>  $slides
+     * @return array<int, array>
+     */
+    private function thinIcons(array $slides): array
+    {
+        // Внутри слайда значки либо у всех пунктов, либо ни у кого:
+        // половина строк с картинкой выглядит как незакрытая вёрстка.
+        // Повтор одного значка в слайде — признак, что модель подбирала
+        // приблизительно, и такой слайд честнее оставить без значков.
+        $candidates = [];
+
+        foreach ($slides as $index => $slide) {
+            $icons = array_column($slide['bullets'] ?? [], 'icon');
+
+            $full = $icons !== []
+                && ! in_array(null, $icons, true)
+                && count(array_unique($icons)) === count($icons);
+
+            if ($full) {
+                $candidates[] = $index;
+            } else {
+                $slides[$index] = $this->stripIcons($slide);
+            }
+        }
+
+        // Значок держится там, где он часть фигуры — в шагах процесса,
+        // в клетках матрицы, в точках таймлайна. В обычном списке это
+        // просто столбик картинок слева, и он уходит первым.
+        $weight = ['process' => 0, 'matrix' => 1, 'timeline' => 2];
+
+        usort($candidates, fn (int $a, int $b) => [
+            $weight[$slides[$a]['layout']] ?? 9, $a,
+        ] <=> [
+            $weight[$slides[$b]['layout']] ?? 9, $b,
+        ]);
+
+        // Не больше трети слайдов со значками — так они читаются как
+        // акцент, а не как оформление по умолчанию.
+        $limit = max(1, intdiv(count($slides), 3));
+
+        foreach (array_slice($candidates, $limit) as $index) {
+            $slides[$index] = $this->stripIcons($slides[$index]);
+        }
+
+        return $slides;
+    }
+
+    /**
+     * @param  array<string, mixed>  $slide
+     * @return array<string, mixed>
+     */
+    private function stripIcons(array $slide): array
+    {
+        foreach ($slide['bullets'] ?? [] as $i => $bullet) {
+            $slide['bullets'][$i]['icon'] = null;
+        }
+
+        return $slide;
     }
 
     /**
@@ -172,9 +251,14 @@ class PresentationPlanner
             $text = $bullet['text'] ?? $bullet['description'] ?? null;
 
             if (filled($title) || filled($text)) {
+                $icon = $bullet['icon'] ?? null;
+
                 $bullets[] = [
                     'title' => (string) ($title ?? ''),
                     'text' => (string) ($text ?? ''),
+                    // Модель иногда придумывает названия — берём только те,
+                    // что действительно есть в наборе
+                    'icon' => Icons::has($icon) ? $icon : null,
                 ];
             }
         }
@@ -305,8 +389,20 @@ class PresentationPlanner
         Первый слайд всегда layout title, последний — closing.
         Это не обсуждается.
 
-        Вёрстку остальных выбирай по форме содержания, а не для разнообразия.
-        Если материал — перечисление, это bullets, даже если bullets уже был.
+        Вёрстку остальных выбирай по форме содержания.
+
+        Жёсткое ограничение: не больше двух одинаковых вёрсток подряд.
+        Если третий слайд снова просится в тот же тип — значит содержание
+        не проработано, а не оформление. Перестрой сам материал:
+        - три причины и три следствия рядом — это comparison, а не два
+          списка подряд;
+        - четыре разновидности чего-либо — это matrix;
+        - последовательность действий — process, даже если её можно
+          записать списком;
+        - слайд, где главное это одна цифра, — bignumber.
+
+        В презентации из восьми и более слайдов должно встретиться
+        минимум четыре разных типа вёрстки.
 
         - bullets — перечисление равноправных пунктов, от трёх до пяти.
         - stats — от двух до четырёх чисел, которые стоит поставить рядом.
@@ -320,7 +416,7 @@ class PresentationPlanner
           Ровно четыре bullets, в subheading назови оси деления.
         - quote — только подлинная цитата с настоящим автором.
 
-        Подряд три одинаковые вёрстки — повод пересобрать содержание.
+
 
         Как писать текст:
         - Заголовок слайда — до 50 знаков, без точки в конце.
@@ -330,6 +426,21 @@ class PresentationPlanner
           обойдись без них.
         - notes — одна фраза для того, кто выступает: что сказать вслух,
           чего нет на слайде. Не пересказывай слайд своими словами.
+        - motif — фоновый узор обложки, один на всю презентацию.
+          none — полноправный ответ и хороший ответ по умолчанию:
+          строгая, деловая или трагическая тема лучше выглядит без
+          узора. Узор выбирай, только если он говорит о теме что-то
+          своё, и по духу, а не буквально: у доклада про экономику
+          это bars, у доклада про экосистемы waves.
+        - icon — редкий акцент, а не оформление каждого пункта.
+          На большей части слайдов у всех пунктов стоит none, и это
+          нормально: презентация совсем без значков выглядит строго,
+          а презентация со значками на каждой строке — пёстро.
+          Значки ставь только там, где они несут смысл и где в слайде
+          все значки разные: про сроки clock, про рост growth, про риск
+          alert, про людей people, про деньги money, про исследование
+          search. Если в слайде хотя бы один пункт остался без точного
+          значка — ставь none у всех пунктов этого слайда.
 
         Отвечай на русском языке.
         TXT;

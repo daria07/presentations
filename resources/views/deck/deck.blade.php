@@ -150,6 +150,25 @@
         margin-top: 0.8mm;
     }
 
+    /* Иконка вместо номера: кружок тот же, содержимое другое */
+    .bullet-mark--icon {
+        background: transparent;
+        color: {{ $theme['accent'] }};
+        width: 8mm;
+        height: 8mm;
+        margin-top: 0;
+    }
+
+    .step-icon {
+        color: {{ $theme['accent'] }};
+        margin-bottom: 4mm;
+    }
+
+    .cell-icon {
+        color: {{ $theme['accent'] }};
+        margin-bottom: 3.5mm;
+    }
+
     .bullet-title {
         font-family: "{{ $theme['font_display'] }}", sans-serif;
         font-size: 13.5pt;
@@ -408,9 +427,30 @@
         max-width: 62%;
     }
 
+    /* ---------- фоновый мотив ---------- */
+
+    /* Узор живёт под содержимым и намеренно едва заметен:
+       это фон, а не иллюстрация */
+    .motif {
+        position: absolute;
+        inset: 0;
+        color: {{ $theme['cover_accent'] }};
+        opacity: .13;
+        pointer-events: none;
+    }
+
+    .motif svg { width: 100%; height: 100%; }
+
+    /* Абсолютно позиционированный элемент рисуется поверх обычных,
+       поэтому содержимое обложки поднимаем явно */
+    .slide--cover > *:not(.motif) { position: relative; z-index: 1; }
+
     /* ---------- декоративная геометрия обложки ---------- */
 
     /* Дуга в углу: намёк на объём, который не спорит с текстом */
+    .slide--cover.has-motif::after,
+    .slide--cover.has-motif::before { display: none; }
+
     .slide--cover::after {
         content: "";
         position: absolute;
@@ -462,6 +502,9 @@
         margin-top: 7mm;
     }
 </style>
+
+{{-- Характер шаблона: типографика, композиция, форма элементов --}}
+@include('deck.styles.'.$style)
 
 @if ($forScreen ?? false)
 {{-- Экранный просмотр: те же слайды, но подогнанные по ширине

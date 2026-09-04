@@ -29,8 +29,8 @@ defineOptions({
             options: confirmOptions(),
             submit: confirmStore(),
         }"
-        label="Confirm with passkey"
-        loading-label="Confirming..."
+        label="Подтвердить ключом доступа"
+        loading-label="Подтверждаем…"
         separator="Или подтвердите паролем"
     />
 

@@ -34,7 +34,7 @@ const passwordInput = useTemplateRef('passwordInput');
             <div class="relative space-y-0.5 text-red-600 dark:text-red-100">
                 <p class="font-medium">Осторожно</p>
                 <p class="text-sm">
-                    Please proceed with caution, this cannot be undone.
+                    Действие необратимо — восстановить аккаунт и презентации будет нельзя.
                 </p>
             </div>
             <Dialog>

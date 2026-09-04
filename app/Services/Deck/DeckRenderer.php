@@ -31,6 +31,7 @@ class DeckRenderer
         return View::make('deck.deck', [
             'title' => $outline['title'] ?? $presentation->topic,
             'slides' => $outline['slides'],
+            'motif' => $outline['motif'] ?? null,
             'theme' => $theme,
             'fontCss' => FontLoader::css(array_unique([
                 $theme['font_display'],
@@ -38,6 +39,8 @@ class DeckRenderer
             ])),
             'width' => config('deck.width'),
             'height' => config('deck.height'),
+            // Файл стилей шаблона: разметка общая, характер разный
+            'style' => $theme['style'] ?? 'strict',
             // На экране слайды нужно уместить по ширине колонки,
             // в печати — оставить натуральный размер
             'forScreen' => $forScreen,

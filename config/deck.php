@@ -26,8 +26,16 @@ return [
 
     'themes' => [
 
+        /*
+         | Шаблон — это цельная визуальная система: палитра, шрифты
+         | и характер вёрстки. Ключ style указывает на файл стилей
+         | в resources/views/deck/styles, разметка слайдов у всех общая.
+         */
+
         'graphite' => [
-            'name' => 'Графит',
+            'name' => 'Строгий',
+            'note' => 'Волосяные линии, острые углы, деловой тон',
+            'style' => 'strict',
             'paper' => '#FFFFFF',
             'ink' => '#12151C',
             'muted' => '#69707E',
@@ -43,14 +51,16 @@ return [
         ],
 
         'forest' => [
-            'name' => 'Хвойный',
-            'paper' => '#FFFFFF',
+            'name' => 'Мягкий',
+            'note' => 'Крупные скругления, воздух, спокойная зелень',
+            'style' => 'soft',
+            'paper' => '#F7FAF8',
             'ink' => '#12201A',
             'muted' => '#5E6F66',
-            'rule' => '#E0E8E3',
+            'rule' => '#DDE9E3',
             'accent' => '#1C7A55',
             'accent_ink' => '#145C40',
-            'accent_soft' => '#E9F4EF',
+            'accent_soft' => '#E4F1EB',
             'cover_bg' => '#12201A',
             'cover_ink' => '#FFFFFF',
             'cover_accent' => '#6FD3A6',
@@ -59,31 +69,35 @@ return [
         ],
 
         'clay' => [
-            'name' => 'Терракота',
-            'paper' => '#FFFDFB',
+            'name' => 'Журнальный',
+            'note' => 'Засечки в заголовках, тёплая бумага',
+            'style' => 'magazine',
+            'paper' => '#FFFCF8',
             'ink' => '#231A16',
             'muted' => '#7A6B63',
-            'rule' => '#EDE4DE',
+            'rule' => '#EDE2DA',
             'accent' => '#B4502A',
             'accent_ink' => '#8C3D1F',
             'accent_soft' => '#FAEFEA',
             'cover_bg' => '#231A16',
             'cover_ink' => '#FFFFFF',
             'cover_accent' => '#E8916B',
-            'font_display' => 'Manrope',
+            'font_display' => 'Lora',
             'font_body' => 'Golos Text',
         ],
 
         'ink' => [
-            'name' => 'Тушь',
+            'name' => 'Контрастный',
+            'note' => 'Чёрное и белое, крупный шрифт, жирные линии',
+            'style' => 'contrast',
             'paper' => '#FFFFFF',
-            'ink' => '#111111',
-            'muted' => '#6B6B6B',
-            'rule' => '#E4E4E4',
-            'accent' => '#111111',
+            'ink' => '#0A0A0A',
+            'muted' => '#666666',
+            'rule' => '#0A0A0A',
+            'accent' => '#0A0A0A',
             'accent_ink' => '#000000',
-            'accent_soft' => '#F2F2F2',
-            'cover_bg' => '#111111',
+            'accent_soft' => '#F0F0F0',
+            'cover_bg' => '#0A0A0A',
             'cover_ink' => '#FFFFFF',
             'cover_accent' => '#FFFFFF',
             'font_display' => 'Manrope',
@@ -91,7 +105,9 @@ return [
         ],
 
         'plum' => [
-            'name' => 'Слива',
+            'name' => 'Академический',
+            'note' => 'Нумерация разделов, сдержанный тон',
+            'style' => 'academic',
             'paper' => '#FCFAFD',
             'ink' => '#1E1424',
             'muted' => '#6B5F73',
@@ -102,7 +118,7 @@ return [
             'cover_bg' => '#1E1424',
             'cover_ink' => '#FFFFFF',
             'cover_accent' => '#B98FD6',
-            'font_display' => 'Manrope',
+            'font_display' => 'Lora',
             'font_body' => 'Golos Text',
         ],
 

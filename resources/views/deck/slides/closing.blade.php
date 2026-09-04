@@ -1,4 +1,10 @@
-<div class="slide slide--cover">
+@use(App\Services\Deck\Motifs)
+
+<div class="slide slide--cover @if (filled($motif ?? null)) has-motif @endif">
+    @if (filled($motif ?? null))
+        <div class="motif">{!! Motifs::svg($motif) !!}</div>
+    @endif
+
     <div class="eyebrow">Итог</div>
     <h1 style="font-size: 38pt;">{{ $slide['heading'] }}</h1>
     @if (filled($slide['subheading'] ?? null))

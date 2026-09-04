@@ -31,6 +31,7 @@ class UpdateOutlineRequest extends FormRequest
             'slides.*.bullets' => ['nullable', 'array', 'max:6'],
             'slides.*.bullets.*.title' => ['nullable', 'string', 'max:100'],
             'slides.*.bullets.*.text' => ['nullable', 'string', 'max:400'],
+            'slides.*.bullets.*.icon' => ['nullable', 'string', 'in:'.implode(',', \App\Services\Deck\Icons::names())],
 
             'slides.*.stats' => ['nullable', 'array', 'max:4'],
             'slides.*.stats.*.value' => ['nullable', 'string', 'max:40'],

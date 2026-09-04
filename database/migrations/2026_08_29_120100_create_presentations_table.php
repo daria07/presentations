@@ -14,7 +14,7 @@ return new class extends Migration
 
             $table->string('title')->nullable();
             $table->text('topic');
-            $table->unsignedSmallInteger('slide_count')->default(10);
+            $table->unsignedSmallInteger('slide_count')->default(8);
 
             // Уточняющие вопросы Claude и ответы пользователя
             $table->jsonb('clarifications')->nullable();

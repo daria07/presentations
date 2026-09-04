@@ -20,6 +20,10 @@ export default defineConfig({
                     weights: [500, 700, 800],
                     subsets: ['latin', 'cyrillic'],
                 }),
+                bunny('Lora', {
+                    weights: [500, 600, 700],
+                    subsets: ['latin', 'cyrillic'],
+                }),
             ],
         }),
         inertia(),

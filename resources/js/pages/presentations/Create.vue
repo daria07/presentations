@@ -28,7 +28,7 @@ const topic = ref('');
 const sourceText = ref('');
 const focus = ref('');
 
-const slideCount = ref(10);
+const slideCount = ref(8);
 const counts = [6, 8, 10, 12, 15];
 
 const examples = [
