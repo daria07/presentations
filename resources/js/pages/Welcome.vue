@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import CookieNotice from '@/components/CookieNotice.vue';
 import { ArrowRight } from '@lucide/vue';
 import SlideCard from '@/components/landing/SlideCard.vue';
 import { login, register } from '@/routes';
@@ -271,5 +272,7 @@ const audiences = [
                 </p>
             </div>
         </footer>
+
+        <CookieNotice />
     </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import CookieNotice from '@/components/CookieNotice.vue';
 
 defineProps<{
     title: string;
@@ -45,6 +46,8 @@ defineProps<{
                 </p>
             </div>
         </footer>
+
+        <CookieNotice />
     </div>
 </template>
 
