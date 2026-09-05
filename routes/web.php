@@ -4,8 +4,25 @@ use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\Presentations\PresentationController;
 use App\Http\Controllers\Presentations\PublicPresentationController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::inertia('/', 'Welcome')->name('home');
+
+// Правовые документы: открыты всем, реквизиты берутся из config/legal.php
+Route::get('offer', fn () => Inertia::render('legal/Offer', [
+    'legal' => config('legal'),
+    'packages' => collect(config('billing.packages'))
+        ->map(fn (array $pack) => [
+            'title' => $pack['title'],
+            'credits' => $pack['credits'],
+            'price' => number_format($pack['amount'] / 100, 0, ',', ' ').' ₽',
+        ])
+        ->values(),
+]))->name('legal.offer');
+
+Route::get('privacy', fn () => Inertia::render('legal/Privacy', [
+    'legal' => config('legal'),
+]))->name('legal.privacy');
 
 // Публичная ссылка на готовую презентацию — без авторизации
 Route::get('p/{token}', [PublicPresentationController::class, 'show'])

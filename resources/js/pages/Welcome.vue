@@ -264,7 +264,11 @@ const audiences = [
                 class="text-muted-foreground mx-auto flex max-w-5xl flex-col gap-3 px-6 py-8 text-sm sm:flex-row sm:items-center sm:justify-between"
             >
                 <p class="font-display text-foreground font-bold">Слайдуша</p>
-                <p>Презентации из одной строки · {{ new Date().getFullYear() }}</p>
+                <p class="flex flex-wrap gap-4">
+                    <Link href="/offer" class="hover:underline">Оферта</Link>
+                    <Link href="/privacy" class="hover:underline">Конфиденциальность</Link>
+                    <span>{{ new Date().getFullYear() }}</span>
+                </p>
             </div>
         </footer>
     </div>

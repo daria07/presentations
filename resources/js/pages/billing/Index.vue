@@ -119,6 +119,13 @@ function formatDate(iso: string | null): string {
             списанная генерация возвращается автоматически.
         </p>
 
+        <p class="text-muted-foreground mt-2 text-sm leading-relaxed">
+            Оплата означает принятие
+            <a href="/offer" target="_blank" class="underline underline-offset-2">условий оферты</a>.
+            Чек придёт на вашу почту. Неиспользованные генерации можно вернуть —
+            напишите нам.
+        </p>
+
         <template v-if="history.length">
             <h2 class="border-rule mt-14 border-b pb-4 text-lg font-bold">
                 История платежей
