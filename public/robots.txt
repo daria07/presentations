@@ -1,2 +1,19 @@
 User-agent: *
-Disallow:
+Allow: /$
+Allow: /offer
+Allow: /privacy
+
+# Личный кабинет и служебные разделы индексировать нечего
+Disallow: /presentations
+Disallow: /billing
+Disallow: /settings
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Публичные ссылки на презентации — приватные по смыслу:
+# ими делятся адресно, в поиске им не место
+Disallow: /p/
+
+Sitemap: https://slaidusha.ru/sitemap.xml
