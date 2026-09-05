@@ -45,7 +45,7 @@ const audiences = [
                 class="mx-auto flex h-16 max-w-5xl items-center justify-between px-6"
             >
                 <Link href="/" class="font-display text-lg font-extrabold tracking-tight">
-                    Тезис
+                    Слайдуша
                 </Link>
 
                 <nav class="flex items-center gap-1 text-sm">
@@ -263,7 +263,7 @@ const audiences = [
             <div
                 class="text-muted-foreground mx-auto flex max-w-5xl flex-col gap-3 px-6 py-8 text-sm sm:flex-row sm:items-center sm:justify-between"
             >
-                <p class="font-display text-foreground font-bold">Тезис</p>
+                <p class="font-display text-foreground font-bold">Слайдуша</p>
                 <p>Презентации из одной строки · {{ new Date().getFullYear() }}</p>
             </div>
         </footer>

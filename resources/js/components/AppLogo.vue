@@ -8,7 +8,7 @@ const name = usePage().props.name;
     <div
         class="bg-foreground text-background font-display flex aspect-square size-8 items-center justify-center rounded-md text-sm font-extrabold"
     >
-        Т
+        С
     </div>
     <div class="ml-1 grid flex-1 text-left text-sm">
         <span class="font-display mb-0.5 truncate leading-tight font-bold">

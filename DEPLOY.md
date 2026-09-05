@@ -1,0 +1,208 @@
+# Деплой «Слайдуши» на VPS
+
+Ubuntu 24.04, минимум 2 ГБ памяти (Chrome при печати PDF съедает около 400 МБ
+на процесс), 20 ГБ диска. Всё ниже — от root, кроме шагов, где явно сказано
+иначе.
+
+## 1. DNS
+
+У регистратора домена:
+
+```
+A    @      <IP сервера>
+A    www    <IP сервера>
+```
+
+Дальше подождать до получаса и проверить: `dig +short slaidusha.ru`.
+Пока DNS не разъехался, сертификат выпустить не получится.
+
+## 2. Пользователь и доступ
+
+```bash
+adduser --disabled-password --gecos "" deploy
+usermod -aG www-data deploy
+mkdir -p /home/deploy/.ssh && cp ~/.ssh/authorized_keys /home/deploy/.ssh/
+chown -R deploy:deploy /home/deploy/.ssh && chmod 700 /home/deploy/.ssh
+```
+
+В `/etc/ssh/sshd_config`: `PermitRootLogin no`, `PasswordAuthentication no`,
+затем `systemctl restart ssh`. Не закрывай текущую сессию, пока не проверишь
+вход под `deploy` из другого окна.
+
+Файрвол:
+
+```bash
+ufw allow OpenSSH && ufw allow 'Nginx Full' && ufw enable
+```
+
+## 3. Пакеты
+
+```bash
+apt update && apt upgrade -y
+apt install -y nginx postgresql supervisor git unzip curl \
+  certbot python3-certbot-nginx
+
+# PHP 8.4
+add-apt-repository -y ppa:ondrej/php && apt update
+apt install -y php8.4-fpm php8.4-cli php8.4-pgsql php8.4-mbstring \
+  php8.4-xml php8.4-curl php8.4-zip php8.4-gd php8.4-intl php8.4-bcmath
+
+# Node 22
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt install -y nodejs
+
+# Composer
+curl -sS https://getcomposer.org/installer | php -- \
+  --install-dir=/usr/local/bin --filename=composer
+```
+
+## 4. Chrome для печати PDF
+
+Browsershot запускает настоящий браузер. Сначала системные библиотеки:
+
+```bash
+apt install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+  libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
+  libgbm1 libasound2t64 libpango-1.0-0 libcairo2 fonts-liberation
+```
+
+Сам браузер ставится уже после `npm ci` (шаг 7), из папки проекта под
+пользователем `deploy`:
+
+```bash
+npx puppeteer browsers install chrome-headless-shell
+```
+
+Отдельной командой — потому что в `.npmrc` стоит `ignore-scripts=true`,
+и автоматически при установке пакетов браузер не скачается.
+
+## 5. База
+
+```bash
+sudo -u postgres createuser slaidusha --pwprompt
+sudo -u postgres createdb slaidusha --owner=slaidusha
+```
+
+Пароль сразу положи в `.env`, второй раз его не покажут.
+
+## 6. Код
+
+```bash
+mkdir -p /var/www && cd /var/www
+git clone <адрес репозитория> slaidusha
+chown -R deploy:www-data slaidusha
+cd slaidusha
+chmod -R 775 storage bootstrap/cache
+```
+
+Дальше всё — под `deploy` (`su - deploy`), не под root: иначе кэши и логи
+окажутся с чужими правами и воркер их не перезапишет.
+
+## 7. Настройки
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+Что поменять в `.env` относительно локального:
+
+```
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://slaidusha.ru
+
+DB_DATABASE=slaidusha
+DB_USERNAME=slaidusha
+DB_PASSWORD=<пароль из шага 5>
+
+QUEUE_CONNECTION=database
+SESSION_DRIVER=database
+SESSION_SECURE_COOKIE=true
+
+ANTHROPIC_API_KEY=<ключ>
+ANTHROPIC_BASE_URL=https://cheapai.io
+
+BILLING_PROVIDER=fake     # пока ЮKassa не подключена
+```
+
+`APP_DEBUG=false` — обязательно: иначе на странице ошибки видны ключи из
+окружения.
+
+Затем зависимости и сборка:
+
+```bash
+composer install --no-dev --optimize-autoloader
+npm ci && npm run build
+npx puppeteer browsers install chrome-headless-shell
+php artisan migrate --force
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+```
+
+## 8. Nginx и сертификат
+
+```bash
+cp deploy/nginx.conf /etc/nginx/sites-available/slaidusha
+ln -s /etc/nginx/sites-available/slaidusha /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl reload nginx
+
+certbot --nginx -d slaidusha.ru -d www.slaidusha.ru
+```
+
+Certbot сам пропишет пути к сертификатам и настроит продление.
+
+## 9. Очередь
+
+```bash
+cp deploy/worker.conf /etc/supervisor/conf.d/slaidusha-worker.conf
+supervisorctl reread && supervisorctl update
+supervisorctl status
+```
+
+Должно быть два процесса `slaidusha-worker:*` в состоянии RUNNING.
+
+## 10. Почта
+
+Сейчас `MAIL_MAILER=log` — письма о готовой презентации никуда не уходят.
+Для домена подойдёт Яндекс 360 для бизнеса или почта Mail.ru: подтверждаешь
+домен, создаёшь ящик `hello@slaidusha.ru`, дальше в `.env`:
+
+```
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.yandex.ru
+MAIL_PORT=465
+MAIL_ENCRYPTION=ssl
+MAIL_USERNAME=hello@slaidusha.ru
+MAIL_PASSWORD=<пароль приложения>
+MAIL_FROM_ADDRESS=hello@slaidusha.ru
+```
+
+Без SPF и DKIM письма будут падать в спам — записи даёт почтовый провайдер,
+добавляются в DNS домена.
+
+## 11. Проверка после первого деплоя
+
+- [ ] `https://slaidusha.ru` открывается, замок в адресной строке
+- [ ] регистрация и вход работают, письмо о подтверждении приходит
+- [ ] генерация презентации доходит до готовности (следить: `tail -f storage/logs/worker.log`)
+- [ ] PDF открывается и скачивается
+- [ ] публичная ссылка `/p/{токен}` работает из режима инкогнито
+- [ ] `php artisan deck:list` не показывает зависших задач
+
+## 12. Дальнейшие деплои
+
+```bash
+su - deploy && cd /var/www/slaidusha && bash deploy/deploy.sh
+```
+
+## 13. Бэкапы
+
+Крон под root, ежедневно:
+
+```
+0 4 * * * sudo -u postgres pg_dump slaidusha | gzip > /var/backups/slaidusha-$(date +\%F).sql.gz
+0 5 * * * find /var/backups -name 'slaidusha-*.sql.gz' -mtime +14 -delete
+```
+
+Сами PDF лежат в `storage/app`. Они восстановимы перегенерацией, но платно,
+поэтому папку тоже стоит забирать в бэкап — хотя бы раз в неделю.
