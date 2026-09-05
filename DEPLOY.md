@@ -138,6 +138,28 @@ php artisan migrate --force
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 ```
 
+## 7a. Права на storage
+
+Приложение пишут два разных пользователя: `deploy` (artisan, воркер) и
+`www-data` (PHP-FPM под nginx). Если файл создан одним, а прочитать или
+дописать его нужно другому — получается глухой 500 без записи в журнал:
+Laravel не может даже сообщить об ошибке, потому что не может писать в
+собственный лог.
+
+Поэтому setgid на папках — не украшение, а обязательный шаг:
+
+```bash
+chown -R deploy:www-data storage bootstrap/cache
+find storage bootstrap/cache -type d -exec chmod 2775 {} \;
+find storage bootstrap/cache -type f -exec chmod 664 {} \;
+```
+
+`2775` означает: всё новое внутри автоматически получает группу
+`www-data`. Без этого права разъедутся снова после первой же генерации.
+
+Проверка: `ls -l storage/logs/` — у файлов должна быть группа `www-data`
+и права `-rw-rw-r--`.
+
 ## 8. Nginx и сертификат
 
 ```bash
@@ -182,6 +204,18 @@ MAIL_FROM_ADDRESS=hello@slaidusha.ru
 
 Без SPF и DKIM письма будут падать в спам — записи даёт почтовый провайдер,
 добавляются в DNS домена.
+
+## 10a. Библиотеки для Chrome
+
+Если PDF не печатается, а в журнале `error while loading shared
+libraries` — не хватает системных библиотек браузера (шаг 4). Проверить,
+чего именно, можно так, под `deploy`:
+
+```bash
+CHROME=$(ls -d ~/.cache/puppeteer/chrome-headless-shell/*/chrome-headless-shell-linux64/chrome-headless-shell)
+$CHROME --version
+ldd $CHROME | grep 'not found'
+```
 
 ## 11. Проверка после первого деплоя
 
