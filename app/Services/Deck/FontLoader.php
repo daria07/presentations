@@ -2,8 +2,6 @@
 
 namespace App\Services\Deck;
 
-use Illuminate\Support\Facades\Cache;
-
 /**
  * Готовит @font-face со шрифтами, вшитыми прямо в CSS.
  *
@@ -18,6 +16,17 @@ class FontLoader
     private const MANIFEST = 'build/fonts-manifest.json';
 
     /**
+     * Память на время запроса. Раньше здесь стоял rememberForever, но
+     * шрифты весят сотни килобайт, кэш у нас в базе, а ключ меняется
+     * при каждой пересборке фронта — старые записи копились в таблице
+     * и никогда не удалялись. Само построение занимает миллисекунды:
+     * прочитать три файла и закодировать. Держать это вечно незачем.
+     *
+     * @var array<string, string>
+     */
+    private static array $memo = [];
+
+    /**
      * @param  array<int, string>  $families  например ['Golos Text', 'Manrope']
      */
     public static function css(array $families): string
@@ -28,11 +37,9 @@ class FontLoader
             return '';
         }
 
-        // Время правки манифеста в ключе: пересобрали фронт — кеш
-        // протухает сам, руками сбрасывать ничего не нужно.
-        $key = 'deck-fonts:'.md5(implode('|', $families).filemtime($manifest));
+        $key = implode('|', $families).':'.filemtime($manifest);
 
-        return Cache::rememberForever($key, fn () => self::build($families));
+        return self::$memo[$key] ??= self::build($families);
     }
 
     private static function build(array $families): string

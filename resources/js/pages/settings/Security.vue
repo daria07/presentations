@@ -101,7 +101,7 @@ defineOptions({
                     :disabled="processing"
                     data-test="update-password-button"
                 >
-                    Save
+                    Сохранить
                 </Button>
             </div>
         </Form>

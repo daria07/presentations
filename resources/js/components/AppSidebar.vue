@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { CreditCard, Plus, Presentation } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -16,6 +17,23 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
+
+const page = usePage();
+
+const credits = computed(() => Number(page.props.auth?.credits ?? 0));
+const trialUsed = computed(() => Boolean(page.props.auth?.trialUsed));
+
+// «1 генерация», «2 генерации», «5 генераций» — иначе интерфейс
+// выглядит машинным ровно в том месте, где речь о деньгах
+function pluralize(n: number): string {
+    const ten = n % 10;
+    const hundred = n % 100;
+
+    if (ten === 1 && hundred !== 11) return 'генерация';
+    if (ten >= 2 && ten <= 4 && (hundred < 12 || hundred > 14)) return 'генерации';
+
+    return 'генераций';
+}
 
 const mainNavItems: NavItem[] = [
     {
@@ -65,6 +83,23 @@ const mainNavItems: NavItem[] = [
 
             <NavMain :items="mainNavItems" />
         </SidebarContent>
+
+        <div class="px-4 pb-2">
+            <Link
+                href="/billing"
+                class="text-muted-foreground hover:text-foreground block text-xs transition-colors group-data-[collapsible=icon]:hidden"
+            >
+                <template v-if="credits > 0">
+                    Осталось {{ credits }} {{ pluralize(credits) }}
+                </template>
+                <template v-else-if="!trialUsed">
+                    Первая генерация бесплатно
+                </template>
+                <template v-else>
+                    <span class="text-brand">Генерации закончились</span>
+                </template>
+            </Link>
+        </div>
 
         <SidebarFooter>
             <NavUser />

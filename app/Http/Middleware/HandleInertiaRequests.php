@@ -40,6 +40,10 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+                // Остаток генераций нужен в шапке на каждой странице,
+                // иначе человек узнаёт о нуле только в момент отказа
+                'credits' => $request->user()?->credits,
+                'trialUsed' => $request->user()?->trial_used,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

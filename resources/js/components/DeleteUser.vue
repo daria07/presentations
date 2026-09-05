@@ -92,7 +92,7 @@ const passwordInput = useTemplateRef('passwordInput');
                                         }
                                     "
                                 >
-                                    Cancel
+                                    Отмена
                                 </Button>
                             </DialogClose>
 

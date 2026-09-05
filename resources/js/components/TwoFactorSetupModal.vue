@@ -197,7 +197,7 @@ watch(
                                 class="bg-border absolute inset-0 top-1/2 h-px w-full"
                             />
                             <span class="bg-card relative px-2 py-1"
-                                >or, enter the code manually</span
+                                >или введите код вручную</span
                             >
                         </div>
 
@@ -286,7 +286,7 @@ watch(
                                     class="w-auto flex-1"
                                     :disabled="processing || code.length < 6"
                                 >
-                                    Confirm
+                                    Подтвердить
                                 </Button>
                             </div>
                         </div>

@@ -95,7 +95,7 @@ const handleCancel = () => {
                 {{ isLoading ? 'Добавляем…' : 'Добавить ключ' }}
             </Button>
             <Button type="button" variant="ghost" @click="handleCancel">
-                Cancel
+                Отмена
             </Button>
         </div>
     </form>

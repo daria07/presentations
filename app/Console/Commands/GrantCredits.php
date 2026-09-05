@@ -38,6 +38,14 @@ class GrantCredits extends Command
             return self::FAILURE;
         }
 
+        // --all по невнимательности раздаёт генерации всей базе.
+        // На проде это прямые деньги, поэтому спрашиваем.
+        if ($this->option('all') && ! $this->confirmAll($users->count(), $amount)) {
+            $this->components->warn('Отменено.');
+
+            return self::SUCCESS;
+        }
+
         foreach ($users as $user) {
             if ($this->option('set')) {
                 $user->forceFill(['credits' => max(0, $amount)])->save();
@@ -63,5 +71,17 @@ class GrantCredits extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    private function confirmAll(int $count, int $amount): bool
+    {
+        $action = $this->option('set')
+            ? "выставить {$amount} генераций"
+            : "начислить по {$amount} генераций";
+
+        return $this->confirm(
+            "Вы собираетесь {$action} всем пользователям ({$count} шт.). Продолжить?",
+            default: false,
+        );
     }
 }
