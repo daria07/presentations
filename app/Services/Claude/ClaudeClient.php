@@ -58,23 +58,102 @@ class ClaudeClient
         string $toolDescription,
         int $maxTokens = 8000,
     ): ClaudeResult {
+        $messages = [
+            ['role' => 'user', 'content' => $prompt],
+        ];
+
+        $tools = [[
+            'name' => $toolName,
+            'description' => $toolDescription,
+            'input_schema' => $schema,
+        ]];
+
+        $startedAt = microtime(true);
+
+        $body = $this->send($system, $messages, $tools, $toolName, $maxTokens);
+        $data = $this->findToolInput($body, $toolName);
+
+        $inputTokens = (int) ($body['usage']['input_tokens'] ?? 0);
+        $outputTokens = (int) ($body['usage']['output_tokens'] ?? 0);
+        $cachedTokens = (int) ($body['usage']['cache_read_input_tokens'] ?? 0);
+
+        // Модель иногда отвечает обычным текстом вместо вызова инструмента:
+        // рассуждает вслух или отказывается («точных данных у меня нет»).
+        // Это поправимо — показываем ей её же ответ и просим ещё раз.
+        if ($data === null) {
+            $said = $this->extractText($body);
+
+            Log::warning('Claude: вместо инструмента пришёл текст, пробуем ещё раз', [
+                'tool' => $toolName,
+                'said' => mb_substr($said, 0, 500),
+            ]);
+
+            $messages[] = ['role' => 'assistant', 'content' => $said !== '' ? $said : '(пустой ответ)'];
+            $messages[] = ['role' => 'user', 'content' => $this->nudge($toolName)];
+
+            $body = $this->send($system, $messages, $tools, $toolName, $maxTokens);
+            $data = $this->findToolInput($body, $toolName);
+
+            // Считаем обе попытки: вторая тоже оплачена
+            $inputTokens += (int) ($body['usage']['input_tokens'] ?? 0);
+            $outputTokens += (int) ($body['usage']['output_tokens'] ?? 0);
+            $cachedTokens += (int) ($body['usage']['cache_read_input_tokens'] ?? 0);
+
+            if ($data === null) {
+                Log::error('Claude: инструмент не вызван и со второй попытки', ['body' => $body]);
+
+                throw ClaudeException::content(
+                    'Модель не смогла собрать структуру по этой теме. '
+                    .'Попробуйте сформулировать её конкретнее или добавить исходный текст.'
+                );
+            }
+        }
+
+        $seconds = round(microtime(true) - $startedAt, 1);
+
+        Log::info('Claude: ответ получен', [
+            'tool' => $toolName,
+            'seconds' => $seconds,
+            'input' => $inputTokens,
+            'output' => $outputTokens,
+            // Главный показатель скорости: сколько токенов в секунду
+            // выдаёт модель. Вход на время почти не влияет.
+            'tokens_per_second' => $seconds > 0 ? round($outputTokens / $seconds) : null,
+        ]);
+
+        return new ClaudeResult(
+            data: $data,
+            raw: $body,
+            inputTokens: $inputTokens,
+            outputTokens: $outputTokens,
+            cachedTokens: $cachedTokens,
+            cost: $this->cost($inputTokens, $outputTokens),
+            model: $this->model,
+        );
+    }
+
+    /**
+     * Одна отправка запроса. Возвращает разобранное тело ответа.
+     *
+     * @param  array<int, array>  $messages
+     * @param  array<int, array>  $tools
+     */
+    private function send(
+        string $system,
+        array $messages,
+        array $tools,
+        string $toolName,
+        int $maxTokens,
+    ): array {
         $payload = [
             'model' => $this->model,
             'max_tokens' => $maxTokens,
             'system' => $system,
-            'messages' => [
-                ['role' => 'user', 'content' => $prompt],
-            ],
-            'tools' => [[
-                'name' => $toolName,
-                'description' => $toolDescription,
-                'input_schema' => $schema,
-            ]],
+            'messages' => $messages,
+            'tools' => $tools,
             // Заставляем модель ответить именно этим инструментом
             'tool_choice' => ['type' => 'tool', 'name' => $toolName],
         ];
-
-        $startedAt = microtime(true);
 
         try {
             $response = $this->request()->post($this->baseUrl.'/v1/messages', $payload);
@@ -112,40 +191,31 @@ class ClaudeClient
             );
         }
 
-        $data = $this->extractToolInput($body, $toolName);
-        $usage = $body['usage'] ?? [];
+        return $body;
+    }
 
-        $inputTokens = (int) ($usage['input_tokens'] ?? 0);
-        $outputTokens = (int) ($usage['output_tokens'] ?? 0);
-        $cachedTokens = (int) ($usage['cache_read_input_tokens'] ?? 0);
+    /**
+     * Что сказать модели, когда она ответила текстом вместо инструмента.
+     */
+    private function nudge(string $toolName): string
+    {
+        return <<<TXT
+        Ответ не принят: нужен вызов инструмента {$toolName}, а не текст.
 
-        $seconds = round(microtime(true) - $startedAt, 1);
+        Отказываться нельзя. Если точных данных по теме нет — это нормально
+        и не мешает работе: строй слайды на структуре и формулировках без
+        конкретных чисел, дат и цитат. Пиши «выручка выросла», а не
+        «выручка выросла на 34%». Пустые места оставляй пользователю.
 
-        Log::info('Claude: ответ получен', [
-            'tool' => $toolName,
-            'seconds' => $seconds,
-            'input' => $inputTokens,
-            'output' => $outputTokens,
-            // Главный показатель скорости: сколько токенов в секунду
-            // выдаёт модель. Вход на время почти не влияет.
-            'tokens_per_second' => $seconds > 0 ? round($outputTokens / $seconds) : null,
-        ]);
-
-        return new ClaudeResult(
-            data: $data,
-            raw: $body,
-            inputTokens: $inputTokens,
-            outputTokens: $outputTokens,
-            cachedTokens: $cachedTokens,
-            cost: $this->cost($inputTokens, $outputTokens),
-            model: $this->model,
-        );
+        Вызови инструмент {$toolName} прямо сейчас, ничего не поясняя.
+        TXT;
     }
 
     /**
      * Достаёт из ответа блок tool_use с нужным именем.
+     * Возвращает null, если модель ответила чем-то другим.
      */
-    private function extractToolInput(array $body, string $toolName): array
+    private function findToolInput(array $body, string $toolName): ?array
     {
         foreach ($body['content'] ?? [] as $block) {
             if (($block['type'] ?? null) === 'tool_use' && ($block['name'] ?? null) === $toolName) {
@@ -153,9 +223,23 @@ class ClaudeClient
             }
         }
 
-        Log::error('Claude: в ответе нет tool_use', ['body' => $body]);
+        return null;
+    }
 
-        throw new ClaudeException('Модель вернула ответ в неожиданном формате.');
+    /**
+     * Собирает текстовые блоки ответа — то, что модель сказала вместо дела.
+     */
+    private function extractText(array $body): string
+    {
+        $parts = [];
+
+        foreach ($body['content'] ?? [] as $block) {
+            if (($block['type'] ?? null) === 'text' && filled($block['text'] ?? null)) {
+                $parts[] = $block['text'];
+            }
+        }
+
+        return trim(implode("\n", $parts));
     }
 
     /**
