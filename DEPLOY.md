@@ -232,14 +232,73 @@ ldd $CHROME | grep 'not found'
 su - deploy && cd /var/www/slaidusha && bash deploy/deploy.sh
 ```
 
+## 12a. Защита от ботов
+
+Сканеры находят новый сайт за минуты и начинают перебирать `/.env`,
+`/.git/config`, `/wp-login.php`. Две меры закрывают почти всё.
+
+**Заглушка для чужих доменов.** Боты стучатся по IP и с посторонним
+`Host` — без блока по умолчанию они попадают в наш сайт:
+
+```bash
+cp deploy/nginx-default.conf /etc/nginx/sites-available/default-deny
+ln -sf /etc/nginx/sites-available/default-deny /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+```
+
+**fail2ban** — банит по IP тех, кто перебирает пароли по SSH или ищет
+чужие файлы:
+
+```bash
+apt install -y fail2ban
+cp deploy/fail2ban-nginx.conf /etc/fail2ban/jail.d/slaidusha.conf
+systemctl enable --now fail2ban
+fail2ban-client status
+```
+
+Посмотреть, кого поймали: `fail2ban-client status nginx-botsearch`.
+Разбанить свой IP, если случайно попал: `fail2ban-client set sshd unbanip <IP>`.
+
 ## 13. Бэкапы
 
-Крон под root, ежедневно:
+Скрипт `deploy/backup.sh` делает три вещи: дамп базы, архив файлов
+презентаций и копию `.env` (его нет в гите, а без него сервер не
+поднять). Дампы хранятся 14 дней, архивы файлов — 7.
+
+Ставим в крон от root:
+
+```bash
+crontab -e
+```
+
+и добавляем строку:
 
 ```
-0 4 * * * sudo -u postgres pg_dump slaidusha | gzip > /var/backups/slaidusha-$(date +\%F).sql.gz
-0 5 * * * find /var/backups -name 'slaidusha-*.sql.gz' -mtime +14 -delete
+0 4 * * * /var/www/slaidusha/deploy/backup.sh >> /var/log/slaidusha-backup.log 2>&1
 ```
 
-Сами PDF лежат в `storage/app`. Они восстановимы перегенерацией, но платно,
-поэтому папку тоже стоит забирать в бэкап — хотя бы раз в неделю.
+Проверить сразу, не дожидаясь ночи:
+
+```bash
+/var/www/slaidusha/deploy/backup.sh
+ls -lh /var/backups/slaidusha/
+```
+
+**Бэкап, который не проверяли восстановлением, — это не бэкап.**
+Раз в пару месяцев стоит убедиться, что дамп разворачивается:
+
+```bash
+sudo -u postgres createdb slaidusha_check
+gunzip -c /var/backups/slaidusha/db-<дата>.sql.gz | sudo -u postgres psql slaidusha_check
+sudo -u postgres psql slaidusha_check -c 'select count(*) from presentations;'
+sudo -u postgres dropdb slaidusha_check
+```
+
+И отдельно: копии лежат на том же сервере. От сбоя приложения и от
+случайного `delete` они спасают, от потери самого сервера — нет.
+Как только появятся платящие пользователи, стоит забирать `db-*.sql.gz`
+куда-то ещё — хотя бы раз в неделю на свой компьютер:
+
+```bash
+scp root@slaidusha.ru:/var/backups/slaidusha/db-$(date +%F).sql.gz ~/backups/
+```
