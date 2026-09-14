@@ -37,7 +37,6 @@ class DeckRenderer
         return View::make('deck.deck', [
             'title' => $outline['title'] ?? $presentation->topic,
             'slides' => $outline['slides'],
-            'motif' => $outline['motif'] ?? null,
             'theme' => $theme,
             'themeKey' => $themeKey,
             'paletteKey' => $paletteKey,

@@ -315,9 +315,6 @@ class PresentationController extends Controller
             'outline' => [
                 'title' => $title,
                 'subtitle' => $request->input('subtitle'),
-                // Мотив в форме редактора не участвует — сохраняем прежний,
-                // иначе первая же правка текста стёрла бы фон обложки
-                'motif' => $presentation->outline['motif'] ?? null,
                 'slides' => array_values($request->input('slides')),
             ],
             'title' => $title,
@@ -354,7 +351,6 @@ class PresentationController extends Controller
             $presentation->outline = [
                 'title' => $request->input('title') ?: $presentation->topic,
                 'subtitle' => $request->input('subtitle'),
-                'motif' => $presentation->outline['motif'] ?? null,
                 'slides' => array_values($draft),
             ];
         }

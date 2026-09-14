@@ -5,7 +5,6 @@ namespace App\Services\Claude;
 use App\Models\ApiCall;
 use App\Models\Presentation;
 use App\Services\Deck\Icons;
-use App\Services\Deck\Motifs;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -113,19 +112,9 @@ class PresentationPlanner
 
         $subtitle = $data['subtitle'] ?? $data['subheading'] ?? null;
 
-        $motif = $data['motif'] ?? null;
-
-        // Узор идёт по всей обложке, а заголовок в четыре строки занимает
-        // её целиком: полосы и сетки начинают перечёркивать буквы.
-        // Длинное название важнее украшения, поэтому узор снимаем.
-        if (mb_strlen((string) $title) > 42) {
-            $motif = null;
-        }
-
         return [
             'title' => $title,
             'subtitle' => $subtitle,
-            'motif' => Motifs::has($motif) ? $motif : null,
             'slides' => $this->thinIcons(
                 $this->ensureTitleSlide($slides, $title, $subtitle)
             ),
@@ -431,12 +420,6 @@ class PresentationPlanner
           места, которые докладчик заполнит сам. Собери такую.
         - notes — одна фраза для того, кто выступает: что сказать вслух,
           чего нет на слайде. Не пересказывай слайд своими словами.
-        - motif — фоновый узор обложки, один на всю презентацию.
-          none — полноправный ответ и хороший ответ по умолчанию:
-          строгая, деловая или трагическая тема лучше выглядит без
-          узора. Узор выбирай, только если он говорит о теме что-то
-          своё, и по духу, а не буквально: у доклада про экономику
-          это bars, у доклада про экосистемы waves.
         - icon — редкий акцент, а не оформление каждого пункта.
           На большей части слайдов у всех пунктов стоит none, и это
           нормально: презентация совсем без значков выглядит строго,

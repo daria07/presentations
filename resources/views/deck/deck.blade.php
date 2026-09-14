@@ -438,27 +438,9 @@
 
     /* ---------- фоновый мотив ---------- */
 
-    /* Узор живёт под содержимым и намеренно едва заметен:
-       это фон, а не иллюстрация */
-    .motif {
-        position: absolute;
-        inset: 0;
-        color: var(--cover-accent);
-        opacity: .13;
-        pointer-events: none;
-    }
-
-    .motif svg { width: 100%; height: 100%; }
-
-    /* Абсолютно позиционированный элемент рисуется поверх обычных,
-       поэтому содержимое обложки поднимаем явно */
-    .slide--cover > *:not(.motif) { position: relative; z-index: 1; }
-
     /* ---------- декоративная геометрия обложки ---------- */
 
     /* Дуга в углу: намёк на объём, который не спорит с текстом */
-    .slide--cover.has-motif::after,
-    .slide--cover.has-motif::before,
     .slide--bare::after,
     .slide--bare::before { display: none; }
 

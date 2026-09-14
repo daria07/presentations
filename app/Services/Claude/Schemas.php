@@ -3,7 +3,6 @@
 namespace App\Services\Claude;
 
 use App\Services\Deck\Icons;
-use App\Services\Deck\Motifs;
 
 /**
  * JSON-схемы, по которым модель обязана вернуть ответ.
@@ -59,15 +58,6 @@ class Schemas
                 'subtitle' => [
                     'type' => 'string',
                     'description' => 'Подзаголовок для титульного слайда.',
-                ],
-                'motif' => [
-                    'type' => 'string',
-                    'enum' => [...Motifs::names(), 'none'],
-                    'description' => 'Фоновый узор обложки по духу темы, '
-                        .'или none, если тема не просит узора. '
-                        .collect(Motifs::MEANINGS)
-                            ->map(fn ($m, $k) => "{$k} — {$m}")
-                            ->implode('; '),
                 ],
                 'slides' => [
                     'type' => 'array',
