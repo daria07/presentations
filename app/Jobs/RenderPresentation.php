@@ -30,7 +30,11 @@ class RenderPresentation implements ShouldQueue
     {
         $this->presentation->update(['status' => PresentationStatus::Generating]);
 
-        $path = $renderer->pdf($this->presentation, $this->presentation->theme);
+        $path = $renderer->pdf(
+            $this->presentation,
+            $this->presentation->theme,
+            $this->presentation->palette,
+        );
 
         $this->presentation->update([
             'file_path' => $path,

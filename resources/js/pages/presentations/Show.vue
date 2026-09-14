@@ -34,8 +34,17 @@ type Theme = {
     key: string;
     name: string;
     note: string;
+    style: string;
+    font: string;
+};
+
+type Palette = {
+    key: string;
+    name: string;
+    note: string;
     accent: string;
     cover: string;
+    paper: string;
 };
 
 type Presentation = {
@@ -54,11 +63,13 @@ type Presentation = {
     downloadUrl: string | null;
     editUrl: string | null;
     theme: string;
+    palette: string;
 };
 
 const props = defineProps<{
     presentation: Presentation;
     themes: Theme[];
+    palettes: Palette[];
 }>();
 
 defineOptions({
@@ -72,7 +83,10 @@ const current = ref<Presentation>(props.presentation);
 /* ---------- Ответы на уточняющие вопросы ---------- */
 
 const answers = ref<Record<string, string>>({});
-const theme = ref(props.presentation.theme ?? props.themes[0]?.key ?? 'clay');
+const theme = ref(props.presentation.theme ?? props.themes[0]?.key ?? 'precise');
+const palette = ref(
+    props.presentation.palette ?? props.palettes[0]?.key ?? 'graphite',
+);
 const sending = ref(false);
 const formError = ref<string | null>(null);
 
@@ -86,7 +100,7 @@ function submitAnswers() {
 
     router.post(
         `/presentations/${current.value.id}/answers`,
-        { answers: answers.value, theme: theme.value },
+        { answers: answers.value, theme: theme.value, palette: palette.value },
         {
             onError: (errors) => {
                 formError.value =
@@ -193,16 +207,116 @@ onBeforeUnmount(stopPolling);
 /* ---------- Смена оформления у готовой презентации ---------- */
 
 const switching = ref<string | null>(null);
+const preview = ref<HTMLIFrameElement | null>(null);
 
-function switchTheme(key: string) {
-    if (key === current.value.theme || switching.value) return;
+/*
+   Экран перекрашивается мгновенно, а PDF на сервере печатается заново
+   и занимает около минуты. Пока он не готов, «Открыть» и «Скачать»
+   отдали бы файл в прежнем оформлении — честнее подождать.
+*/
+const reprinting = ref(false);
 
-    switching.value = key;
-    router.post(
-        `/presentations/${current.value.id}/theme`,
-        { theme: key },
-        { onFinish: () => (switching.value = null) },
+async function waitForFile() {
+    reprinting.value = true;
+
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < POLL_LIMIT_MS) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
+
+        try {
+            const response = await fetch(
+                `/presentations/${current.value.id}/status`,
+                { headers: { Accept: 'application/json' } },
+            );
+
+            if (!response.ok) continue;
+
+            const fresh = await response.json();
+
+            if (!fresh.isPending) {
+                // Забираем свежие ссылки, оформление на экране не трогаем
+                current.value = { ...fresh, theme: current.value.theme };
+                break;
+            }
+        } catch {
+            // Сеть моргнула — пробуем на следующем круге
+        }
+    }
+
+    reprinting.value = false;
+}
+
+/*
+   Превью — это та же страница слайдов, что уходит в печать, и все
+   палитры уже лежат в ней. Поэтому смена шаблона — это два атрибута
+   на <html> внутри iframe: ни запроса, ни перерисовки, ни мигания.
+   На сервер уходим отдельно и молча — там перепечатывается PDF,
+   чтобы скачанный файл совпадал с тем, что человек видит.
+*/
+function applyToPreview(themeKey: string, paletteKey: string) {
+    const root = preview.value?.contentDocument?.documentElement;
+
+    if (!root) return false;
+
+    const theme = props.themes.find((t) => t.key === themeKey);
+
+    root.dataset.palette = paletteKey;
+
+    if (theme) {
+        root.dataset.theme = theme.key;
+        root.dataset.style = theme.style;
+    }
+
+    return true;
+}
+
+/** Обе оси сохраняются одной ручкой: печать всё равно одна */
+function switchLook(next: { theme?: string; palette?: string }) {
+    const themeKey = next.theme ?? current.value.theme;
+    const paletteKey = next.palette ?? current.value.palette;
+
+    if (
+        themeKey === current.value.theme &&
+        paletteKey === current.value.palette
+    ) {
+        return;
+    }
+
+    const applied = applyToPreview(themeKey, paletteKey);
+
+    current.value = { ...current.value, theme: themeKey, palette: paletteKey };
+    switching.value = themeKey + paletteKey;
+
+    // XSRF-токен Laravel кладёт в cookie; в заголовок он идёт
+    // раскодированным, иначе проверка не сойдётся
+    const token = decodeURIComponent(
+        document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
     );
+
+    fetch(`/presentations/${current.value.id}/theme`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-XSRF-TOKEN': token,
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ theme: themeKey, palette: paletteKey }),
+    })
+        .catch(() => {
+            // Не сохранилось — экран уже перекрашен, но файл останется
+            // прежним. Честнее перезагрузить и показать правду.
+            router.reload();
+        })
+        .then(() => waitForFile())
+        .finally(() => {
+            switching.value = null;
+
+            // Если iframe ещё не был готов в момент клика — перечитываем
+            if (!applied) {
+                router.reload({ only: ['presentation'] });
+            }
+        });
 }
 
 /* ---------- Удаление ---------- */
@@ -354,23 +468,59 @@ async function copyShare() {
                 </div>
             </div>
 
-            <div class="space-y-3 border-t pt-6">
-                <p class="font-medium">Шаблон</p>
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        v-for="t in themes"
-                        :key="t.key"
-                        type="button"
-                        class="border-border flex items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors"
-                        :class="theme === t.key ? 'border-foreground' : 'hover:border-foreground/40'"
-                        @click="theme = t.key"
-                    >
-                        <span class="flex gap-1">
-                            <span class="size-4 rounded-full" :style="{ background: t.cover }" />
-                            <span class="size-4 rounded-full" :style="{ background: t.accent }" />
-                        </span>
-                        {{ t.name }}
-                    </button>
+            <div class="space-y-4 border-t pt-6">
+                <div class="space-y-2">
+                    <p class="font-medium">Тема</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-for="t in themes"
+                            :key="t.key"
+                            type="button"
+                            class="border-border rounded-lg border px-4 py-2.5 text-left text-sm transition-colors"
+                            :class="
+                                theme === t.key
+                                    ? 'border-foreground'
+                                    : 'hover:border-foreground/40'
+                            "
+                            @click="theme = t.key"
+                        >
+                            {{ t.name }}
+                            <span class="text-muted-foreground block text-xs">
+                                {{ t.note }}
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <p class="font-medium">Гамма</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-for="p in palettes"
+                            :key="p.key"
+                            type="button"
+                            :title="p.note"
+                            class="border-border flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
+                            :class="
+                                palette === p.key
+                                    ? 'border-foreground'
+                                    : 'hover:border-foreground/40'
+                            "
+                            @click="palette = p.key"
+                        >
+                            <span class="flex gap-1">
+                                <span
+                                    class="size-4 rounded-full"
+                                    :style="{ background: p.cover }"
+                                />
+                                <span
+                                    class="size-4 rounded-full"
+                                    :style="{ background: p.accent }"
+                                />
+                            </span>
+                            {{ p.name }}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -406,16 +556,25 @@ async function copyShare() {
                         <Link2 class="size-4" />
                         {{ copied ? 'Скопировано' : 'Ссылка' }}
                     </Button>
-                    <Button variant="outline" size="sm" as-child>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        as-child
+                        :class="reprinting && 'pointer-events-none opacity-50'"
+                    >
                         <a :href="current.shareUrl!" target="_blank" rel="noopener">
                             <ExternalLink class="size-4" />
                             Открыть
                         </a>
                     </Button>
-                    <Button size="sm" as-child>
+                    <Button
+                        size="sm"
+                        as-child
+                        :class="reprinting && 'pointer-events-none opacity-50'"
+                    >
                         <a :href="current.downloadUrl!">
                             <Download class="size-4" />
-                            Скачать
+                            {{ reprinting ? 'Обновляем файл…' : 'Скачать' }}
                         </a>
                     </Button>
 
@@ -471,7 +630,7 @@ async function copyShare() {
 
             <div class="border-border group relative overflow-hidden rounded-xl border bg-neutral-100 dark:bg-neutral-900">
                 <iframe
-                    :key="current.previewUrl!"
+                    ref="preview"
                     :src="current.previewUrl!"
                     class="aspect-video w-full"
                     title="Просмотр презентации"
@@ -490,34 +649,61 @@ async function copyShare() {
 
             <!-- Оформление меняется бесплатно: структура уже готова,
                  перепечатывается только файл -->
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-3">
-                <p class="text-muted-foreground text-sm">Шаблон</p>
+            <div class="space-y-4">
+                <div class="flex flex-wrap items-start gap-x-4 gap-y-3">
+                    <p class="text-muted-foreground w-20 pt-2 text-sm">Тема</p>
 
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        v-for="t in themes"
-                        :key="t.key"
-                        type="button"
-                        class="border-border flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
-                        :class="
-                            current.theme === t.key
-                                ? 'border-foreground'
-                                : 'hover:border-foreground/40'
-                        "
-                        :disabled="switching !== null"
-                        @click="switchTheme(t.key)"
-                    >
-                        <span class="flex gap-1">
-                            <span class="size-3.5 rounded-full" :style="{ background: t.cover }" />
-                            <span class="size-3.5 rounded-full" :style="{ background: t.accent }" />
-                        </span>
-                        <span class="text-left">
-                            {{ switching === t.key ? 'Меняем…' : t.name }}
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-for="t in themes"
+                            :key="t.key"
+                            type="button"
+                            class="border-border rounded-lg border px-3 py-1.5 text-left text-sm transition-colors"
+                            :class="
+                                current.theme === t.key
+                                    ? 'border-foreground'
+                                    : 'hover:border-foreground/40'
+                            "
+                            @click="switchLook({ theme: t.key })"
+                        >
+                            {{ t.name }}
                             <span class="text-muted-foreground block text-xs">
                                 {{ t.note }}
                             </span>
-                        </span>
-                    </button>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-start gap-x-4 gap-y-3">
+                    <p class="text-muted-foreground w-20 pt-2 text-sm">Гамма</p>
+
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-for="p in palettes"
+                            :key="p.key"
+                            type="button"
+                            :title="p.note"
+                            class="border-border flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors"
+                            :class="
+                                current.palette === p.key
+                                    ? 'border-foreground'
+                                    : 'hover:border-foreground/40'
+                            "
+                            @click="switchLook({ palette: p.key })"
+                        >
+                            <span class="flex gap-1">
+                                <span
+                                    class="size-3.5 rounded-full"
+                                    :style="{ background: p.cover }"
+                                />
+                                <span
+                                    class="size-3.5 rounded-full"
+                                    :style="{ background: p.accent }"
+                                />
+                            </span>
+                            {{ p.name }}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

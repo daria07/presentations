@@ -12,6 +12,7 @@ class AnswerQuestionsRequest extends FormRequest
             'answers' => ['required', 'array'],
             'answers.*' => ['nullable', 'string', 'max:200'],
             'theme' => ['nullable', 'string', 'in:'.implode(',', array_keys(config('deck.themes')))],
+            'palette' => ['nullable', 'string', 'in:'.implode(',', array_keys(config('deck.palettes')))],
         ];
     }
 

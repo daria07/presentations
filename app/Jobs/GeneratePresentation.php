@@ -31,6 +31,7 @@ class GeneratePresentation implements ShouldQueue
     public function __construct(
         public Presentation $presentation,
         public ?string $theme = null,
+        public ?string $palette = null,
     ) {}
 
     public function handle(PresentationPlanner $planner, DeckRenderer $renderer): void
@@ -43,6 +44,7 @@ class GeneratePresentation implements ShouldQueue
         $presentation->update([
             'status' => PresentationStatus::Generating,
             'theme' => $this->theme ?? $presentation->theme ?? config('deck.default_theme'),
+            'palette' => $this->palette ?? $presentation->palette ?? config('deck.default_palette'),
         ]);
 
         // Структура могла быть куплена на прошлой попытке — если тогда
@@ -64,7 +66,7 @@ class GeneratePresentation implements ShouldQueue
             $presentation->refresh();
         }
 
-        $path = $renderer->pdf($presentation, $presentation->theme);
+        $path = $renderer->pdf($presentation, $presentation->theme, $presentation->palette);
 
         $presentation->update([
             'file_path' => $path,

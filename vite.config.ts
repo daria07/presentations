@@ -24,6 +24,23 @@ export default defineConfig({
                     weights: [500, 600, 700],
                     subsets: ['latin', 'cyrillic'],
                 }),
+                // Шрифты шаблонов презентаций: пара на каждую тему
+                bunny('IBM Plex Sans', {
+                    weights: [400, 500, 600, 700],
+                    subsets: ['latin', 'cyrillic'],
+                }),
+                bunny('Unbounded', {
+                    weights: [600, 800],
+                    subsets: ['latin', 'cyrillic'],
+                }),
+                bunny('Nunito', {
+                    weights: [400, 600, 800],
+                    subsets: ['latin', 'cyrillic'],
+                }),
+                bunny('Onest', {
+                    weights: [400, 500, 600],
+                    subsets: ['latin', 'cyrillic'],
+                }),
             ],
         }),
         inertia(),

@@ -1,10 +1,16 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-palette="{{ $paletteKey }}" data-theme="{{ $themeKey }}" data-style="{{ $style }}">
 <head>
 <meta charset="utf-8">
 <title>{{ $title }}</title>
 <style>
 {!! $fontCss !!}
+</style>
+
+{{-- Палитры всех тем сразу. Переключение на экране — это смена
+     data-theme на <html>, без перерисовки и без запроса к серверу. --}}
+<style>
+{!! $themeVars !!}
 </style>
 <style>
     @page {
@@ -17,8 +23,8 @@
     html, body {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
-        font-family: "{{ $theme['font_body'] }}", -apple-system, sans-serif;
-        color: {{ $theme['ink'] }};
+        font-family: var(--font-body), -apple-system, sans-serif;
+        color: var(--ink);
     }
 
     .slide {
@@ -27,7 +33,7 @@
         page-break-after: always;
         position: relative;
         overflow: hidden;
-        background: {{ $theme['paper'] }};
+        background: var(--paper);
         padding: 20mm 24mm 16mm;
         display: flex;
         flex-direction: column;
@@ -35,15 +41,15 @@
     .slide:last-child { page-break-after: auto; }
 
     .slide--cover {
-        background: {{ $theme['cover_bg'] }};
-        color: {{ $theme['cover_ink'] }};
+        background: var(--cover-bg);
+        color: var(--cover-ink);
         justify-content: center;
     }
 
     /* ---------- типографика ---------- */
 
     h1 {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-weight: 800;
         font-size: 46pt;
         line-height: 1.06;
@@ -53,7 +59,7 @@
     }
 
     h2 {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-weight: 700;
         font-size: 27pt;
         line-height: 1.12;
@@ -64,7 +70,7 @@
 
     .subheading {
         font-size: 13pt;
-        color: {{ $theme['muted'] }};
+        color: var(--muted);
         margin-top: 4mm;
         max-width: 70%;
         line-height: 1.45;
@@ -73,7 +79,7 @@
     .slide--cover .subheading { color: rgba(255,255,255,.72); }
 
     .head {
-        border-bottom: 0.5mm solid {{ $theme['rule'] }};
+        border-bottom: 0.5mm solid var(--rule);
         padding-bottom: 6mm;
         margin-bottom: 9mm;
         flex: none;
@@ -89,7 +95,7 @@
         bottom: -0.5mm;
         width: 16mm;
         height: 0.5mm;
-        background: {{ $theme['accent'] }};
+        background: var(--accent);
     }
 
     /*
@@ -104,32 +110,32 @@
     /* ---------- метки и номера ---------- */
 
     .eyebrow {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-size: 9pt;
         font-weight: 700;
         letter-spacing: 0.16em;
         text-transform: uppercase;
-        color: {{ $theme['accent'] }};
+        color: var(--accent);
         margin-bottom: 5mm;
     }
-    .slide--cover .eyebrow { color: {{ $theme['cover_accent'] }}; }
+    .slide--cover .eyebrow { color: var(--cover-accent); }
 
     .pageno {
         position: absolute;
         right: 24mm;
         bottom: 9mm;
         font-size: 9pt;
-        color: {{ $theme['muted'] }};
+        color: var(--muted);
         font-variant-numeric: tabular-nums;
     }
 
     .rule-accent {
         width: 22mm;
         height: 1.2mm;
-        background: {{ $theme['accent'] }};
+        background: var(--accent);
         border-radius: 1mm;
     }
-    .slide--cover .rule-accent { background: {{ $theme['cover_accent'] }}; }
+    .slide--cover .rule-accent { background: var(--cover-accent); }
 
     /* ---------- bullets ---------- */
 
@@ -141,9 +147,9 @@
         flex: none;
         width: 7mm; height: 7mm;
         border-radius: 50%;
-        background: {{ $theme['accent_soft'] }};
-        color: {{ $theme['accent'] }};
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-family: var(--font-display), sans-serif;
         font-size: 9.5pt;
         font-weight: 700;
         display: flex; align-items: center; justify-content: center;
@@ -153,24 +159,24 @@
     /* Иконка вместо номера: кружок тот же, содержимое другое */
     .bullet-mark--icon {
         background: transparent;
-        color: {{ $theme['accent'] }};
+        color: var(--accent);
         width: 8mm;
         height: 8mm;
         margin-top: 0;
     }
 
     .step-icon {
-        color: {{ $theme['accent'] }};
+        color: var(--accent);
         margin-bottom: 4mm;
     }
 
     .cell-icon {
-        color: {{ $theme['accent'] }};
+        color: var(--accent);
         margin-bottom: 3.5mm;
     }
 
     .bullet-title {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-size: 13.5pt;
         font-weight: 700;
         margin-bottom: 1.5mm;
@@ -179,7 +185,7 @@
     .bullet-text {
         font-size: 12pt;
         line-height: 1.5;
-        color: {{ $theme['muted'] }};
+        color: var(--muted);
         max-width: 82%;
     }
 
@@ -189,12 +195,12 @@
 
     .stat {
         flex: 1;
-        border-top: 1mm solid {{ $theme['accent'] }};
+        border-top: 1mm solid var(--accent);
         padding-top: 6mm;
     }
 
     .stat-value {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-size: 38pt;
         font-weight: 800;
         line-height: 1;
@@ -204,7 +210,7 @@
 
     .stat-label {
         font-size: 11.5pt;
-        color: {{ $theme['muted'] }};
+        color: var(--muted);
         margin-top: 3mm;
         line-height: 1.4;
     }
@@ -226,7 +232,7 @@
         left: 5%;
         right: 5%;
         height: 0.5mm;
-        background: {{ $theme['accent'] }};
+        background: var(--accent);
         opacity: .22;
     }
 
@@ -244,22 +250,22 @@
         width: 5mm;
         height: 5mm;
         border-radius: 50%;
-        background: {{ $theme['accent'] }};
+        background: var(--accent);
         flex: none;
-        box-shadow: 0 0 0 2mm {{ $theme['paper'] }};
+        box-shadow: 0 0 0 2mm var(--paper);
     }
 
     /* Ножка от точки к году — связывает линию с подписью */
     .tl-stem {
         width: 0.5mm;
         height: 9mm;
-        background: {{ $theme['accent'] }};
+        background: var(--accent);
         opacity: .3;
         margin-bottom: 5mm;
     }
 
     .tl-value {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-size: 26pt;
         font-weight: 800;
         line-height: 1;
@@ -269,7 +275,7 @@
 
     .tl-label {
         font-size: 11.5pt;
-        color: {{ $theme['muted'] }};
+        color: var(--muted);
         margin-top: 4mm;
         line-height: 1.45;
         max-width: 46mm;
@@ -285,26 +291,29 @@
         min-height: 52mm;
         padding: 10mm;
         border-radius: 3mm;
-        background: {{ $theme['accent_soft'] }};
+        background: var(--accent-soft);
         display: flex;
         flex-direction: column;
     }
     .compare-col + .compare-col {
-        background: {{ $theme['cover_bg'] }};
+        background: var(--cover-bg);
         color: #FFFFFF;
     }
 
     .compare-title {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-size: 13pt;
         font-weight: 700;
         margin-bottom: 4mm;
-        color: {{ $theme['accent'] }};
+        /* Мелкий текст красим только в accent_ink: чистый accent у ярких
+           гамм даёт около 3:1 к бумаге — годится для крупного и для
+           линий, но не для подписи в 13 пунктов */
+        color: var(--accent-ink, var(--accent));
     }
-    .compare-col + .compare-col .compare-title { color: {{ $theme['cover_accent'] }}; }
+    .compare-col + .compare-col .compare-title { color: var(--cover-accent); }
 
     .compare-text { font-size: 12pt; line-height: 1.5; }
-    .compare-col .compare-text { color: {{ $theme['ink'] }}; }
+    .compare-col .compare-text { color: var(--ink); }
     .compare-col + .compare-col .compare-text { color: rgba(255,255,255,.85); }
 
 
@@ -317,7 +326,7 @@
         display: flex;
         flex-direction: column;
         padding: 9mm 7mm;
-        background: {{ $theme['accent_soft'] }};
+        background: var(--accent-soft);
         border-radius: 2.5mm;
         position: relative;
     }
@@ -335,28 +344,28 @@
         height: 0;
         border-top: 2.4mm solid transparent;
         border-bottom: 2.4mm solid transparent;
-        border-left: 3.2mm solid {{ $theme['accent'] }};
+        border-left: 3.2mm solid var(--accent);
         opacity: .5;
     }
 
     .step-num {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-size: 10pt;
         font-weight: 700;
-        color: {{ $theme['accent'] }};
+        color: var(--accent);
         letter-spacing: .1em;
         margin-bottom: 4mm;
         font-variant-numeric: tabular-nums;
     }
 
     .step-title {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-size: 13pt;
         font-weight: 700;
         margin-bottom: 3mm;
     }
 
-    .step-text { font-size: 11pt; line-height: 1.45; color: {{ $theme['muted'] }}; }
+    .step-text { font-size: 11pt; line-height: 1.45; color: var(--muted); }
 
     /* ---------- matrix: четыре поля по двум осям ---------- */
 
@@ -369,7 +378,7 @@
     .cell {
         padding: 9mm;
         border-radius: 2.5mm;
-        border: 0.4mm solid {{ $theme['rule'] }};
+        border: 0.4mm solid var(--rule);
         display: flex;
         flex-direction: column;
         min-height: 40mm;
@@ -377,21 +386,21 @@
 
     /* По диагонали заливаем — сетка читается как матрица, а не как список */
     .cell:nth-child(1), .cell:nth-child(4) {
-        background: {{ $theme['accent_soft'] }};
+        background: var(--accent-soft);
         border-color: transparent;
     }
 
     .cell-title {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-size: 12.5pt;
         font-weight: 700;
         margin-bottom: 3mm;
     }
     .cell:nth-child(1) .cell-title, .cell:nth-child(4) .cell-title {
-        color: {{ $theme['accent_ink'] ?? $theme['accent'] }};
+        color: var(--accent-ink, var(--accent));
     }
 
-    .cell-text { font-size: 11pt; line-height: 1.45; color: {{ $theme['muted'] }}; }
+    .cell-text { font-size: 11pt; line-height: 1.45; color: var(--muted); }
 
     /* ---------- bignumber: одно число во весь слайд ---------- */
 
@@ -402,17 +411,17 @@
     }
 
     .bignum-value {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-size: 120pt;
         font-weight: 800;
         line-height: .88;
         letter-spacing: -.045em;
-        color: {{ $theme['accent'] }};
+        color: var(--accent);
         font-variant-numeric: tabular-nums;
     }
 
     .bignum-label {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-size: 19pt;
         font-weight: 700;
         margin-top: 6mm;
@@ -422,7 +431,7 @@
     .bignum-note {
         font-size: 12.5pt;
         line-height: 1.5;
-        color: {{ $theme['muted'] }};
+        color: var(--muted);
         margin-top: 4mm;
         max-width: 62%;
     }
@@ -434,7 +443,7 @@
     .motif {
         position: absolute;
         inset: 0;
-        color: {{ $theme['cover_accent'] }};
+        color: var(--cover-accent);
         opacity: .13;
         pointer-events: none;
     }
@@ -449,7 +458,9 @@
 
     /* Дуга в углу: намёк на объём, который не спорит с текстом */
     .slide--cover.has-motif::after,
-    .slide--cover.has-motif::before { display: none; }
+    .slide--cover.has-motif::before,
+    .slide--bare::after,
+    .slide--bare::before { display: none; }
 
     .slide--cover::after {
         content: "";
@@ -459,7 +470,7 @@
         width: 130mm;
         height: 130mm;
         border-radius: 50%;
-        border: 1mm solid {{ $theme['cover_accent'] }};
+        border: 1mm solid var(--cover-accent);
         opacity: .16;
     }
 
@@ -471,7 +482,7 @@
         width: 34mm;
         height: 34mm;
         border-radius: 50%;
-        background: {{ $theme['cover_accent'] }};
+        background: var(--cover-accent);
         opacity: .1;
     }
 
@@ -482,13 +493,13 @@
         font-family: Georgia, serif;
         font-size: 80pt;
         line-height: 0.6;
-        color: {{ $theme['accent'] }};
+        color: var(--accent);
         opacity: .28;
         margin-bottom: 2mm;
     }
 
     .quote-text {
-        font-family: "{{ $theme['font_display'] }}", sans-serif;
+        font-family: var(--font-display), sans-serif;
         font-size: 22pt;
         font-weight: 500;
         line-height: 1.32;
@@ -498,30 +509,42 @@
 
     .quote-author {
         font-size: 12pt;
-        color: {{ $theme['muted'] }};
+        color: var(--muted);
         margin-top: 7mm;
     }
 </style>
 
-{{-- Характер шаблона: типографика, композиция, форма элементов --}}
-@include('deck.styles.'.$style)
+{{-- Характер шаблона: типографика, композиция, форма элементов.
+     Подключаем все наборы сразу, каждый под своим data-style — тогда
+     смена темы на экране меняет и цвета, и типографику, не трогая сервер. --}}
+@foreach ($styles as $styleKey)
+<style>
+{{-- :where() не добавляет веса селекторам внутри, поэтому правила
+     шаблона спорят с базовой вёрсткой ровно так же, как раньше.
+     Без него .compare-col из шаблона перебивал .compare-col + .compare-col
+     из базы — и вторая колонка теряла тёмный фон. --}}
+:where([data-style="{{ $styleKey }}"]) {
+@include('deck.styles.'.$styleKey)
+}
+</style>
+@endforeach
 
 @if ($forScreen ?? false)
 {{-- Экранный просмотр: те же слайды, но подогнанные по ширине
      и разложенные как отдельные листы. В печать это не попадает. --}}
 <style>
-    html {
-        background: {{ $theme['rule'] }};
-        padding: 4mm 0;
-    }
+    /* Рамку рисует сам блок превью на странице, поэтому здесь
+       ни полей, ни теней, ни скруглений — иначе по краям остаются
+       полосы чужого фона */
+    html { background: var(--paper); }
 
     body { margin: 0; }
 
-    .slide {
-        margin: 0 auto 4mm;
-        box-shadow: 0 0.5mm 2mm rgba(0, 0, 0, .18);
-        border-radius: 1mm;
-    }
+    .slide { margin: 0 auto; }
+
+    /* Тонкая линия вместо зазора: слайды не слипаются, но и не
+       расходятся полями */
+    .slide + .slide { border-top: 0.3mm solid var(--rule); }
 </style>
 
 <script>
@@ -533,7 +556,9 @@
         var PX_PER_MM = 96 / 25.4;
 
         function fit() {
-            var available = document.documentElement.clientWidth - 16;
+            // Ровно по ширине окна: запас в пиксели оставлял светлую
+            // полосу справа, которая читалась как сбой вёрстки
+            var available = document.documentElement.clientWidth;
             var ratio = available / (SLIDE_MM * PX_PER_MM);
 
             document.body.style.zoom = Math.min(ratio, 1);

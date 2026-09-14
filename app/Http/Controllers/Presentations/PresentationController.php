@@ -54,6 +54,7 @@ class PresentationController extends Controller
             'credits' => $request->user()->credits,
             'trialAvailable' => ! $request->user()->trial_used,
             'themes' => $this->themes(),
+            'palettes' => $this->palettes(),
         ]);
     }
 
@@ -96,6 +97,7 @@ class PresentationController extends Controller
         return Inertia::render('presentations/Show', [
             'presentation' => $this->detail($presentation),
             'themes' => $this->themes(),
+            'palettes' => $this->palettes(),
             'credits' => $request->user()->credits,
             'trialAvailable' => ! $request->user()->trial_used,
         ]);
@@ -163,6 +165,7 @@ class PresentationController extends Controller
                 fn () => GeneratePresentation::dispatch(
                     $presentation->refresh(),
                     $request->input('theme'),
+                    $request->input('palette'),
                 ),
             ),
         };
@@ -244,7 +247,8 @@ class PresentationController extends Controller
         $this->authorize('update', $presentation);
 
         $request->validate([
-            'theme' => ['required', 'string', 'in:'.implode(',', array_keys(config('deck.themes')))],
+            'theme' => ['nullable', 'string', 'in:'.implode(',', array_keys(config('deck.themes')))],
+            'palette' => ['nullable', 'string', 'in:'.implode(',', array_keys(config('deck.palettes')))],
         ]);
 
         if (! $presentation->isReady()) {
@@ -254,14 +258,17 @@ class PresentationController extends Controller
             ]);
         }
 
-        $theme = $request->string('theme')->value();
+        $theme = $request->input('theme', $presentation->theme);
+        $palette = $request->input('palette', $presentation->palette);
 
-        if ($theme === $presentation->theme) {
+        // Ничего не изменилось — и печатать заново нечего
+        if ($theme === $presentation->theme && $palette === $presentation->palette) {
             return back();
         }
 
         $presentation->update([
             'theme' => $theme,
+            'palette' => $palette,
             'status' => PresentationStatus::Generating,
         ]);
 
@@ -354,7 +361,12 @@ class PresentationController extends Controller
 
         abort_unless(filled($presentation->outline['slides'] ?? null), 404);
 
-        return response($renderer->html($presentation, $presentation->theme, forScreen: true))
+        return response($renderer->html(
+            $presentation,
+            $presentation->theme,
+            forScreen: true,
+            palette: $presentation->palette,
+        ))
             ->header('Content-Type', 'text/html; charset=utf-8');
     }
 
@@ -410,6 +422,7 @@ class PresentationController extends Controller
             'topic' => $presentation->topic,
             'fromText' => $presentation->hasSourceText(),
             'theme' => $presentation->theme ?? config('deck.default_theme'),
+            'palette' => $presentation->palette ?? config('deck.default_palette'),
             'questions' => $presentation->status === PresentationStatus::Asking
                 ? $presentation->clarifications
                 : null,
@@ -419,8 +432,12 @@ class PresentationController extends Controller
             'isReady' => $presentation->isReady(),
             'error' => $presentation->error_message,
             'shareUrl' => $presentation->isReady() ? $presentation->shareUrl() : null,
+            // Живая вёрстка, а не PDF: в HTML лежат все палитры,
+            // поэтому шаблон переключается прямо в превью, без запроса.
+            // Метка версии — чтобы браузер не показал слайды до правок.
             'previewUrl' => $presentation->isReady()
-                ? $presentation->shareUrl().'?v='.$presentation->generated_at?->timestamp
+                ? route('presentations.preview', $presentation)
+                    .'?v='.($presentation->updated_at?->timestamp ?? 0)
                 : null,
             'downloadUrl' => $presentation->isReady()
                 ? route('presentations.download', $presentation)
@@ -448,6 +465,10 @@ class PresentationController extends Controller
         ];
     }
 
+    /**
+     * Темы — характер оформления: шрифты, скругления, линии.
+     * Фронт ставит ключ на <html> превью, поэтому смена мгновенная.
+     */
     private function themes(): array
     {
         return collect(config('deck.themes'))
@@ -455,8 +476,24 @@ class PresentationController extends Controller
                 'key' => $key,
                 'name' => $theme['name'],
                 'note' => $theme['note'] ?? '',
-                'accent' => $theme['accent'],
-                'cover' => $theme['cover_bg'],
+                'style' => $theme['style'],
+                'font' => $theme['font_display'],
+            ])
+            ->values()
+            ->all();
+    }
+
+    /** Гаммы — только цвет, любая сочетается с любой темой */
+    private function palettes(): array
+    {
+        return collect(config('deck.palettes'))
+            ->map(fn ($palette, $key) => [
+                'key' => $key,
+                'name' => $palette['name'],
+                'note' => $palette['note'] ?? '',
+                'accent' => $palette['accent'],
+                'cover' => $palette['cover_bg'],
+                'paper' => $palette['paper'],
             ])
             ->values()
             ->all();

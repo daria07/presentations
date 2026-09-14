@@ -11,13 +11,14 @@ use Throwable;
 /**
  * Печатает PDF по уже собранной структуре:
  *   php artisan deck:render 12
- *   php artisan deck:render 12 --theme=forest --html
+ *   php artisan deck:render 12 --theme=bold --palette=pine --html
  */
 class RenderDeck extends Command
 {
     protected $signature = 'deck:render
                             {id? : ID презентации, по умолчанию последняя}
-                            {--theme= : graphite | forest | clay}
+                            {--theme= : precise | bold | soft}
+                            {--palette= : graphite | coal | pine | bordeaux | sand | ocean | plum}
                             {--html : Сохранить ещё и HTML, чтобы посмотреть вёрстку в браузере}
                             {--open : Открыть готовый файл}';
 
@@ -42,18 +43,19 @@ class RenderDeck extends Command
         }
 
         $theme = $this->option('theme');
+        $palette = $this->option('palette');
 
         try {
             if ($this->option('html')) {
                 $htmlPath = storage_path("app/deck-{$presentation->id}.html");
-                file_put_contents($htmlPath, $renderer->html($presentation, $theme));
+                file_put_contents($htmlPath, $renderer->html($presentation, $theme, palette: $palette));
                 $this->components->twoColumnDetail('HTML', $htmlPath);
             }
 
             $path = null;
 
-            $this->components->task('Печатаем PDF', function () use ($renderer, $presentation, $theme, &$path) {
-                $path = $renderer->pdf($presentation, $theme);
+            $this->components->task('Печатаем PDF', function () use ($renderer, $presentation, $theme, $palette, &$path) {
+                $path = $renderer->pdf($presentation, $theme, $palette);
 
                 return true;
             });
@@ -76,7 +78,8 @@ class RenderDeck extends Command
         $this->newLine();
         $this->components->twoColumnDetail('Презентация', $presentation->outline['title'] ?? '—');
         $this->components->twoColumnDetail('Слайдов', (string) count($presentation->outline['slides']));
-        $this->components->twoColumnDetail('Тема', $theme ?: config('deck.default_theme'));
+        $this->components->twoColumnDetail('Тема', $theme ?: ($presentation->theme ?? config('deck.default_theme')));
+        $this->components->twoColumnDetail('Гамма', $palette ?: ($presentation->palette ?? config('deck.default_palette')));
         $this->components->twoColumnDetail('Файл', $full);
         $this->components->twoColumnDetail('Размер', number_format(filesize($full) / 1024, 0).' КБ');
 

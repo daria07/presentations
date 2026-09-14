@@ -31,7 +31,7 @@ use Illuminate\Support\Str;
 #[Fillable([
     'user_id', 'title', 'topic', 'source_text', 'slide_count',
     'clarifications', 'outline', 'status',
-    'file_path', 'file_format', 'theme', 'generated_at', 'error_message',
+    'file_path', 'file_format', 'theme', 'palette', 'generated_at', 'error_message',
 ])]
 class Presentation extends Model
 {

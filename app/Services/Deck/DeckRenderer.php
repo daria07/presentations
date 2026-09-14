@@ -18,29 +18,40 @@ use Throwable;
  */
 class DeckRenderer
 {
-    public function html(Presentation $presentation, ?string $theme = null, bool $forScreen = false): string
-    {
+    public function html(
+        Presentation $presentation,
+        ?string $theme = null,
+        bool $forScreen = false,
+        ?string $palette = null,
+    ): string {
         $outline = $presentation->outline ?? [];
 
         if (empty($outline['slides'])) {
             throw new RuntimeException('У презентации нет слайдов — сначала нужно собрать структуру.');
         }
 
-        $theme = $this->theme($theme);
+        $themeKey = $this->themeKey($theme ?? $presentation->theme);
+        $paletteKey = $this->paletteKey($palette ?? $presentation->palette);
+        $theme = config('deck.themes')[$themeKey];
 
         return View::make('deck.deck', [
             'title' => $outline['title'] ?? $presentation->topic,
             'slides' => $outline['slides'],
             'motif' => $outline['motif'] ?? null,
             'theme' => $theme,
-            'fontCss' => FontLoader::css(array_unique([
-                $theme['font_display'],
-                $theme['font_body'],
-            ])),
+            'themeKey' => $themeKey,
+            'paletteKey' => $paletteKey,
+            // Все гаммы и все темы разом: на экране переключение должно быть
+            // мгновенным, без запроса к серверу и перерисовки
+            'themeVars' => $this->cssVars(),
+            // Шрифты тоже всех тем — иначе при смене темы текст на секунду
+            // съезжает на системный, пока догружается нужная гарнитура
+            'fontCss' => FontLoader::css($this->allFamilies()),
             'width' => config('deck.width'),
             'height' => config('deck.height'),
-            // Файл стилей шаблона: разметка общая, характер разный
-            'style' => $theme['style'] ?? 'strict',
+            // Файл стилей темы: разметка общая, характер разный
+            'style' => $theme['style'],
+            'styles' => $this->styleKeys(),
             // На экране слайды нужно уместить по ширине колонки,
             // в печати — оставить натуральный размер
             'forScreen' => $forScreen,
@@ -48,9 +59,74 @@ class DeckRenderer
     }
 
     /**
+     * Ключи файлов стилей — по одному на тему.
+     *
+     * @return array<int, string>
+     */
+    private function styleKeys(): array
+    {
+        return collect(config('deck.themes'))
+            ->pluck('style')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Все семейства шрифтов, встречающиеся в темах.
+     *
+     * @return array<int, string>
+     */
+    private function allFamilies(): array
+    {
+        return collect(config('deck.themes'))
+            ->flatMap(fn (array $t) => [$t['font_display'] ?? null, $t['font_body'] ?? null])
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * CSS-переменные: цвета по гаммам, шрифты по темам.
+     * Вёрстка обращается к ним через var(), поэтому смена гаммы или
+     * темы — это смена атрибута на корне документа, без перерисовки.
+     */
+    private function cssVars(): string
+    {
+        $blocks = [];
+
+        foreach (config('deck.palettes') as $key => $palette) {
+            $vars = [];
+
+            foreach ($palette as $name => $value) {
+                if (in_array($name, ['name', 'note'], true)) {
+                    continue;
+                }
+
+                $vars[] = '--'.str_replace('_', '-', $name).':'.$value;
+            }
+
+            $blocks[] = sprintf('[data-palette="%s"]{%s}', $key, implode(';', $vars));
+        }
+
+        foreach (config('deck.themes') as $key => $theme) {
+            $blocks[] = sprintf(
+                '[data-theme="%s"]{--font-display:"%s";--font-body:"%s"}',
+                $key,
+                $theme['font_display'],
+                $theme['font_body'],
+            );
+        }
+
+        return implode("\n", $blocks);
+    }
+
+    /**
      * Печатает PDF и возвращает путь на диске.
      */
-    public function pdf(Presentation $presentation, ?string $theme = null): string
+    public function pdf(Presentation $presentation, ?string $theme = null, ?string $palette = null): string
     {
         $disk = Storage::disk(config('deck.disk'));
         $relative = config('deck.path')."/{$presentation->id}-{$presentation->share_token}.pdf";
@@ -64,7 +140,7 @@ class DeckRenderer
         $pdf = $temp.'.pdf';
 
         try {
-            $this->browser($presentation, $theme)->savePdf($pdf);
+            $this->browser($presentation, $theme, $palette)->savePdf($pdf);
             $disk->put($relative, file_get_contents($pdf));
         } catch (Throwable $e) {
             throw new RuntimeException('Не удалось напечатать PDF: '.$e->getMessage(), previous: $e);
@@ -79,9 +155,9 @@ class DeckRenderer
         return $relative;
     }
 
-    private function browser(Presentation $presentation, ?string $theme): Browsershot
+    private function browser(Presentation $presentation, ?string $theme, ?string $palette = null): Browsershot
     {
-        $shot = Browsershot::html($this->html($presentation, $theme))
+        $shot = Browsershot::html($this->html($presentation, $theme, palette: $palette))
             ->showBackground()
             ->margins(0, 0, 0, 0)
             ->paperSize(config('deck.width'), config('deck.height'), 'mm')
@@ -99,11 +175,23 @@ class DeckRenderer
         return $shot;
     }
 
-    private function theme(?string $name): array
+    /**
+     * Имя темы, гарантированно существующее в конфиге.
+     */
+    private function themeKey(?string $name): string
     {
         $themes = config('deck.themes');
-        $name ??= config('deck.default_theme');
 
-        return $themes[$name] ?? $themes[config('deck.default_theme')];
+        return isset($themes[$name]) ? $name : config('deck.default_theme');
+    }
+
+    /**
+     * Имя гаммы, гарантированно существующее в конфиге.
+     */
+    private function paletteKey(?string $name): string
+    {
+        $palettes = config('deck.palettes');
+
+        return isset($palettes[$name]) ? $name : config('deck.default_palette');
     }
 }
