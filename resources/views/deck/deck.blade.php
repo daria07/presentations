@@ -511,54 +511,18 @@
 </style>
 @endforeach
 
-@if ($forScreen ?? false)
-{{-- Экранный просмотр: те же слайды, но подогнанные по ширине
-     и разложенные как отдельные листы. В печать это не попадает. --}}
-<style>
-    /* Рамку рисует сам блок превью на странице, поэтому здесь
-       ни полей, ни теней, ни скруглений — иначе по краям остаются
-       полосы чужого фона */
-    html { background: var(--paper); }
-
-    body { margin: 0; }
-
-    .slide { margin: 0 auto; }
-
-    /* Тонкая линия вместо зазора: слайды не слипаются, но и не
-       расходятся полями */
-    .slide + .slide { border-top: 0.3mm solid var(--rule); }
-</style>
-
-<script>
-    // Слайд шире любой колонки редактора, поэтому масштабируем
-    // документ целиком — так вёрстка остаётся ровно той же,
-    // просто уменьшенной.
-    (function () {
-        var SLIDE_MM = {{ $width }};
-        var PX_PER_MM = 96 / 25.4;
-
-        function fit() {
-            // Ровно по ширине окна: запас в пиксели оставлял светлую
-            // полосу справа, которая читалась как сбой вёрстки
-            var available = document.documentElement.clientWidth;
-            var ratio = available / (SLIDE_MM * PX_PER_MM);
-
-            document.body.style.zoom = Math.min(ratio, 1);
-        }
-
-        // Скрипт объявлен в head, тела ещё нет — ждём разбора документа
-        document.addEventListener('DOMContentLoaded', fit);
-        window.addEventListener('resize', fit);
-    })();
-</script>
-@endif
+{{-- Экранный просмотр собирается на стороне приложения: слайды
+     переносятся в Shadow DOM страницы, а лента миниатюр, стрелки и
+     полный экран — обычный интерфейс. Здесь остаётся только вёрстка. --}}
 </head>
 <body>
+<div class="deck" data-palette="{{ $paletteKey }}" data-theme="{{ $themeKey }}" data-style="{{ $style }}">
 @foreach ($slides as $i => $slide)
     @includeFirst(
         ['deck.slides.'.$slide['layout'], 'deck.slides.bullets'],
         ['slide' => $slide, 'index' => $i, 'total' => count($slides), 'deckTitle' => $title]
     )
 @endforeach
+</div>
 </body>
 </html>

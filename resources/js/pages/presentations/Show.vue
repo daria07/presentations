@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import DeckViewer from '@/components/DeckViewer.vue';
 import {
     CheckCircle2,
     Download,
@@ -207,7 +208,6 @@ onBeforeUnmount(stopPolling);
 /* ---------- Смена оформления у готовой презентации ---------- */
 
 const switching = ref<string | null>(null);
-const preview = ref<HTMLIFrameElement | null>(null);
 
 /*
    Экран перекрашивается мгновенно, а PDF на сервере печатается заново
@@ -247,31 +247,19 @@ async function waitForFile() {
     reprinting.value = false;
 }
 
-/*
-   Превью — это та же страница слайдов, что уходит в печать, и все
-   палитры уже лежат в ней. Поэтому смена шаблона — это два атрибута
-   на <html> внутри iframe: ни запроса, ни перерисовки, ни мигания.
-   На сервер уходим отдельно и молча — там перепечатывается PDF,
-   чтобы скачанный файл совпадал с тем, что человек видит.
-*/
-function applyToPreview(themeKey: string, paletteKey: string) {
-    const root = preview.value?.contentDocument?.documentElement;
-
-    if (!root) return false;
-
-    const theme = props.themes.find((t) => t.key === themeKey);
-
-    root.dataset.palette = paletteKey;
-
-    if (theme) {
-        root.dataset.theme = theme.key;
-        root.dataset.style = theme.style;
-    }
-
-    return true;
+/** Файл оформления, соответствующий теме */
+function styleOf(themeKey: string): string {
+    return props.themes.find((t) => t.key === themeKey)?.style ?? 'precise';
 }
 
-/** Обе оси сохраняются одной ручкой: печать всё равно одна */
+/*
+   Просмотрщик перекрашивается сам: он следит за темой и гаммой и меняет
+   атрибуты на контейнерах со слайдами. Ни запроса, ни перерисовки.
+   На сервер уходим отдельно и молча — там перепечатывается PDF, чтобы
+   скачанный файл совпадал с тем, что человек видит.
+
+   Обе оси сохраняются одной ручкой: печать всё равно одна.
+*/
 function switchLook(next: { theme?: string; palette?: string }) {
     const themeKey = next.theme ?? current.value.theme;
     const paletteKey = next.palette ?? current.value.palette;
@@ -282,8 +270,6 @@ function switchLook(next: { theme?: string; palette?: string }) {
     ) {
         return;
     }
-
-    const applied = applyToPreview(themeKey, paletteKey);
 
     current.value = { ...current.value, theme: themeKey, palette: paletteKey };
     switching.value = themeKey + paletteKey;
@@ -311,11 +297,6 @@ function switchLook(next: { theme?: string; palette?: string }) {
         .then(() => waitForFile())
         .finally(() => {
             switching.value = null;
-
-            // Если iframe ещё не был готов в момент клика — перечитываем
-            if (!applied) {
-                router.reload({ only: ['presentation'] });
-            }
         });
 }
 
@@ -628,83 +609,80 @@ async function copyShare() {
                 />
             </div>
 
-            <div class="border-border group relative overflow-hidden rounded-xl border bg-neutral-100 dark:bg-neutral-900">
-                <iframe
-                    ref="preview"
-                    :src="current.previewUrl!"
-                    class="aspect-video w-full"
-                    title="Просмотр презентации"
-                />
-
-                <a
-                    :href="current.shareUrl!"
-                    target="_blank"
-                    rel="noopener"
-                    class="bg-background/90 text-foreground pointer-events-auto absolute top-3 right-3 flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium opacity-0 shadow-sm backdrop-blur transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                >
-                    <ExternalLink class="size-3.5" />
-                    Во весь экран
-                </a>
-            </div>
-
-            <!-- Оформление меняется бесплатно: структура уже готова,
-                 перепечатывается только файл -->
-            <div class="space-y-4">
-                <div class="flex flex-wrap items-start gap-x-4 gap-y-3">
-                    <p class="text-muted-foreground w-20 pt-2 text-sm">Тема</p>
-
-                    <div class="flex flex-wrap gap-2">
-                        <button
-                            v-for="t in themes"
-                            :key="t.key"
-                            type="button"
-                            class="border-border rounded-lg border px-3 py-1.5 text-left text-sm transition-colors"
-                            :class="
-                                current.theme === t.key
-                                    ? 'border-foreground'
-                                    : 'hover:border-foreground/40'
-                            "
-                            @click="switchLook({ theme: t.key })"
-                        >
-                            {{ t.name }}
-                            <span class="text-muted-foreground block text-xs">
-                                {{ t.note }}
-                            </span>
-                        </button>
-                    </div>
+            <!-- Просмотр и оформление рядом: слева слайды с лентой
+                 миниатюр, справа выбор темы и гаммы -->
+            <div class="flex flex-col gap-5 lg:flex-row">
+                <div class="min-w-0 flex-1">
+                    <DeckViewer
+                        :src="current.previewUrl!"
+                        :theme="current.theme"
+                        :palette="current.palette"
+                        :deck-style="styleOf(current.theme)"
+                        class="h-[400px] lg:h-[540px]"
+                    />
                 </div>
 
-                <div class="flex flex-wrap items-start gap-x-4 gap-y-3">
-                    <p class="text-muted-foreground w-20 pt-2 text-sm">Гамма</p>
-
-                    <div class="flex flex-wrap gap-2">
-                        <button
-                            v-for="p in palettes"
-                            :key="p.key"
-                            type="button"
-                            :title="p.note"
-                            class="border-border flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors"
-                            :class="
-                                current.palette === p.key
-                                    ? 'border-foreground'
-                                    : 'hover:border-foreground/40'
-                            "
-                            @click="switchLook({ palette: p.key })"
-                        >
-                            <span class="flex gap-1">
-                                <span
-                                    class="size-3.5 rounded-full"
-                                    :style="{ background: p.cover }"
-                                />
-                                <span
-                                    class="size-3.5 rounded-full"
-                                    :style="{ background: p.accent }"
-                                />
-                            </span>
-                            {{ p.name }}
-                        </button>
+                <!-- Оформление меняется бесплатно: структура уже готова,
+                     перепечатывается только файл -->
+                <aside class="flex w-full flex-none flex-col gap-6 lg:w-56">
+                    <div class="space-y-2">
+                        <p class="text-muted-foreground text-xs tracking-wide uppercase">
+                            Тема
+                        </p>
+                        <div class="flex flex-col gap-1.5">
+                            <button
+                                v-for="t in themes"
+                                :key="t.key"
+                                type="button"
+                                class="border-border rounded-lg border px-3 py-2 text-left text-sm transition-colors"
+                                :class="
+                                    current.theme === t.key
+                                        ? 'border-foreground'
+                                        : 'hover:border-foreground/40'
+                                "
+                                @click="switchLook({ theme: t.key })"
+                            >
+                                {{ t.name }}
+                                <span class="text-muted-foreground block text-xs">
+                                    {{ t.note }}
+                                </span>
+                            </button>
+                        </div>
                     </div>
-                </div>
+
+                    <div class="space-y-2">
+                        <p class="text-muted-foreground text-xs tracking-wide uppercase">
+                            Гамма
+                        </p>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button
+                                v-for="p in palettes"
+                                :key="p.key"
+                                type="button"
+                                :title="p.note"
+                                class="border-border flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm transition-colors"
+                                :class="
+                                    current.palette === p.key
+                                        ? 'border-foreground'
+                                        : 'hover:border-foreground/40'
+                                "
+                                @click="switchLook({ palette: p.key })"
+                            >
+                                <span class="flex gap-0.5">
+                                    <span
+                                        class="size-3 rounded-full"
+                                        :style="{ background: p.cover }"
+                                    />
+                                    <span
+                                        class="size-3 rounded-full"
+                                        :style="{ background: p.accent }"
+                                    />
+                                </span>
+                                <span class="truncate">{{ p.name }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
             </div>
         </div>
 

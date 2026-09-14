@@ -363,7 +363,12 @@ class PresentationController extends Controller
             forScreen: true,
             palette: $presentation->palette,
         ))
-            ->header('Content-Type', 'text/html; charset=utf-8');
+            ->header('Content-Type', 'text/html; charset=utf-8')
+            // Превью собирается на лету из шаблонов и настроек. Кэш здесь
+            // вреден: после правки вёрстки браузер продолжает показывать
+            // старое, а адрес не меняется — метка версии завязана на
+            // презентацию, а не на код.
+            ->header('Cache-Control', 'no-store, must-revalidate');
     }
 
     public function download(Presentation $presentation): StreamedResponse
