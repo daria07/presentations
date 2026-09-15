@@ -375,9 +375,11 @@ async function copyShare() {
 <template>
     <Head :title="current.title" />
 
-    <div class="mx-auto w-full max-w-3xl px-4 py-8">
+    <!-- Ширину ограничивают сами экраны: тексту узкая колонка нужна,
+         просмотру слайдов — нет -->
+    <div class="w-full px-4 py-8">
         <!-- Ждём: готовим вопросы или генерируем -->
-        <div v-if="current.isPending" class="flex flex-col items-center gap-5 py-24 text-center">
+        <div v-if="current.isPending" class="mx-auto flex w-full max-w-3xl flex-col items-center gap-5 py-24 text-center">
             <template v-if="stalled">
                 <p class="text-lg font-medium">Что-то затянулось</p>
                 <p class="text-muted-foreground max-w-md text-sm leading-relaxed">
@@ -419,7 +421,7 @@ async function copyShare() {
         </div>
 
         <!-- Уточняющие вопросы -->
-        <div v-else-if="current.questions?.length" class="space-y-8">
+        <div v-else-if="current.questions?.length" class="mx-auto w-full max-w-3xl space-y-8">
             <div class="border-rule border-b pb-6">
                 <h1 class="text-3xl font-extrabold">Уточним детали</h1>
                 <p class="text-muted-foreground mt-1.5 leading-relaxed">
@@ -457,7 +459,7 @@ async function copyShare() {
                             v-for="t in themes"
                             :key="t.key"
                             type="button"
-                            class="border-border rounded-lg border px-4 py-2.5 text-left text-sm transition-colors"
+                            class="border-border cursor-pointer rounded-lg border px-4 py-2.5 text-left text-sm transition-colors"
                             :class="
                                 theme === t.key
                                     ? 'border-foreground'
@@ -481,7 +483,7 @@ async function copyShare() {
                             :key="p.key"
                             type="button"
                             :title="p.note"
-                            class="border-border flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
+                            class="border-border flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
                             :class="
                                 palette === p.key
                                     ? 'border-foreground'
@@ -516,17 +518,14 @@ async function copyShare() {
         </div>
 
         <!-- Готово -->
-        <div v-else-if="current.isReady" class="space-y-6">
-            <div class="flex items-start justify-between gap-4">
-                <div class="space-y-1">
-                    <p class="text-muted-foreground flex items-center gap-1.5 text-sm">
-                        <CheckCircle2 class="size-4" />
-                        Готово · {{ current.slideCount }} слайдов
-                    </p>
-                    <h1 class="text-2xl font-extrabold">{{ current.title }}</h1>
-                </div>
-
-                <div class="flex flex-none gap-2">
+        <!-- Поля по бокам только на широких экранах: на телефоне
+             они съели бы и без того узкую колонку -->
+        <div v-else-if="current.isReady" class="space-y-6 lg:px-16">
+            <!-- Кнопки строкой выше заголовка: их подписи меняются
+                 («Скачать» → «Обновляем файл…»), и в одной строке
+                 с заголовком они отбирали бы у него ширину -->
+            <div class="space-y-3">
+                <div class="flex flex-wrap justify-end gap-2">
                     <Button v-if="current.editUrl" variant="outline" size="sm" as-child>
                         <Link :href="current.editUrl">
                             <Pencil class="size-4" />
@@ -594,6 +593,14 @@ async function copyShare() {
                         </DialogContent>
                     </Dialog>
                 </div>
+
+                <div class="space-y-1">
+                    <p class="text-muted-foreground flex items-center gap-1.5 text-sm">
+                        <CheckCircle2 class="size-4" />
+                        Готово · {{ current.slideCount }} слайдов
+                    </p>
+                    <h1 class="text-2xl font-extrabold">{{ current.title }}</h1>
+                </div>
             </div>
 
             <div
@@ -612,15 +619,13 @@ async function copyShare() {
             <!-- Просмотр и оформление рядом: слева слайды с лентой
                  миниатюр, справа выбор темы и гаммы -->
             <div class="flex flex-col gap-5 lg:flex-row">
-                <div class="min-w-0 flex-1">
-                    <DeckViewer
-                        :src="current.previewUrl!"
-                        :theme="current.theme"
-                        :palette="current.palette"
-                        :deck-style="styleOf(current.theme)"
-                        class="h-[400px] lg:h-[540px]"
-                    />
-                </div>
+                <DeckViewer
+                    :src="current.previewUrl!"
+                    :theme="current.theme"
+                    :palette="current.palette"
+                    :deck-style="styleOf(current.theme)"
+                    class="h-[440px] min-w-0 flex-1 lg:h-[560px]"
+                />
 
                 <!-- Оформление меняется бесплатно: структура уже готова,
                      перепечатывается только файл -->
@@ -634,7 +639,7 @@ async function copyShare() {
                                 v-for="t in themes"
                                 :key="t.key"
                                 type="button"
-                                class="border-border rounded-lg border px-3 py-2 text-left text-sm transition-colors"
+                                class="border-border cursor-pointer rounded-lg border px-3 py-2 text-left text-sm transition-colors"
                                 :class="
                                     current.theme === t.key
                                         ? 'border-foreground'
@@ -660,7 +665,7 @@ async function copyShare() {
                                 :key="p.key"
                                 type="button"
                                 :title="p.note"
-                                class="border-border flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm transition-colors"
+                                class="border-border flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2 text-sm transition-colors"
                                 :class="
                                     current.palette === p.key
                                         ? 'border-foreground'
@@ -687,7 +692,7 @@ async function copyShare() {
         </div>
 
         <!-- Ошибка или неожиданное состояние -->
-        <div v-else class="space-y-5 py-16 text-center">
+        <div v-else class="mx-auto w-full max-w-3xl space-y-5 py-16 text-center">
             <div class="space-y-1">
                 <p class="text-lg font-medium">Не получилось</p>
                 <p class="text-muted-foreground mx-auto max-w-md text-sm">

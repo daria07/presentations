@@ -2,6 +2,8 @@
 
 namespace App\Services\Deck;
 
+use Illuminate\Support\Facades\Log;
+
 /**
  * Готовит @font-face со шрифтами, вшитыми прямо в CSS.
  *
@@ -52,6 +54,7 @@ class FontLoader
 
         $data = json_decode(file_get_contents($manifest), true) ?: [];
         $rules = [];
+        $found = [];
 
         foreach ($data['preloads'] ?? [] as $variant) {
             if (! in_array($variant['family'] ?? '', $families, true)) {
@@ -64,6 +67,7 @@ class FontLoader
                 continue;
             }
 
+            $found[] = $variant['family'];
             $encoded = base64_encode(file_get_contents($file));
 
             $rules[] = sprintf(
@@ -74,6 +78,18 @@ class FontLoader
                 $variant['weight'] ?? 400,
                 $encoded,
             );
+        }
+
+        // Шрифта нет в сборке — Chrome напечатает системным, и файл
+        // молча разойдётся с тем, что человек видел на экране.
+        // Обычно причина одна: фронт не пересобран после правки списка.
+        $missing = array_diff($families, array_unique($found));
+
+        if ($missing !== []) {
+            Log::warning('Шрифты не найдены в сборке, PDF будет отличаться', [
+                'families' => array_values($missing),
+                'hint' => 'npm run build',
+            ]);
         }
 
         return implode("\n", $rules);

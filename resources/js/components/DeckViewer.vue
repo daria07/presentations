@@ -16,29 +16,41 @@ const props = defineProps<{
    Класть её прямо в страницу нельзя: у неё свои h1, h2 и .slide,
    они бы смешались со стилями сайта. Shadow DOM изолирует стили
    в обе стороны, поэтому iframe здесь не нужен.
+
+   Корней два: сцена и лента миниатюр. Второй обязателен — узлы,
+   созданные в обычной разметке, стилей слайдов не видят и остаются
+   пустыми рамками.
 */
-const host = ref<HTMLDivElement | null>(null);
+const stageHost = ref<HTMLDivElement | null>(null);
+const railHost = ref<HTMLDivElement | null>(null);
 const stage = ref<HTMLDivElement | null>(null);
-const rail = ref<HTMLDivElement | null>(null);
 
 const total = ref(0);
 const index = ref(0);
 const loading = ref(true);
 const failed = ref(false);
 
-let shadow: ShadowRoot | null = null;
+let stageShadow: ShadowRoot | null = null;
+let railShadow: ShadowRoot | null = null;
 let deck: HTMLElement | null = null;
 let slides: HTMLElement[] = [];
 let thumbs: HTMLElement[] = [];
 
-/** Размер слайда в пикселях при 96 dpi — из конфига через вёрстку */
+/** Размер слайда в пикселях при 96 dpi */
 let slideWidth = 1280;
 let slideHeight = 720;
 
 const THUMB_WIDTH = 104;
 
+/** Свой корень на каждый узел: после пересборки узлы новые */
+function rootFor(host: HTMLElement, current: ShadowRoot | null): ShadowRoot {
+    if (current && current.host === host) return current;
+
+    return host.shadowRoot ?? host.attachShadow({ mode: 'open' });
+}
+
 async function load() {
-    if (!host.value) return;
+    if (!stageHost.value || !railHost.value) return;
 
     loading.value = true;
     failed.value = false;
@@ -60,8 +72,10 @@ async function load() {
 
     const parsed = new DOMParser().parseFromString(markup, 'text/html');
 
-    shadow ??= host.value.attachShadow({ mode: 'open' });
-    shadow.innerHTML = '';
+    stageShadow = rootFor(stageHost.value, stageShadow);
+    railShadow = rootFor(railHost.value, railShadow);
+    stageShadow.innerHTML = '';
+    railShadow.innerHTML = '';
 
     /*
        @font-face внутри Shadow DOM браузеры игнорируют, поэтому шрифты
@@ -77,38 +91,52 @@ async function load() {
         document.head.appendChild(holder);
     }
 
-    styles.forEach((style) => shadow!.appendChild(style.cloneNode(true)));
+    const layout = `
+        .deck--screen { display: contents; }
+        .slide { display: none; flex: none; transform-origin: center center; }
+        .slide.is-active { display: flex; }
 
-    const source = parsed.querySelector('.deck');
+        .rail { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+        /* Миниатюра — это кнопка, а у кнопок браузер сам ставит
+           выравнивание по центру и свой шрифт. Внутри лежит клон
+           слайда, и всё это наследуется: гасим. */
+        .thumb {
+            position: relative; flex: none; padding: 0; overflow: hidden;
+            width: ${THUMB_WIDTH}px; border-radius: 4px; cursor: pointer;
+            border: 1px solid #DCD8D3; background: #fff;
+            text-align: left; font: inherit; color: inherit;
+        }
+        .thumb[aria-current="true"] { border-color: #3B82F6; box-shadow: 0 0 0 1px #3B82F6; }
+        .thumb .slide { display: flex; transform-origin: top left; pointer-events: none; }
+    `;
 
-    if (!source) {
+    for (const root of [stageShadow, railShadow]) {
+        styles.forEach((style) => root.appendChild(style.cloneNode(true)));
+
+        const own = document.createElement('style');
+        own.textContent = layout;
+        root.appendChild(own);
+    }
+
+    // Обычно слайды лежат в контейнере .deck — он несёт атрибуты
+    // оформления. Если его нет, берём тело документа: так просмотр
+    // переживает и старую разметку из кэша.
+    const source = parsed.querySelector('.deck') ?? parsed.body;
+
+    if (!source || !source.querySelector('.slide')) {
         failed.value = true;
         loading.value = false;
 
         return;
     }
 
-    // Слайды показываем по одному, поэтому раскладываем их сами
     deck = source.cloneNode(true) as HTMLElement;
-    deck.classList.add('deck--screen');
-
-    const layout = document.createElement('style');
-    layout.textContent = `
-        .deck--screen { display: contents; }
-        .slide { display: none; flex: none; transform-origin: center center; }
-        .slide.is-active { display: flex; }
-        .thumb-deck .slide { display: flex; transform-origin: top left; }
-    `;
-    shadow.appendChild(layout);
-    shadow.appendChild(deck);
+    deck.classList.add('deck', 'deck--screen');
+    applyLook(deck);
+    stageShadow.appendChild(deck);
 
     slides = Array.from(deck.querySelectorAll<HTMLElement>('.slide'));
     total.value = slides.length;
-
-    if (slides[0]) {
-        slideWidth = slides[0].offsetWidth || slideWidth;
-        slideHeight = slides[0].offsetHeight || slideHeight;
-    }
 
     buildThumbs();
     show(Math.min(index.value, slides.length - 1));
@@ -117,43 +145,41 @@ async function load() {
     loading.value = false;
 }
 
+function applyLook(el: HTMLElement) {
+    el.dataset.theme = props.theme;
+    el.dataset.palette = props.palette;
+    el.dataset.style = props.deckStyle;
+}
+
 /** Миниатюра — клон настоящего слайда, уменьшенный трансформацией */
 function buildThumbs() {
-    if (!rail.value || !shadow) return;
+    if (!railShadow) return;
 
-    rail.value.innerHTML = '';
-    thumbs = [];
+    const rail = document.createElement('div');
+    rail.className = 'rail deck';
+    applyLook(rail);
 
     const scale = THUMB_WIDTH / slideWidth;
+    thumbs = [];
 
     slides.forEach((slide, i) => {
         const box = document.createElement('button');
         box.type = 'button';
         box.className = 'thumb';
+        box.style.height = `${Math.round(slideHeight * scale)}px`;
         box.setAttribute('aria-label', `Слайд ${i + 1}`);
-        box.style.cssText = `
-            position: relative; flex: none; padding: 0; cursor: pointer;
-            width: ${THUMB_WIDTH}px; height: ${Math.round(slideHeight * scale)}px;
-            overflow: hidden; border-radius: 4px; background: #fff;
-        `;
-
-        const inner = document.createElement('div');
-        inner.className = 'thumb-deck';
-        inner.dataset.palette = props.palette;
-        inner.dataset.theme = props.theme;
-        inner.dataset.style = props.deckStyle;
 
         const clone = slide.cloneNode(true) as HTMLElement;
         clone.classList.remove('is-active');
         clone.style.transform = `scale(${scale})`;
-        clone.style.pointerEvents = 'none';
-        inner.appendChild(clone);
-        box.appendChild(inner);
+        box.appendChild(clone);
 
         box.addEventListener('click', () => show(i));
-        rail.value!.appendChild(box);
+        rail.appendChild(box);
         thumbs.push(box);
     });
+
+    railShadow.appendChild(rail);
 }
 
 function show(next: number) {
@@ -162,10 +188,9 @@ function show(next: number) {
     index.value = Math.max(0, Math.min(slides.length - 1, next));
 
     slides.forEach((slide, i) => slide.classList.toggle('is-active', i === index.value));
-    thumbs.forEach((thumb, i) => {
-        thumb.style.outline = i === index.value ? '2px solid #3B82F6' : '1px solid #DCD8D3';
-        thumb.style.outlineOffset = '-1px';
-    });
+    thumbs.forEach((thumb, i) =>
+        thumb.setAttribute('aria-current', i === index.value ? 'true' : 'false'),
+    );
 
     thumbs[index.value]?.scrollIntoView({ block: 'nearest' });
 }
@@ -174,10 +199,12 @@ function show(next: number) {
 function fit() {
     if (!stage.value || !slides.length) return;
 
+    // Снизу оставляем полосу под кнопки листания, иначе слайд
+    // наезжает на них на невысоком окне
     const box = stage.value.getBoundingClientRect();
     const scale = Math.min(
-        (box.width - 24) / slideWidth,
-        (box.height - 24) / slideHeight,
+        (box.width - 32) / slideWidth,
+        (box.height - 72) / slideHeight,
     );
 
     slides.forEach((slide) => {
@@ -206,14 +233,12 @@ function keys(event: KeyboardEvent) {
 /* Смена оформления — это атрибуты на контейнерах, без перезагрузки */
 watch(
     () => [props.theme, props.palette, props.deckStyle],
-    ([theme, palette, style]) => {
-        for (const el of [deck, ...(rail.value?.querySelectorAll<HTMLElement>('.thumb-deck') ?? [])]) {
-            if (!el) continue;
+    () => {
+        if (deck) applyLook(deck);
 
-            el.dataset.theme = theme;
-            el.dataset.palette = palette;
-            el.dataset.style = style;
-        }
+        const rail = railShadow?.querySelector<HTMLElement>('.rail');
+
+        if (rail) applyLook(rail);
     },
 );
 
@@ -232,50 +257,62 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div
-        class="border-border bg-muted/40 relative flex overflow-hidden rounded-xl border"
-    >
-        <!-- Лента миниатюр -->
+    <div class="border-border bg-muted/40 flex overflow-hidden rounded-xl border">
+        <!-- Лента миниатюр: свой изолированный корень со стилями слайдов -->
         <div
-            ref="rail"
-            class="bg-muted/70 border-rule flex w-[120px] flex-none flex-col gap-2 overflow-y-auto border-r p-2"
+            ref="railHost"
+            class="bg-muted/70 border-rule w-[120px] flex-none overflow-y-auto border-r"
         />
 
         <!-- Сцена -->
-        <div ref="stage" class="relative flex min-w-0 flex-1 items-center justify-center p-3">
-            <div ref="host" class="contents" />
+        <div ref="stage" class="relative min-w-0 flex-1">
+            <div
+                ref="stageHost"
+                class="absolute inset-0 flex items-center justify-center pb-12"
+            />
 
-            <p v-if="loading" class="text-muted-foreground text-sm">Готовим просмотр…</p>
-            <p v-else-if="failed" class="text-muted-foreground text-sm">
+            <p
+                v-if="loading"
+                class="text-muted-foreground absolute inset-0 flex items-center justify-center text-sm"
+            >
+                Готовим просмотр…
+            </p>
+            <p
+                v-else-if="failed"
+                class="text-muted-foreground absolute inset-0 flex items-center justify-center text-sm"
+            >
                 Не удалось загрузить слайды
             </p>
 
-            <template v-if="!loading && !failed">
+            <!-- Управление в пустом поле под слайдом -->
+            <div
+                v-else
+                class="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3"
+            >
                 <button
                     type="button"
-                    class="bg-background/90 text-foreground absolute top-1/2 left-3 flex size-8 -translate-y-1/2 items-center justify-center rounded-full shadow-sm transition-opacity disabled:invisible"
+                    class="border-border bg-background/80 text-foreground flex size-8 cursor-pointer items-center justify-center rounded-md border transition-colors disabled:cursor-default disabled:opacity-40"
                     :disabled="index === 0"
                     aria-label="Предыдущий слайд"
                     @click="show(index - 1)"
                 >
                     <ChevronLeft class="size-4" />
                 </button>
+
+                <p class="text-muted-foreground w-14 text-center text-sm tabular-nums">
+                    {{ index + 1 }} / {{ total }}
+                </p>
+
                 <button
                     type="button"
-                    class="bg-background/90 text-foreground absolute top-1/2 right-3 flex size-8 -translate-y-1/2 items-center justify-center rounded-full shadow-sm transition-opacity disabled:invisible"
+                    class="border-border bg-background/80 text-foreground flex size-8 cursor-pointer items-center justify-center rounded-md border transition-colors disabled:cursor-default disabled:opacity-40"
                     :disabled="index === total - 1"
                     aria-label="Следующий слайд"
                     @click="show(index + 1)"
                 >
                     <ChevronRight class="size-4" />
                 </button>
-
-                <p
-                    class="text-muted-foreground absolute right-4 bottom-2 text-xs tabular-nums"
-                >
-                    {{ index + 1 }} / {{ total }}
-                </p>
-            </template>
+            </div>
         </div>
     </div>
 </template>
