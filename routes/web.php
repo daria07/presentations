@@ -3,11 +3,12 @@
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LandingController;
+use App\Http\Controllers\LegalController;
 use App\Http\Controllers\Presentations\PresentationController;
 use App\Http\Controllers\Presentations\PublicPresentationController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', HomeController::class)->name('home');
 
@@ -17,29 +18,13 @@ Route::get('/', HomeController::class)->name('home');
    завершающего слэша: иначе всё зависело бы от директивы index в nginx,
    а она на локальной машине и на сервере разная.
 */
-Route::get('l/{slug}', function (string $slug) {
-    $file = public_path("l/{$slug}/index.html");
-
-    abort_unless(is_file($file), 404);
-
-    return response()->file($file);
-})->where('slug', '[a-z0-9-]+')->name('landing');
+Route::get('l/{slug}', LandingController::class)
+    ->where('slug', '[a-z0-9-]+')
+    ->name('landing');
 
 // Правовые документы: открыты всем, реквизиты берутся из config/legal.php
-Route::get('offer', fn () => Inertia::render('legal/Offer', [
-    'legal' => config('legal'),
-    'packages' => collect(config('billing.packages'))
-        ->map(fn (array $pack) => [
-            'title' => $pack['title'],
-            'credits' => $pack['credits'],
-            'price' => number_format($pack['amount'] / 100, 0, ',', ' ').' ₽',
-        ])
-        ->values(),
-]))->name('legal.offer');
-
-Route::get('privacy', fn () => Inertia::render('legal/Privacy', [
-    'legal' => config('legal'),
-]))->name('legal.privacy');
+Route::get('offer', [LegalController::class, 'offer'])->name('legal.offer');
+Route::get('privacy', [LegalController::class, 'privacy'])->name('legal.privacy');
 
 // Публичная ссылка на готовую презентацию — без авторизации
 Route::get('p/{token}', [PublicPresentationController::class, 'show'])
