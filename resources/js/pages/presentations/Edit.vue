@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeckViewer from '@/components/DeckViewer.vue';
 import { Head, router } from '@inertiajs/vue3';
 import {
     ArrowDown,
@@ -283,7 +284,7 @@ function save(then?: () => void) {
                 Есть несохранённые правки
             </span>
 
-            <Button variant="ghost" size="sm" @click="done">Готово</Button>
+            <Button variant="ghost" size="sm" @click="done">Выйти из редактора</Button>
 
             <Button size="sm" :disabled="saving || !isDirty" @click="save()">
                 {{ saving ? 'Сохраняем…' : 'Сохранить' }}
@@ -304,7 +305,7 @@ function save(then?: () => void) {
                     v-for="(slide, i) in slides"
                     :key="i"
                     type="button"
-                    class="mb-1 w-full rounded-lg px-3 py-2.5 text-left transition-colors"
+                    class="cursor-pointer mb-1 w-full rounded-lg px-3 py-2.5 text-left transition-colors"
                     :class="active === i ? 'bg-secondary' : 'hover:bg-secondary/60'"
                     @click="active = i"
                 >
@@ -528,10 +529,15 @@ function save(then?: () => void) {
                         <RefreshCw class="size-3.5" :class="refreshing && 'animate-spin'" />
                     </Button>
                 </div>
-                <iframe
-                    :srcdoc="previewHtml"
+                <!-- Тот же просмотрщик, что и на странице презентации:
+                     слайд вписывается в колонку, а не торчит за край,
+                     и следит за выбранным в списке слайдом -->
+                <DeckViewer
+                    v-model:active="active"
+                    :html="previewHtml"
+                    :rail="false"
+                    :framed="false"
                     class="h-[calc(100%-2.5rem)] w-full"
-                    title="Превью презентации"
                 />
             </aside>
         </div>

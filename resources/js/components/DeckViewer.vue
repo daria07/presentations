@@ -2,14 +2,33 @@
 import { ChevronLeft, ChevronRight } from '@lucide/vue';
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
-const props = defineProps<{
-    /** Адрес, по которому отдаётся вёрстка слайдов */
-    src: string;
-    theme: string;
-    palette: string;
-    /* Имя style занято самим Vue под инлайновые стили */
-    deckStyle: string;
-}>();
+const props = withDefaults(
+    defineProps<{
+        /** Адрес, по которому отдаётся вёрстка слайдов */
+        src?: string;
+        /** Готовая вёрстка вместо адреса: в редакторе черновик
+            приходит ответом на POST, ссылки на него нет */
+        html?: string;
+        /* Оформление. Не передали — оставляем то, что проставил сервер:
+           в редакторе тему не переключают */
+        theme?: string;
+        palette?: string;
+        /* Имя style занято самим Vue под инлайновые стили */
+        deckStyle?: string;
+        /** Лента миниатюр слева */
+        rail?: boolean;
+        /** Стрелки и счётчик под слайдом */
+        controls?: boolean;
+        /** Своя рамка со скруглением. В редакторе просмотр вставлен
+            в колонку, у которой рамка уже есть */
+        framed?: boolean;
+        /** Номер показанного слайда — для связи с внешним списком */
+        active?: number;
+    }>(),
+    { rail: true, controls: true, framed: true },
+);
+
+const emit = defineEmits<{ 'update:active': [number] }>();
 
 /*
    Слайды приходят готовой вёрсткой — той же, что уходит в печать.
@@ -57,17 +76,29 @@ async function load() {
 
     let markup: string;
 
-    try {
-        const response = await fetch(props.src, { headers: { Accept: 'text/html' } });
+    if (props.html !== undefined) {
+        if (!props.html) {
+            loading.value = true;
 
-        if (!response.ok) throw new Error(String(response.status));
+            return;
+        }
 
-        markup = await response.text();
-    } catch {
-        failed.value = true;
-        loading.value = false;
+        markup = props.html;
+    } else {
+        try {
+            const response = await fetch(props.src ?? '', {
+                headers: { Accept: 'text/html' },
+            });
 
-        return;
+            if (!response.ok) throw new Error(String(response.status));
+
+            markup = await response.text();
+        } catch {
+            failed.value = true;
+            loading.value = false;
+
+            return;
+        }
     }
 
     const parsed = new DOMParser().parseFromString(markup, 'text/html');
@@ -138,17 +169,22 @@ async function load() {
     slides = Array.from(deck.querySelectorAll<HTMLElement>('.slide'));
     total.value = slides.length;
 
-    buildThumbs();
-    show(Math.min(index.value, slides.length - 1));
+    if (props.rail) {
+        buildThumbs();
+    } else {
+        thumbs = [];
+    }
+
+    show(Math.min(props.active ?? index.value, slides.length - 1));
     fit();
 
     loading.value = false;
 }
 
 function applyLook(el: HTMLElement) {
-    el.dataset.theme = props.theme;
-    el.dataset.palette = props.palette;
-    el.dataset.style = props.deckStyle;
+    if (props.theme) el.dataset.theme = props.theme;
+    if (props.palette) el.dataset.palette = props.palette;
+    if (props.deckStyle) el.dataset.style = props.deckStyle;
 }
 
 /** Миниатюра — клон настоящего слайда, уменьшенный трансформацией */
@@ -193,6 +229,8 @@ function show(next: number) {
     );
 
     thumbs[index.value]?.scrollIntoView({ block: 'nearest' });
+
+    if (index.value !== props.active) emit('update:active', index.value);
 }
 
 /** Слайд не резиновый: подгоняем масштабом по меньшей стороне */
@@ -204,7 +242,7 @@ function fit() {
     const box = stage.value.getBoundingClientRect();
     const scale = Math.min(
         (box.width - 32) / slideWidth,
-        (box.height - 72) / slideHeight,
+        (box.height - (props.controls ? 72 : 24)) / slideHeight,
     );
 
     slides.forEach((slide) => {
@@ -213,6 +251,17 @@ function fit() {
 }
 
 function keys(event: KeyboardEvent) {
+    // В редакторе рядом живут поля ввода: стрелки там двигают курсор,
+    // а не слайды
+    const target = event.target as HTMLElement | null;
+
+    if (
+        target?.isContentEditable ||
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName ?? '')
+    ) {
+        return;
+    }
+
     const step: Record<string, number> = {
         ArrowRight: 1,
         ArrowDown: 1,
@@ -242,7 +291,15 @@ watch(
     },
 );
 
-watch(() => props.src, load);
+watch(() => [props.src, props.html], load);
+
+/* Внешний список выбрал другой слайд — показываем его */
+watch(
+    () => props.active,
+    (next) => {
+        if (next !== undefined && next !== index.value) show(next);
+    },
+);
 
 onMounted(() => {
     load();
@@ -257,9 +314,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="border-border bg-muted/40 flex overflow-hidden rounded-xl border">
+    <div
+        class="bg-muted/40 flex overflow-hidden"
+        :class="framed && 'border-border rounded-xl border'"
+    >
         <!-- Лента миниатюр: свой изолированный корень со стилями слайдов -->
         <div
+            v-show="rail"
             ref="railHost"
             class="bg-muted/70 border-rule w-[120px] flex-none overflow-y-auto border-r"
         />
@@ -268,7 +329,8 @@ onBeforeUnmount(() => {
         <div ref="stage" class="relative min-w-0 flex-1">
             <div
                 ref="stageHost"
-                class="absolute inset-0 flex items-center justify-center pb-12"
+                class="absolute inset-0 flex items-center justify-center"
+                :class="controls ? 'pb-12' : 'p-3'"
             />
 
             <p
@@ -286,7 +348,7 @@ onBeforeUnmount(() => {
 
             <!-- Управление в пустом поле под слайдом -->
             <div
-                v-else
+                v-else-if="controls"
                 class="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3"
             >
                 <button

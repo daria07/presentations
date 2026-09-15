@@ -62,7 +62,7 @@ const canSubmit = computed(() =>
         <div class="border-rule mt-8 flex gap-1 rounded-lg border p-1">
             <button
                 type="button"
-                class="flex-1 rounded-md px-4 py-2.5 text-sm font-medium transition-colors"
+                class="cursor-pointer flex-1 rounded-md px-4 py-2.5 text-sm font-medium transition-colors"
                 :class="mode === 'topic' ? 'bg-foreground text-background' : 'hover:bg-secondary'"
                 @click="mode = 'topic'"
             >
@@ -70,7 +70,7 @@ const canSubmit = computed(() =>
             </button>
             <button
                 type="button"
-                class="flex-1 rounded-md px-4 py-2.5 text-sm font-medium transition-colors"
+                class="cursor-pointer flex-1 rounded-md px-4 py-2.5 text-sm font-medium transition-colors"
                 :class="mode === 'text' ? 'bg-foreground text-background' : 'hover:bg-secondary'"
                 @click="mode = 'text'"
             >
@@ -103,7 +103,7 @@ const canSubmit = computed(() =>
                         v-for="example in examples"
                         :key="example"
                         type="button"
-                        class="text-muted-foreground hover:text-foreground hover:border-foreground/30 border-border rounded-full border px-3 py-1 text-xs transition-colors"
+                        class="cursor-pointer text-muted-foreground hover:text-foreground hover:border-foreground/30 border-border rounded-full border px-3 py-1 text-xs transition-colors"
                         @click="topic = example"
                     >
                         {{ example.length > 42 ? example.slice(0, 42) + '…' : example }}
@@ -164,7 +164,7 @@ const canSubmit = computed(() =>
                         v-for="n in counts"
                         :key="n"
                         type="button"
-                        class="border-border h-11 flex-1 rounded-lg border text-sm font-medium transition-colors"
+                        class="cursor-pointer border-border h-11 flex-1 rounded-lg border text-sm font-medium transition-colors"
                         :class="
                             slideCount === n
                                 ? 'border-brand bg-brand text-white'

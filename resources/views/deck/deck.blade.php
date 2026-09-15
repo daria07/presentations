@@ -37,6 +37,11 @@
         padding: 20mm 24mm 16mm;
         display: flex;
         flex-direction: column;
+        /* Шрифт и цвет повторяют то, что задано на body: в просмотрщике
+           слайды живут в Shadow DOM, где никакого body нет, и текст без
+           своего цвета унаследовал бы цвет страницы приложения */
+        font-family: var(--font-body), -apple-system, sans-serif;
+        color: var(--ink);
     }
     .slide:last-child { page-break-after: auto; }
 
@@ -76,7 +81,7 @@
         line-height: 1.45;
     }
 
-    .slide--cover .subheading { color: rgba(255,255,255,.72); }
+    .slide--cover .subheading { color: color-mix(in srgb, var(--cover-ink) 72%, var(--cover-bg)); }
 
     .head {
         border-bottom: 0.5mm solid var(--rule);
@@ -118,7 +123,7 @@
         color: var(--accent);
         margin-bottom: 5mm;
     }
-    .slide--cover .eyebrow { color: var(--cover-accent); }
+    .slide--cover .eyebrow { color: var(--cover-title); }
 
     .pageno {
         position: absolute;
@@ -135,7 +140,7 @@
         background: var(--accent);
         border-radius: 1mm;
     }
-    .slide--cover .rule-accent { background: var(--cover-accent); }
+    .slide--cover .rule-accent { background: var(--cover-title); }
 
     /* ---------- bullets ---------- */
 
@@ -297,7 +302,7 @@
     }
     .compare-col + .compare-col {
         background: var(--cover-bg);
-        color: #FFFFFF;
+        color: var(--cover-ink);
     }
 
     .compare-title {
@@ -310,11 +315,11 @@
            линий, но не для подписи в 13 пунктов */
         color: var(--accent-ink, var(--accent));
     }
-    .compare-col + .compare-col .compare-title { color: var(--cover-accent); }
+    .compare-col + .compare-col .compare-title { color: var(--cover-title); }
 
     .compare-text { font-size: 12pt; line-height: 1.5; }
     .compare-col .compare-text { color: var(--ink); }
-    .compare-col + .compare-col .compare-text { color: rgba(255,255,255,.85); }
+    .compare-col + .compare-col .compare-text { color: color-mix(in srgb, var(--cover-ink) 85%, var(--cover-bg)); }
 
 
     /* ---------- process: этапы со стрелками ---------- */

@@ -107,6 +107,15 @@ class DeckRenderer
                 $vars[] = '--'.str_replace('_', '-', $name).':'.$value;
             }
 
+            // Заголовок на обложечном фоне. У светлых гамм cover_accent
+            // светлее самой подложки и читается около 1.5:1 — тогда берём
+            // cover_ink. Считаем здесь, чтобы вёрстка не знала о гаммах.
+            $vars[] = '--cover-title:'.$this->onCover(
+                $palette['cover_bg'],
+                $palette['cover_accent'],
+                $palette['cover_ink'],
+            );
+
             $blocks[] = sprintf('[data-palette="%s"]{%s}', $key, implode(';', $vars));
         }
 
@@ -182,6 +191,39 @@ class DeckRenderer
         $themes = config('deck.themes');
 
         return isset($themes[$name]) ? $name : config('deck.default_theme');
+    }
+
+    /**
+     * Читаемый цвет на подложке обложки: предпочитаем акцент, но если
+     * контраст ниже 4.5:1 — отступаем к основному цвету текста.
+     */
+    private function onCover(string $bg, string $preferred, string $fallback): string
+    {
+        return $this->contrast($bg, $preferred) >= 4.5 ? $preferred : $fallback;
+    }
+
+    /**
+     * Коэффициент контраста по WCAG 2.1.
+     */
+    private function contrast(string $a, string $b): float
+    {
+        $la = $this->luminance($a);
+        $lb = $this->luminance($b);
+
+        return (max($la, $lb) + 0.05) / (min($la, $lb) + 0.05);
+    }
+
+    private function luminance(string $hex): float
+    {
+        $hex = ltrim($hex, '#');
+        $channels = [];
+
+        foreach ([0, 2, 4] as $offset) {
+            $c = hexdec(substr($hex, $offset, 2)) / 255;
+            $channels[] = $c <= 0.03928 ? $c / 12.92 : (($c + 0.055) / 1.055) ** 2.4;
+        }
+
+        return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
     }
 
     /**

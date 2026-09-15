@@ -86,7 +86,7 @@ const current = ref<Presentation>(props.presentation);
 const answers = ref<Record<string, string>>({});
 const theme = ref(props.presentation.theme ?? props.themes[0]?.key ?? 'precise');
 const palette = ref(
-    props.presentation.palette ?? props.palettes[0]?.key ?? 'graphite',
+    props.presentation.palette ?? props.palettes[0]?.key ?? 'fog',
 );
 const sending = ref(false);
 const formError = ref<string | null>(null);
@@ -211,12 +211,22 @@ const switching = ref<string | null>(null);
 
 /*
    Экран перекрашивается мгновенно, а PDF на сервере печатается заново
-   и занимает около минуты. Пока он не готов, «Открыть» и «Скачать»
+   и занимает около минуты. Пока он не готов, «Открыть» и «Скачать PDF»
    отдали бы файл в прежнем оформлении — честнее подождать.
 */
 const reprinting = ref(false);
 
+/*
+   Номер последнего запроса на смену оформления. Клики идут быстрее,
+   чем печатается PDF, поэтому циклов опроса может крутиться несколько.
+   Ответ устаревшего цикла вернул бы прежнюю гамму поверх новой — такой
+   цикл просто выходит, не трогая экран.
+*/
+let lookRequest = 0;
+
 async function waitForFile() {
+    const request = ++lookRequest;
+
     reprinting.value = true;
 
     const startedAt = Date.now();
@@ -234,9 +244,16 @@ async function waitForFile() {
 
             const fresh = await response.json();
 
+            if (request !== lookRequest) return;
+
             if (!fresh.isPending) {
-                // Забираем свежие ссылки, оформление на экране не трогаем
-                current.value = { ...fresh, theme: current.value.theme };
+                // Забираем свежие ссылки, оформление на экране не трогаем:
+                // человек уже видит то, что выбрал, и обе оси выбирает он
+                current.value = {
+                    ...fresh,
+                    theme: current.value.theme,
+                    palette: current.value.palette,
+                };
                 break;
             }
         } catch {
@@ -244,7 +261,9 @@ async function waitForFile() {
         }
     }
 
-    reprinting.value = false;
+    if (request === lookRequest) {
+        reprinting.value = false;
+    }
 }
 
 /** Файл оформления, соответствующий теме */
@@ -437,7 +456,7 @@ async function copyShare() {
                             v-for="option in q.options"
                             :key="option"
                             type="button"
-                            class="border-border rounded-lg border px-4 py-2 text-sm transition-colors"
+                            class="cursor-pointer border-border rounded-lg border px-4 py-2 text-sm transition-colors"
                             :class="
                                 answers[q.key ?? String(i)] === option
                                     ? 'border-brand bg-brand text-white'
@@ -476,7 +495,7 @@ async function copyShare() {
                 </div>
 
                 <div class="space-y-2">
-                    <p class="font-medium">Гамма</p>
+                    <p class="font-medium">Цветовая гамма</p>
                     <div class="flex flex-wrap gap-2">
                         <button
                             v-for="p in palettes"
@@ -522,14 +541,14 @@ async function copyShare() {
              они съели бы и без того узкую колонку -->
         <div v-else-if="current.isReady" class="space-y-6 lg:px-16">
             <!-- Кнопки строкой выше заголовка: их подписи меняются
-                 («Скачать» → «Обновляем файл…»), и в одной строке
+                 («Скачать PDF» → «Обновляем файл…»), и в одной строке
                  с заголовком они отбирали бы у него ширину -->
             <div class="space-y-3">
                 <div class="flex flex-wrap justify-end gap-2">
                     <Button v-if="current.editUrl" variant="outline" size="sm" as-child>
                         <Link :href="current.editUrl">
                             <Pencil class="size-4" />
-                            Править
+                            Редактировать
                         </Link>
                     </Button>
                     <Button variant="outline" size="sm" @click="copyShare">
@@ -554,7 +573,7 @@ async function copyShare() {
                     >
                         <a :href="current.downloadUrl!">
                             <Download class="size-4" />
-                            {{ reprinting ? 'Обновляем файл…' : 'Скачать' }}
+                            {{ reprinting ? 'Обновляем файл…' : 'Скачать PDF' }}
                         </a>
                     </Button>
 
@@ -657,7 +676,7 @@ async function copyShare() {
 
                     <div class="space-y-2">
                         <p class="text-muted-foreground text-xs tracking-wide uppercase">
-                            Гамма
+                            Цветовая гамма
                         </p>
                         <div class="grid grid-cols-2 gap-1.5">
                             <button

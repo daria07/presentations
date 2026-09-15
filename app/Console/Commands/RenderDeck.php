@@ -11,14 +11,14 @@ use Throwable;
 /**
  * Печатает PDF по уже собранной структуре:
  *   php artisan deck:render 12
- *   php artisan deck:render 12 --theme=bold --palette=pine --html
+ *   php artisan deck:render 12 --theme=bold --palette=sage --html
  */
 class RenderDeck extends Command
 {
     protected $signature = 'deck:render
                             {id? : ID презентации, по умолчанию последняя}
                             {--theme= : precise | bold | soft}
-                            {--palette= : graphite | coal | pine | bordeaux | sand | ocean | plum}
+                            {--palette= : fog | clay | sage | wine | honey | lagoon | iris | neon}
                             {--html : Сохранить ещё и HTML, чтобы посмотреть вёрстку в браузере}
                             {--open : Открыть готовый файл}';
 
