@@ -12,6 +12,7 @@ use App\Jobs\PrepareQuestions;
 use App\Jobs\RenderPresentation;
 use App\Models\Presentation;
 use App\Services\Deck\DeckRenderer;
+use App\Services\Deck\Looks;
 use App\Services\Deck\SpeechRenderer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -54,8 +55,8 @@ class PresentationController extends Controller
             'maxSource' => \App\Http\Requests\Presentations\StorePresentationRequest::MAX_SOURCE,
             'credits' => $request->user()->credits,
             'trialAvailable' => ! $request->user()->trial_used,
-            'themes' => $this->themes(),
-            'palettes' => $this->palettes(),
+            'themes' => Looks::themes(),
+            'palettes' => Looks::palettes(),
         ]);
     }
 
@@ -97,8 +98,8 @@ class PresentationController extends Controller
 
         return Inertia::render('presentations/Show', [
             'presentation' => $this->detail($presentation),
-            'themes' => $this->themes(),
-            'palettes' => $this->palettes(),
+            'themes' => Looks::themes(),
+            'palettes' => Looks::palettes(),
             'credits' => $request->user()->credits,
             'trialAvailable' => ! $request->user()->trial_used,
         ]);
@@ -493,39 +494,5 @@ class PresentationController extends Controller
             ['key' => 'quote', 'name' => 'Цитата'],
             ['key' => 'closing', 'name' => 'Финальный'],
         ];
-    }
-
-    /**
-     * Темы — характер оформления: шрифты, скругления, линии.
-     * Фронт ставит ключ на <html> превью, поэтому смена мгновенная.
-     */
-    private function themes(): array
-    {
-        return collect(config('deck.themes'))
-            ->map(fn ($theme, $key) => [
-                'key' => $key,
-                'name' => $theme['name'],
-                'note' => $theme['note'] ?? '',
-                'style' => $theme['style'],
-                'font' => $theme['font_display'],
-            ])
-            ->values()
-            ->all();
-    }
-
-    /** Гаммы — только цвет, любая сочетается с любой темой */
-    private function palettes(): array
-    {
-        return collect(config('deck.palettes'))
-            ->map(fn ($palette, $key) => [
-                'key' => $key,
-                'name' => $palette['name'],
-                'note' => $palette['note'] ?? '',
-                'accent' => $palette['accent'],
-                'cover' => $palette['cover_bg'],
-                'paper' => $palette['paper'],
-            ])
-            ->values()
-            ->all();
     }
 }

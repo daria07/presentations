@@ -2,13 +2,14 @@
 
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Billing\BillingController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Presentations\PresentationController;
 use App\Http\Controllers\Presentations\PublicPresentationController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::inertia('/', 'Welcome')->name('home');
+Route::get('/', HomeController::class)->name('home');
 
 // Правовые документы: открыты всем, реквизиты берутся из config/legal.php
 Route::get('offer', fn () => Inertia::render('legal/Offer', [
