@@ -140,7 +140,9 @@
         background: var(--accent);
         border-radius: 1mm;
     }
-    .slide--cover .rule-accent { background: var(--cover-title); }
+    /* Линейка декоративна, ей хватает и приглушённого акцента;
+       текст рядом — нет, поэтому надзаголовок красим по контрасту */
+    .slide--cover .rule-accent { background: var(--cover-accent); }
 
     /* ---------- bullets ---------- */
 
