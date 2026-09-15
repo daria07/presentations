@@ -337,13 +337,7 @@ onBeforeUnmount(() => {
             />
 
             <p
-                v-if="loading"
-                class="text-muted-foreground absolute inset-0 flex items-center justify-center text-sm"
-            >
-                Готовим просмотр…
-            </p>
-            <p
-                v-else-if="failed"
+                v-if="failed"
                 class="text-muted-foreground absolute inset-0 flex items-center justify-center text-sm"
             >
                 Не удалось загрузить слайды
@@ -351,7 +345,7 @@ onBeforeUnmount(() => {
 
             <!-- Управление в пустом поле под слайдом -->
             <div
-                v-else-if="controls"
+                v-else-if="controls && !loading"
                 class="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3"
             >
                 <button

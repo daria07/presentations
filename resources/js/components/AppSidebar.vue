@@ -68,17 +68,23 @@ const mainNavItems = computed<NavItem[]>(() => [
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
-                            <AppLogo />
-                        </Link>
-                    </SidebarMenuButton>
+                    <!--
+                        Обычная ссылка, а не SidebarMenuButton: логотип не
+                        пункт меню, и подсветка на наведении делала вид,
+                        будто рядом с «Презентациями» есть ещё один раздел.
+                    -->
+                    <Link
+                        :href="dashboard()"
+                        class="flex h-12 items-center gap-2 rounded-md p-2 group-data-[collapsible=icon]:p-0! text-[var(--foreground)]"
+                    >
+                        <AppLogo />
+                    </Link>
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>
 
         <SidebarContent>
-            <SidebarGroup class="px-2 pt-0 pb-2">
+            <SidebarGroup class="px-4 pt-0 pb-2">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <!-- Размеры из макета: 16px, отступы 13/16,

@@ -7,7 +7,7 @@ const name = usePage().props.name;
 
 <template>
     <!-- Размеры из макета: знак 30px, название 19px -->
-    <AppLogoMark class="size-[30px] shrink-0" />
+    <AppLogoMark class="size-5 shrink-0" />
 
     <div class="grid flex-1 text-left">
         <span

@@ -42,7 +42,8 @@ export default defineConfig({
                     subsets: ['latin', 'cyrillic'],
                 }),
                 bunny('Onest', {
-                    weights: [400, 500, 600],
+                    // 700 и 800 — интерфейс: заголовки страниц и логотип
+                    weights: [400, 500, 600, 700, 800],
                     subsets: ['latin', 'cyrillic'],
                 }),
             ],

@@ -18,7 +18,7 @@ const { isCurrentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <SidebarGroup class="px-1.5 py-0">
+    <SidebarGroup class="px-4 py-0">
         <!-- Разрядка и верхний регистр — как в макете -->
         <SidebarGroupLabel
             class="h-auto px-1.5 pt-5 pb-2.5 text-xs font-semibold tracking-[0.1em] uppercase"
