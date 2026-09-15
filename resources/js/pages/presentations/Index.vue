@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from '@lucide/vue';
+import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -68,67 +68,94 @@ function destroy() {
     });
 }
 
+/*
+   Статус — бейдж, а не просто цветной текст: в списке из десяти строк
+   глаз ищет состояние пятном, а не читает слово. Зелёный и красный
+   взяты из макета, остальные состояния идут нейтральным.
+*/
 const statusTone: Record<string, string> = {
-    failed: 'text-destructive',
-    ready: 'text-muted-foreground',
+    ready: 'bg-[#E4F3EC] text-[#1D7A55]',
+    failed: 'bg-[#FDECEE] text-[#C2364A]',
+    default: 'bg-secondary text-muted-foreground',
 };
 </script>
 
 <template>
     <Head title="Презентации" />
 
-    <div class="mx-auto w-full max-w-3xl px-4 py-8">
-        <div class="border-rule flex items-end justify-between gap-6 border-b pb-6">
+    <!-- Полотно во всю ширину с отступами 38/56 из макета:
+         узкая колонка сжимала плашки и ломала ритм строки -->
+    <div class="w-full px-6 py-9 lg:px-14">
+        <div class="mb-6 flex items-end justify-between gap-6">
             <div>
-                <h1 class="text-3xl font-extrabold">Презентации</h1>
-                <p class="text-muted-foreground mt-1.5 text-sm">
+                <h1 class="text-[40px] leading-none font-bold tracking-[-0.02em]">
+                    Презентации
+                </h1>
+                <p class="text-muted-foreground mt-2.5 flex items-center gap-2 text-[15px]">
+                    <!-- Точка акцентом: в макете она отмечает живую цифру -->
+                    <span class="bg-action size-[7px] flex-none rounded-full" />
                     <template v-if="trialAvailable">
                         Первая — бесплатно, карта не нужна.
                     </template>
                     <template v-else>
                         Осталось генераций:
-                        <span class="text-foreground font-medium tabular-nums">
+                        <span class="text-foreground font-bold tabular-nums">
                             {{ credits }}
                         </span>
                     </template>
                 </p>
             </div>
 
-            <Button as-child class="flex-none">
+            <Button as-child class="h-12 flex-none px-[22px] text-base shadow-[0_6px_16px_rgba(21,22,26,.2)]">
                 <Link href="/presentations/new">
-                    <Plus class="size-4" />
+                    <Plus class="size-[17px]" />
                     Создать
                 </Link>
             </Button>
         </div>
 
-        <!-- Список строками с волосяными линейками — по-редакторски,
-             без визуального шума от карточек -->
-        <ul v-if="presentations.data.length" class="divide-rule divide-y">
+        <!-- Плашками, а не строками с линейками: так в макете, и так
+             у каждой презентации своя область нажатия -->
+        <ul v-if="presentations.data.length" class="flex flex-col gap-2">
             <li
                 v-for="item in presentations.data"
                 :key="item.id"
-                class="group flex items-baseline gap-4"
+                class="group border-rule bg-card hover:border-action hover:shadow-[0_6px_18px_rgba(43,74,203,.1)] relative flex items-center gap-[18px] rounded-[13px] border px-5 py-4 transition-all"
             >
-                <Link :href="item.url" class="flex min-w-0 flex-1 items-baseline gap-4 py-5">
+                <Link :href="item.url" class="flex min-w-0 flex-1 items-center gap-[18px]">
+                    <!-- Заглушка слайда: три полоски вместо картинки,
+                         превью первой страницы у нас нет -->
+                    <div
+                        class="border-rule bg-sidebar h-[38px] w-14 flex-none rounded-[7px] border px-[7px] py-1.5"
+                        aria-hidden="true"
+                    >
+                        <div class="h-1 w-[70%] rounded-sm bg-[#C9C3B6]" />
+                        <div class="mt-[5px] h-[3px] w-[46%] rounded-sm bg-[#DDD7CB]" />
+                        <div class="mt-1 h-[3px] w-[56%] rounded-sm bg-[#DDD7CB]" />
+                    </div>
+
                     <div class="min-w-0 flex-1">
-                        <p
-                            class="group-hover:text-brand-ink truncate font-medium transition-colors"
-                        >
+                        <p class="truncate text-[18px] font-semibold tracking-[-0.01em]">
                             {{ item.title }}
                         </p>
-                        <p class="text-muted-foreground mt-1 text-sm">
-                            <span :class="statusTone[item.status] ?? 'text-brand-ink'">
+                        <p class="mt-[7px] flex items-center gap-2.5">
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[13px] font-semibold"
+                                :class="statusTone[item.status] ?? statusTone.default"
+                            >
+                                <Check v-if="item.status === 'ready'" class="size-3" />
                                 {{ item.statusLabel }}
                             </span>
-                            <span class="mx-1.5">·</span>
-                            {{ item.slideCount }} слайдов
+                            <span class="text-muted-foreground text-sm">
+                                {{ item.slideCount }} слайдов
+                            </span>
                         </p>
                     </div>
 
                     <span class="text-muted-foreground flex-none text-sm tabular-nums">
                         {{ formatDate(item.createdAt) }}
                     </span>
+                    <ChevronRight class="text-rule size-[18px] flex-none" />
                 </Link>
 
                 <!-- Появляется при наведении, чтобы не шуметь в спокойном состоянии -->

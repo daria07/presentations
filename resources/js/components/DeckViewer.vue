@@ -134,10 +134,13 @@ async function load() {
         .thumb {
             position: relative; flex: none; padding: 0; overflow: hidden;
             width: ${THUMB_WIDTH}px; border-radius: 4px; cursor: pointer;
-            border: 1px solid #DCD8D3; background: #fff;
+            border: 1px solid #E2DCD1; background: #fff;
             text-align: left; font: inherit; color: inherit;
         }
-        .thumb[aria-current="true"] { border-color: #3B82F6; box-shadow: 0 0 0 1px #3B82F6; }
+        /* Значения здесь именно значениями, а не токенами: лента живёт
+           в теневом корне, куда переменные страницы не достают.
+           Индиго — акцент интерфейса, тёплый серый — линейка. */
+        .thumb[aria-current="true"] { border-color: #2B4ACB; box-shadow: 0 0 0 1px #2B4ACB; }
         .thumb .slide { display: flex; transform-origin: top left; pointer-events: none; }
     `;
 

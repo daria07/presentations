@@ -79,13 +79,13 @@ function formatDate(iso: string | null): string {
                 v-for="pack in packages"
                 :key="pack.key"
                 class="flex flex-col rounded-xl border p-6"
-                :class="pack.popular ? 'border-brand' : 'border-rule'"
+                :class="pack.popular ? 'border-action' : 'border-rule'"
             >
                 <div class="flex items-baseline justify-between">
                     <p class="font-display font-bold">{{ pack.title }}</p>
                     <span
                         v-if="pack.popular"
-                        class="bg-brand-soft text-brand-ink rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        class="bg-action-soft text-action-ink rounded-full px-2 py-0.5 text-[11px] font-medium"
                     >
                         чаще берут
                     </span>
@@ -148,7 +148,7 @@ function formatDate(iso: string | null): string {
                         class="flex items-center gap-1.5"
                         :class="
                             item.status === 'paid'
-                                ? 'text-brand-ink'
+                                ? 'text-action-ink'
                                 : 'text-muted-foreground'
                         "
                     >

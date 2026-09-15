@@ -461,7 +461,7 @@ async function copyShare() {
                             class="cursor-pointer border-border rounded-lg border px-4 py-2 text-sm transition-colors"
                             :class="
                                 answers[q.key ?? String(i)] === option
-                                    ? 'border-brand bg-brand text-white'
+                                    ? 'border-action bg-action text-white'
                                     : 'hover:border-foreground/40'
                             "
                             @click="answers[q.key ?? String(i)] = option"

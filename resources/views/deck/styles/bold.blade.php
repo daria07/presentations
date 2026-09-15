@@ -46,6 +46,14 @@
 
     .bullets { gap: 4.7mm; }
 
+    /* У этой темы пункт — карточка со своими отступами, поэтому
+       четыре штуки стоят дороже, чем строки списка у остальных:
+       поджимаем и зазор, и внутренние отступы, и интерлиньяж */
+    .bullets:has(> .bullet:nth-child(4)) { gap: 2.2mm; }
+    .bullets:has(> .bullet:nth-child(5)) { gap: 1.5mm; }
+    .bullets:has(> .bullet:nth-child(4)) .bullet { padding: 2.8mm 5mm; }
+    .bullets:has(> .bullet:nth-child(4)) .bullet-text { line-height: 1.38; }
+
     /* Пункт — карточка с тенью, а не строка списка */
     .bullet {
         gap: 5mm;

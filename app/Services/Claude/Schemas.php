@@ -88,14 +88,20 @@ class Schemas
                             ],
                             'bullets' => [
                                 'type' => 'array',
-                                'maxItems' => 5,
+                                // Четыре, а не пять: пятый пункт с длинным
+                                // описанием не влезает в высоту слайда
+                                'maxItems' => 4,
                                 'description' => 'Для bullets, comparison, process и matrix. '
                                     .'В comparison ровно два, в matrix ровно четыре.',
                                 'items' => [
                                     'type' => 'object',
                                     'properties' => [
                                         'title' => ['type' => 'string'],
-                                        'text' => ['type' => 'string'],
+                                        'text' => [
+                                            'type' => 'string',
+                                            'description' => 'Одно предложение до 120 знаков: '
+                                                .'высота слайда фиксирована, лишнее обрежется.',
+                                        ],
                                         'icon' => [
                                             'type' => 'string',
                                             // none в словаре нужен, чтобы поле можно было

@@ -57,7 +57,14 @@ const mainNavItems = computed<NavItem[]>(() => [
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
+    <!--
+        variant="sidebar", а не "inset": при inset shadcn красит всё
+        полотно цветом меню, а содержимое кладёт плавающей панелью со
+        скруглением, отступами и тенью. В макете меню прижато к краю,
+        между ним и содержимым волосяная линейка, полотно одно на всю
+        страницу — это и даёт вариант по умолчанию.
+    -->
+    <Sidebar collapsible="icon" variant="sidebar" class="border-sidebar-border">
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
@@ -74,10 +81,12 @@ const mainNavItems = computed<NavItem[]>(() => [
             <SidebarGroup class="px-2 pt-0 pb-2">
                 <SidebarMenu>
                     <SidebarMenuItem>
+                        <!-- Размеры из макета: 16px, отступы 13/16,
+                             скругление 11, мягкая тень -->
                         <SidebarMenuButton
                             as-child
                             tooltip="Создать"
-                            class="bg-foreground text-background hover:bg-foreground/90 hover:text-background active:bg-foreground/90 active:text-background"
+                            class="bg-foreground text-background hover:bg-foreground/90 hover:text-background active:bg-foreground/90 active:text-background h-auto gap-2.5 rounded-[11px] px-4 py-[13px] text-base font-semibold shadow-[0_4px_12px_rgba(21,22,26,.18)] [&>svg]:size-[17px]"
                         >
                             <Link href="/presentations/new">
                                 <Plus />
@@ -91,19 +100,36 @@ const mainNavItems = computed<NavItem[]>(() => [
             <NavMain :items="mainNavItems" />
         </SidebarContent>
 
-        <div class="px-4 pb-2">
+        <!--
+            Плашка остатка, как в макете. Полосы прогресса нет: в макете
+            она показывает «35 / 50», а знаменателя у нас не существует —
+            баланс не ограничен сверху. Рисовать шкалу от выдуманного
+            максимума значит показывать неправду.
+        -->
+        <div class="px-3 pb-2 group-data-[collapsible=icon]:hidden">
             <Link
                 href="/billing"
-                class="text-muted-foreground hover:text-foreground block text-xs transition-colors group-data-[collapsible=icon]:hidden"
+                class="border-sidebar-border bg-card hover:border-action/40 block rounded-xl border px-3.5 py-3 transition-colors"
             >
                 <template v-if="credits > 0">
-                    Осталось {{ credits }} {{ pluralize(credits) }}
+                    <div class="flex items-baseline justify-between gap-3">
+                        <span class="text-muted-foreground text-[13px]">
+                            {{ pluralize(credits) === 'генерация' ? 'Генерация' : 'Генерации' }}
+                        </span>
+                        <span class="text-[15px] font-bold tabular-nums">
+                            {{ credits }}
+                        </span>
+                    </div>
                 </template>
                 <template v-else-if="!trialUsed">
-                    Первая генерация бесплатно
+                    <span class="text-[13px] font-medium">
+                        Первая генерация бесплатно
+                    </span>
                 </template>
                 <template v-else>
-                    <span class="text-brand">Генерации закончились</span>
+                    <span class="text-destructive text-[13px] font-medium">
+                        Генерации закончились
+                    </span>
                 </template>
             </Link>
         </div>

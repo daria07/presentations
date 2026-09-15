@@ -167,7 +167,7 @@ const canSubmit = computed(() =>
                         class="cursor-pointer border-border h-11 flex-1 rounded-lg border text-sm font-medium transition-colors"
                         :class="
                             slideCount === n
-                                ? 'border-brand bg-brand text-white'
+                                ? 'border-action bg-action text-white'
                                 : 'hover:border-foreground/40'
                         "
                         @click="slideCount = n"

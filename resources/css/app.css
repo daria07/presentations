@@ -17,8 +17,15 @@
         'Manrope', 'Golos Text', ui-sans-serif, system-ui, sans-serif;
 
     --color-paper: var(--paper);
+    --color-panel: var(--panel);
     --color-rule: var(--rule);
     --color-brand: var(--brand);
+    /* Акцент взаимодействия отдельно от знака бренда: выбор, ссылки,
+       фокус. Раньше и то и другое было --brand, и после смены акцента
+       на индиго знак поехал бы вместе с кнопками */
+    --color-action: var(--action);
+    --color-action-soft: var(--action-soft);
+    --color-action-ink: var(--action-ink);
     --color-brand-soft: var(--brand-soft);
     --color-brand-ink: var(--brand-ink);
 
@@ -96,6 +103,7 @@
 */
 .landing {
     --paper: hsl(40 33% 98%);
+    --panel: hsl(40 30% 97%);
     --rule: hsl(38 20% 88%);
     --brand: hsl(17 62% 44%);
     --brand-soft: hsl(20 60% 95%);
@@ -113,6 +121,12 @@
     --muted-foreground: hsl(38 8% 43%);
     --accent: hsl(20 60% 95%);
     --accent-foreground: hsl(17 66% 34%);
+    /* На лендинге акцент взаимодействия — тот же терракотовый,
+       что и знак: страница живёт в своём мире и индиго кабинета
+       к ней не относится */
+    --action: hsl(17 62% 44%);
+    --action-soft: hsl(20 60% 95%);
+    --action-ink: hsl(17 66% 34%);
     --border: hsl(38 20% 88%);
     --input: hsl(38 20% 85%);
     --ring: hsl(17 62% 44%);
@@ -141,33 +155,46 @@
 }
 
 :root {
-    /* Тёплая бумага вместо стерильно-белого: фон, на котором
-       чёрный текст не режет глаз, а терракота не спорит с ним. */
-    --paper: hsl(40 33% 98%);
-    --rule: hsl(38 20% 88%);
+    /* Значения взяты из макета «Тёплая бумага» как есть, в hex:
+       так их видно рядом с макетом без пересчёта в hsl.
+
+       Полотно тёплое и на полтона темнее белого — за счёт этого
+       карточки светлее фона и всплывают без теней и рамок. Акцент
+       интерфейса — индиго: он отвечает за действия, фокус и ссылки.
+       --brand остался терракотовым: это знак бренда (звезда), он не
+       обязан совпадать с акцентом и держит связь с лендингами. */
+    --paper: #f4f1eb;
+    /* Верхняя панель: на полтона светлее полотна */
+    --panel: #f9f7f3;
+    --rule: #e2dcd1;
     --brand: hsl(17 62% 44%);
     --brand-soft: hsl(20 60% 95%);
     --brand-ink: hsl(17 66% 34%);
 
-    --background: hsl(40 33% 98%);
-    --foreground: hsl(40 16% 8%);
-    --card: hsl(0 0% 100%);
-    --card-foreground: hsl(40 16% 8%);
-    --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(40 16% 8%);
-    --primary: hsl(40 16% 10%);
-    --primary-foreground: hsl(40 33% 98%);
-    --secondary: hsl(38 22% 94%);
-    --secondary-foreground: hsl(40 16% 10%);
-    --muted: hsl(38 22% 95%);
-    --muted-foreground: hsl(38 8% 43%);
-    --accent: hsl(20 60% 95%);
-    --accent-foreground: hsl(17 66% 34%);
-    --destructive: hsl(5 74% 45%);
-    --destructive-foreground: hsl(40 33% 98%);
-    --border: hsl(38 20% 88%);
-    --input: hsl(38 20% 85%);
-    --ring: hsl(17 62% 44%);
+    --background: #f4f1eb;
+    --foreground: #15161a;
+    --card: #ffffff;
+    --card-foreground: #15161a;
+    --popover: #ffffff;
+    --popover-foreground: #15161a;
+    --primary: #15161a;
+    --primary-foreground: #ffffff;
+    --secondary: #eae5dc;
+    --secondary-foreground: #15161a;
+    --muted: #eae5dc;
+    /* Из трёх серых макета берём средний: светлые (#78756D и дальше)
+       дают к полотну 4.08 и ниже, а это основной вторичный текст */
+    --muted-foreground: #6f6b62;
+    --accent: #e6eafb;
+    --accent-foreground: #2b4acb;
+    --action: #2b4acb;
+    --action-soft: #e6eafb;
+    --action-ink: #1d35a0;
+    --destructive: #c2364a;
+    --destructive-foreground: #ffffff;
+    --border: #e2dcd1;
+    --input: #ddd7cb;
+    --ring: #2b4acb;
     /* Синий и оранжевый: худшая пара по дальтонизму даёт ΔE 24.7,
        по обычному зрению 33.6 — с запасом к порогам 8 и 15 */
     --series-1: #2a78d6;
@@ -178,20 +205,24 @@
     --chart-3: hsl(38 60% 50%);
     --chart-4: hsl(220 35% 45%);
     --chart-5: hsl(340 45% 52%);
-    --radius: 0.5rem;
-    --sidebar-background: hsl(40 30% 96%);
-    --sidebar-foreground: hsl(38 12% 28%);
-    --sidebar-primary: hsl(40 16% 10%);
-    --sidebar-primary-foreground: hsl(40 33% 98%);
-    --sidebar-accent: hsl(38 24% 92%);
-    --sidebar-accent-foreground: hsl(40 16% 18%);
-    --sidebar-border: hsl(38 20% 88%);
-    --sidebar-ring: hsl(17 62% 44%);
-    --sidebar: hsl(40 30% 96%);
+    /* В макете преобладает 10px */
+    --radius: 0.625rem;
+    --sidebar-background: #efebe3;
+    --sidebar-foreground: #57554f;
+    --sidebar-primary: #15161a;
+    --sidebar-primary-foreground: #ffffff;
+    /* Выбранный пункт в макете — белая пилюля, поэтому поверхность
+       именно белая, а не тёплый оттенок */
+    --sidebar-accent: #ffffff;
+    --sidebar-accent-foreground: #15161a;
+    --sidebar-border: #e2dcd1;
+    --sidebar-ring: #2b4acb;
+    --sidebar: #efebe3;
 }
 
 .dark {
     --paper: hsl(36 10% 7%);
+    --panel: hsl(36 9% 10%);
     --rule: hsl(36 8% 18%);
     --brand: hsl(19 72% 62%);
     --brand-soft: hsl(19 30% 15%);
@@ -209,13 +240,16 @@
     --secondary-foreground: hsl(40 20% 94%);
     --muted: hsl(36 8% 15%);
     --muted-foreground: hsl(38 8% 62%);
-    --accent: hsl(19 30% 16%);
-    --accent-foreground: hsl(19 76% 72%);
+    --accent: #20263f;
+    --accent-foreground: #9aadf4;
+    --action: #6f8bea;
+    --action-soft: #20263f;
+    --action-ink: #9aadf4;
     --destructive: hsl(5 70% 58%);
     --destructive-foreground: hsl(40 20% 96%);
     --border: hsl(36 8% 18%);
     --input: hsl(36 8% 20%);
-    --ring: hsl(19 72% 62%);
+    --ring: #7b93ee;
     --series-1: #3987e5;
     --series-2: #d95926;
 
@@ -231,7 +265,7 @@
     --sidebar-accent: hsl(36 8% 15%);
     --sidebar-accent-foreground: hsl(40 18% 92%);
     --sidebar-border: hsl(36 8% 18%);
-    --sidebar-ring: hsl(19 72% 62%);
+    --sidebar-ring: #7b93ee;
     --sidebar: hsl(36 10% 9%);
 }
 
