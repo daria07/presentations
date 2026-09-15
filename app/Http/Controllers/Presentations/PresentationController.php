@@ -403,9 +403,11 @@ class PresentationController extends Controller
             ->append('-rech.pdf')
             ->value();
 
+        // inline, а не attachment: речь чаще читают с экрана, чем хранят,
+        // и скачать её из просмотрщика браузера всё равно можно
         return response($renderer->pdf($presentation))
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'attachment; filename="'.$name.'"');
+            ->header('Content-Disposition', 'inline; filename="'.$name.'"');
     }
 
     public function destroy(Presentation $presentation): RedirectResponse

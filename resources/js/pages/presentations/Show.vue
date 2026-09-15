@@ -553,7 +553,16 @@ async function copyShare() {
                             Редактировать
                         </Link>
                     </Button>
-                    <Button variant="outline" size="sm" @click="copyShare">
+                    <!-- Ссылка ведёт на ту же страницу, что и «Открыть»,
+                         а там лежит ещё старый файл: дать её сейчас значит
+                         отправить человека смотреть прошлое оформление -->
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        :disabled="reprinting"
+                        :title="reprinting ? 'Файл ещё печатается' : undefined"
+                        @click="copyShare"
+                    >
                         <Link2 class="size-4" />
                         {{ copied ? 'Скопировано' : 'Ссылка' }}
                     </Button>
@@ -562,6 +571,7 @@ async function copyShare() {
                         size="sm"
                         as-child
                         :class="reprinting && 'pointer-events-none opacity-50'"
+                        :title="reprinting ? 'Файл ещё печатается' : undefined"
                     >
                         <a :href="current.shareUrl!" target="_blank" rel="noopener">
                             <ExternalLink class="size-4" />
@@ -569,9 +579,14 @@ async function copyShare() {
                         </a>
                     </Button>
                     <!-- Речь печатается на лету, поэтому ссылка ведёт
-                         прямо на маршрут: пара секунд ожидания браузера -->
+                         прямо на маршрут: пара секунд ожидания браузера.
+                         Открываем во вкладке — читать, а не складывать -->
                     <Button v-if="current.speechUrl" variant="outline" size="sm" as-child>
-                        <a :href="current.speechUrl">
+                        <a
+                            :href="current.speechUrl"
+                            target="_blank"
+                            rel="noopener"
+                        >
                             <Mic class="size-4" />
                             Речь докладчика
                         </a>
@@ -580,6 +595,7 @@ async function copyShare() {
                         size="sm"
                         as-child
                         :class="reprinting && 'pointer-events-none opacity-50'"
+                        :title="reprinting ? 'Файл ещё печатается' : undefined"
                     >
                         <a :href="current.downloadUrl!">
                             <Download class="size-4" />

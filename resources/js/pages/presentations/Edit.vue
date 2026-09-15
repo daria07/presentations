@@ -503,11 +503,15 @@ function save(then?: () => void) {
 
                     <div class="space-y-2">
                         <Label>Заметка для выступающего</Label>
+                        <!-- Речь докладчика собирается из этого поля,
+                             поэтому его пишут, а не подписывают: даём
+                             высоту под несколько предложений и разрешаем
+                             тянуть дальше -->
                         <textarea
                             v-model="slides[active].notes"
-                            rows="2"
-                            placeholder="Не попадёт на слайд"
-                            class="border-input bg-background w-full resize-none rounded-lg border px-3 py-2 text-sm"
+                            rows="8"
+                            placeholder="Не попадёт на слайд — это текст для выступления"
+                            class="border-input bg-background min-h-32 w-full resize-y rounded-lg border px-3 py-2 text-sm leading-relaxed"
                         />
                     </div>
                 </div>
