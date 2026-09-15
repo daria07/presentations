@@ -12,6 +12,10 @@ export type User = {
 
 export type Auth = {
     user: User;
+    /* Всё это приходит из HandleInertiaRequests на каждой странице */
+    credits?: number | null;
+    trialUsed?: boolean | null;
+    isAdmin?: boolean;
 };
 
 export type Passkey = {

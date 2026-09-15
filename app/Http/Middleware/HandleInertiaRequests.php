@@ -44,6 +44,8 @@ class HandleInertiaRequests extends Middleware
                 // иначе человек узнаёт о нуле только в момент отказа
                 'credits' => $request->user()?->credits,
                 'trialUsed' => $request->user()?->trial_used,
+                // Ссылка на кабинет показывается только своим
+                'isAdmin' => (bool) $request->user()?->isAdmin(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

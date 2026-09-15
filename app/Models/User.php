@@ -62,6 +62,16 @@ class User extends Authenticatable implements PasskeyUser
         });
     }
 
+    /**
+     * Права администратора живут в ADMIN_EMAILS, а не в базе:
+     * колонку можно выставить миграцией, сидом или дырой в приложении,
+     * а окружение на сервере меняют руками.
+     */
+    public function isAdmin(): bool
+    {
+        return in_array(mb_strtolower($this->email), config('admin.emails', []), true);
+    }
+
     public function presentations(): HasMany
     {
         return $this->hasMany(Presentation::class)->latest();

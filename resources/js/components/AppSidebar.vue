@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { CreditCard, Plus, Presentation } from '@lucide/vue';
+import { CreditCard, Plus, Presentation, ShieldCheck } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -35,7 +35,9 @@ function pluralize(n: number): string {
     return 'генераций';
 }
 
-const mainNavItems: NavItem[] = [
+const isAdmin = computed(() => Boolean(page.props.auth?.isAdmin));
+
+const mainNavItems = computed<NavItem[]>(() => [
     {
         title: 'Презентации',
         href: '/presentations',
@@ -46,7 +48,12 @@ const mainNavItems: NavItem[] = [
         href: '/billing',
         icon: CreditCard,
     },
-];
+    // Пункт видят только свои — маршрут всё равно закрыт на сервере,
+    // это лишь чтобы не мозолил глаза остальным
+    ...(isAdmin.value
+        ? [{ title: 'Админка', href: '/admin', icon: ShieldCheck }]
+        : []),
+]);
 </script>
 
 <template>

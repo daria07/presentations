@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\Presentations\PresentationController;
 use App\Http\Controllers\Presentations\PublicPresentationController;
+use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -49,6 +51,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Песочница видна только при провайдере fake
         Route::get('sandbox/{payment}', [BillingController::class, 'sandbox'])->name('sandbox');
         Route::post('sandbox/{payment}', [BillingController::class, 'sandboxSettle'])->name('sandbox.settle');
+    });
+
+    // Кабинет администратора: только чтение, доступ по ADMIN_EMAILS
+    Route::middleware(EnsureAdmin::class)->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/', [AdminController::class, 'index'])->name('index');
+        Route::get('users', [AdminController::class, 'users'])->name('users');
+        Route::get('users/{user}', [AdminController::class, 'user'])->name('user');
     });
 
     Route::prefix('presentations')->name('presentations.')->group(function () {

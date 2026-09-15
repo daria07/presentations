@@ -54,6 +54,12 @@
     --color-input: var(--input);
     --color-ring: var(--ring);
 
+    /* Цвета серий на графиках админки. Отдельно от chart-1…5:
+       те подобраны под интерфейс, а эти проверены на различимость
+       при дальтонизме и на контраст к подложке */
+    --color-series-1: var(--series-1);
+    --color-series-2: var(--series-2);
+
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
@@ -162,6 +168,11 @@
     --border: hsl(38 20% 88%);
     --input: hsl(38 20% 85%);
     --ring: hsl(17 62% 44%);
+    /* Синий и оранжевый: худшая пара по дальтонизму даёт ΔE 24.7,
+       по обычному зрению 33.6 — с запасом к порогам 8 и 15 */
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+
     --chart-1: hsl(17 62% 48%);
     --chart-2: hsl(168 40% 36%);
     --chart-3: hsl(38 60% 50%);
@@ -205,6 +216,9 @@
     --border: hsl(36 8% 18%);
     --input: hsl(36 8% 20%);
     --ring: hsl(19 72% 62%);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+
     --chart-1: hsl(19 72% 62%);
     --chart-2: hsl(168 45% 52%);
     --chart-3: hsl(38 70% 62%);
