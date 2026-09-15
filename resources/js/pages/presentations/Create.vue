@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import Field from '@/components/Field.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const props = defineProps<{
     credits: number;
@@ -87,14 +90,14 @@ const canSubmit = computed(() =>
             <!-- Сценарий «по теме» -->
             <div v-if="mode === 'topic'" class="space-y-2">
                 <Label for="topic" class="sr-only">Тема</Label>
-                <textarea
+                <Textarea
                     id="topic"
                     name="topic"
                     v-model="topic"
                     rows="3"
                     autofocus
                     placeholder="Например: Пётр I и его реформы государственного управления"
-                    class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring w-full resize-none rounded-lg border px-4 py-3 text-base leading-relaxed focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    class="resize-none"
                 />
                 <InputError :message="errors.topic" />
 
@@ -113,46 +116,33 @@ const canSubmit = computed(() =>
 
             <!-- Сценарий «по готовому тексту» -->
             <div v-else class="space-y-6">
-                <div class="space-y-2">
-                    <div class="flex items-baseline justify-between">
-                        <Label for="source_text">Текст</Label>
-                        <span
-                            class="text-xs tabular-nums"
-                            :class="charsLeft < 0 ? 'text-destructive' : 'text-muted-foreground'"
-                        >
-                            {{ sourceText.length.toLocaleString('ru-RU') }} из
-                            {{ maxSource.toLocaleString('ru-RU') }}
-                        </span>
-                    </div>
-
-                    <textarea
+                <Field
+                    for="source_text"
+                    label="Текст"
+                    :counter="`${sourceText.length.toLocaleString('ru-RU')} из ${maxSource.toLocaleString('ru-RU')}`"
+                    :error="errors.source_text"
+                    hint="Работаем строго по вашему тексту: фактов и цифр, которых в нём нет, в презентации не появится."
+                >
+                    <Textarea
                         id="source_text"
                         name="source_text"
                         v-model="sourceText"
                         rows="12"
                         autofocus
                         placeholder="Вставьте статью, реферат, конспект или расшифровку встречи. Мы отберём главное и разложим по слайдам, ничего не дописывая от себя."
-                        class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring w-full resize-y rounded-lg border px-4 py-3 text-[15px] leading-relaxed focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                        :aria-invalid="charsLeft < 0 || undefined"
                     />
-                    <InputError :message="errors.source_text" />
+                </Field>
 
-                    <p class="text-muted-foreground text-sm leading-relaxed">
-                        Работаем строго по вашему тексту: фактов и цифр, которых
-                        в нём нет, в презентации не появится.
-                    </p>
-                </div>
-
-                <div class="space-y-2">
-                    <Label for="focus">На что сделать акцент</Label>
-                    <input
+                <Field for="focus" label="На что сделать акцент">
+                    <Input
                         id="focus"
                         name="topic"
                         v-model="focus"
                         type="text"
                         placeholder="Необязательно. Например: выводы и практическая польза"
-                        class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-lg border px-4 py-2.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     />
-                </div>
+                </Field>
             </div>
 
             <!-- Количество слайдов -->

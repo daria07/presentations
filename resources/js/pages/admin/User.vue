@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import PageHeader from '@/components/PageHeader.vue';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -97,10 +98,9 @@ function when(iso: string | null): string {
     <Head :title="user.name" />
 
     <div class="w-full space-y-6 px-4 py-8 lg:px-8">
-        <div>
-            <h1 class="text-2xl font-semibold">{{ user.name }}</h1>
-            <p class="text-muted-foreground text-sm">{{ user.email }}</p>
-        </div>
+        <PageHeader :title="user.name">
+            <template #meta>{{ user.email }}</template>
+        </PageHeader>
 
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div class="border-border bg-card rounded-xl border p-4">

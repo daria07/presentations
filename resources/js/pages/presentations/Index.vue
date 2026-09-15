@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from '@lucide/vue';
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
+import PageHeader from '@/components/PageHeader.vue';
+import StatusBadge from '@/components/StatusBadge.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -68,16 +70,6 @@ function destroy() {
     });
 }
 
-/*
-   Статус — бейдж, а не просто цветной текст: в списке из десяти строк
-   глаз ищет состояние пятном, а не читает слово. Зелёный и красный
-   взяты из макета, остальные состояния идут нейтральным.
-*/
-const statusTone: Record<string, string> = {
-    ready: 'bg-[#E4F3EC] text-[#1D7A55]',
-    failed: 'bg-[#FDECEE] text-[#C2364A]',
-    default: 'bg-secondary text-muted-foreground',
-};
 </script>
 
 <template>
@@ -86,33 +78,28 @@ const statusTone: Record<string, string> = {
     <!-- Полотно во всю ширину с отступами 38/56 из макета:
          узкая колонка сжимала плашки и ломала ритм строки -->
     <div class="w-full px-6 py-9 lg:px-14">
-        <div class="mb-6 flex items-end justify-between gap-6">
-            <div>
-                <h1 class="text-[40px] leading-none font-bold tracking-[-0.02em]">
-                    Презентации
-                </h1>
-                <p class="text-muted-foreground mt-2.5 flex items-center gap-2 text-[15px]">
-                    <!-- Точка акцентом: в макете она отмечает живую цифру -->
-                    <span class="bg-action size-[7px] flex-none rounded-full" />
-                    <template v-if="trialAvailable">
-                        Первая — бесплатно, карта не нужна.
-                    </template>
-                    <template v-else>
-                        Осталось генераций:
-                        <span class="text-foreground font-bold tabular-nums">
-                            {{ credits }}
-                        </span>
-                    </template>
-                </p>
-            </div>
+        <PageHeader title="Презентации" dot>
+            <template #meta>
+                <template v-if="trialAvailable">
+                    Первая — бесплатно, карта не нужна.
+                </template>
+                <template v-else>
+                    Осталось генераций:
+                    <span class="text-foreground font-bold tabular-nums">
+                        {{ credits }}
+                    </span>
+                </template>
+            </template>
 
-            <Button as-child class="h-12 flex-none px-[22px] text-base shadow-[0_6px_16px_rgba(21,22,26,.2)]">
-                <Link href="/presentations/new">
-                    <Plus class="size-[17px]" />
-                    Создать
-                </Link>
-            </Button>
-        </div>
+            <template #actions>
+                <Button as-child class="h-12 px-[22px] text-base shadow-[0_6px_16px_rgba(21,22,26,.2)]">
+                    <Link href="/presentations/new">
+                        <Plus class="size-[17px]" />
+                        Создать
+                    </Link>
+                </Button>
+            </template>
+        </PageHeader>
 
         <!-- Плашками, а не строками с линейками: так в макете, и так
              у каждой презентации своя область нажатия -->
@@ -139,13 +126,7 @@ const statusTone: Record<string, string> = {
                             {{ item.title }}
                         </p>
                         <p class="mt-[7px] flex items-center gap-2.5">
-                            <span
-                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[13px] font-semibold"
-                                :class="statusTone[item.status] ?? statusTone.default"
-                            >
-                                <Check v-if="item.status === 'ready'" class="size-3" />
-                                {{ item.statusLabel }}
-                            </span>
+                            <StatusBadge :status="item.status" :label="item.statusLabel" />
                             <span class="text-muted-foreground text-sm">
                                 {{ item.slideCount }} слайдов
                             </span>

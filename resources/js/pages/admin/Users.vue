@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import PageHeader from '@/components/PageHeader.vue';
+import { Input } from '@/components/ui/input';
 
 type Row = {
     id: number;
@@ -77,21 +79,18 @@ function day(iso: string | null): string {
     <Head title="Пользователи" />
 
     <div class="w-full space-y-5 px-4 py-8 lg:px-8">
-        <div class="flex flex-wrap items-end justify-between gap-3">
-            <div>
-                <h1 class="text-2xl font-semibold">Пользователи</h1>
-                <p class="text-muted-foreground text-sm tabular-nums">
-                    Всего {{ users.total }}
-                </p>
-            </div>
+        <PageHeader title="Пользователи">
+            <template #meta>Всего {{ users.total }}</template>
 
-            <input
+            <template #actions>
+                <Input
                 v-model="query"
                 type="search"
                 placeholder="Имя или почта"
-                class="border-input bg-background w-64 rounded-lg border px-3 py-2 text-sm"
-            />
-        </div>
+                    class="w-64"
+                />
+            </template>
+        </PageHeader>
 
         <div class="border-border bg-card overflow-x-auto rounded-xl border">
             <table class="w-full text-sm">

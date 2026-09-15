@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import DeckViewer from '@/components/DeckViewer.vue';
+import Field from '@/components/Field.vue';
 import { Head, router } from '@inertiajs/vue3';
 import {
     ArrowDown,
     ArrowUp,
-    ChevronDown,
     Plus,
     RefreshCw,
     Trash2,
@@ -19,7 +19,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SelectNative } from '@/components/ui/select-native';
+import { Textarea } from '@/components/ui/textarea';
 
 type Bullet = { title: string; text: string };
 type Stat = { value: string; label: string };
@@ -271,9 +274,11 @@ function save(then?: () => void) {
     <div class="flex h-[calc(100vh-4rem)] flex-col">
         <!-- Шапка редактора -->
         <div class="border-rule flex flex-none items-center gap-4 border-b px-4 py-3">
+            <!-- Прозрачное поле, а не Input: это заголовок страницы,
+                 который можно править, а не элемент формы -->
             <input
                 v-model="title"
-                class="min-w-0 flex-1 bg-transparent text-lg font-bold outline-none"
+                class="focus-visible:ring-ring/50 min-w-0 flex-1 rounded-md bg-transparent px-1 text-lg font-bold outline-none focus-visible:ring-[3px]"
                 placeholder="Название презентации"
             />
 
@@ -330,19 +335,11 @@ function save(then?: () => void) {
             >
                 <div class="mx-auto max-w-xl space-y-6">
                     <div class="flex items-center gap-2">
-                        <div class="relative flex-1">
-                            <select
-                                v-model="slides[active].layout"
-                                class="border-input bg-background w-full appearance-none rounded-lg border px-3 py-2 pr-9 text-sm"
-                            >
-                                <option v-for="l in layouts" :key="l.key" :value="l.key">
-                                    {{ l.name }}
-                                </option>
-                            </select>
-                            <ChevronDown
-                                class="text-muted-foreground pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2"
-                            />
-                        </div>
+                        <SelectNative v-model="slides[active].layout" class="flex-1">
+                            <option v-for="l in layouts" :key="l.key" :value="l.key">
+                                {{ l.name }}
+                            </option>
+                        </SelectNative>
 
                         <Button
                             variant="ghost"
@@ -374,22 +371,16 @@ function save(then?: () => void) {
                         </Button>
                     </div>
 
-                    <div class="space-y-2">
-                        <Label>Заголовок</Label>
-                        <input
-                            v-model="slides[active].heading"
-                            class="border-input bg-background w-full rounded-lg border px-3 py-2"
-                        />
-                    </div>
+                    <Field label="Заголовок">
+                        <Input v-model="slides[active].heading" />
+                    </Field>
 
-                    <div class="space-y-2">
-                        <Label>Подзаголовок</Label>
-                        <input
+                    <Field label="Подзаголовок">
+                        <Input
                             v-model="slides[active].subheading"
                             placeholder="Необязательно"
-                            class="border-input bg-background w-full rounded-lg border px-3 py-2"
                         />
-                    </div>
+                    </Field>
 
                     <!-- Пункты -->
                     <div v-if="usesBullets(slides[active].layout)" class="space-y-3">
@@ -401,10 +392,10 @@ function save(then?: () => void) {
                             class="border-rule space-y-2 rounded-lg border p-3"
                         >
                             <div class="flex gap-2">
-                                <input
+                                <Input
                                     v-model="bullet.title"
                                     placeholder="Коротко"
-                                    class="border-input bg-background flex-1 rounded-md border px-3 py-1.5 text-sm font-medium"
+                                    class="h-10 flex-1 font-medium"
                                 />
                                 <Button
                                     variant="ghost"
@@ -415,11 +406,11 @@ function save(then?: () => void) {
                                     <Trash2 class="size-3.5" />
                                 </Button>
                             </div>
-                            <textarea
+                            <Textarea
                                 v-model="bullet.text"
                                 rows="2"
-                                placeholder="Одно предложение"
-                                class="border-input bg-background w-full resize-none rounded-md border px-3 py-1.5 text-sm"
+                                placeholder="Одно предложение до 120 знаков"
+                                class="min-h-16 resize-none"
                             />
                         </div>
 
@@ -443,15 +434,15 @@ function save(then?: () => void) {
                             :key="si"
                             class="flex gap-2"
                         >
-                            <input
+                            <Input
                                 v-model="stat.value"
                                 placeholder="1682"
-                                class="border-input bg-background w-28 rounded-md border px-3 py-1.5 text-sm font-medium tabular-nums"
+                                class="h-10 w-28 font-medium tabular-nums"
                             />
-                            <input
+                            <Input
                                 v-model="stat.label"
                                 placeholder="Что это значит"
-                                class="border-input bg-background flex-1 rounded-md border px-3 py-1.5 text-sm"
+                                class="h-10 flex-1"
                             />
                             <Button
                                 variant="ghost"
@@ -477,10 +468,10 @@ function save(then?: () => void) {
                     <!-- Цитата -->
                     <div v-if="usesQuote(slides[active].layout)" class="space-y-3">
                         <Label>Цитата</Label>
-                        <textarea
-                            :value="slides[active].quote?.text ?? ''"
+                        <Textarea
+                            :model-value="slides[active].quote?.text ?? ''"
                             rows="3"
-                            class="border-input bg-background w-full resize-none rounded-lg border px-3 py-2"
+                            class="resize-none"
                             @input="
                                 slides[active].quote = {
                                     text: ($event.target as HTMLTextAreaElement).value,
@@ -488,10 +479,9 @@ function save(then?: () => void) {
                                 }
                             "
                         />
-                        <input
-                            :value="slides[active].quote?.author ?? ''"
+                        <Input
+                            :model-value="slides[active].quote?.author ?? ''"
                             placeholder="Автор"
-                            class="border-input bg-background w-full rounded-lg border px-3 py-2"
                             @input="
                                 slides[active].quote = {
                                     text: slides[active].quote?.text ?? '',
@@ -501,19 +491,20 @@ function save(then?: () => void) {
                         />
                     </div>
 
-                    <div class="space-y-2">
-                        <Label>Заметка для выступающего</Label>
-                        <!-- Речь докладчика собирается из этого поля,
-                             поэтому его пишут, а не подписывают: даём
-                             высоту под несколько предложений и разрешаем
-                             тянуть дальше -->
-                        <textarea
+                    <!-- Речь докладчика собирается из этого поля, поэтому
+                         его пишут, а не подписывают: даём высоту под
+                         несколько предложений и счётчик под ограничение -->
+                    <Field
+                        label="Заметка для выступающего"
+                        :counter="`${(slides[active].notes ?? '').length} / 600`"
+                    >
+                        <Textarea
                             v-model="slides[active].notes"
                             rows="8"
                             placeholder="Не попадёт на слайд — это текст для выступления"
-                            class="border-input bg-background min-h-32 w-full resize-y rounded-lg border px-3 py-2 text-sm leading-relaxed"
+                            class="min-h-32"
                         />
-                    </div>
+                    </Field>
                 </div>
             </section>
 
