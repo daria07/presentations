@@ -6,11 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { store } from '@/routes/password/confirm';
-import {
-    index as confirmOptions,
-    store as confirmStore,
-} from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyConfirmationController';
-import PasskeyVerify from '@/components/PasskeyVerify.vue';
 
 defineOptions({
     layout: {
@@ -23,16 +18,6 @@ defineOptions({
 
 <template>
     <Head title="Подтверждение пароля" />
-
-    <PasskeyVerify
-        :routes="{
-            options: confirmOptions(),
-            submit: confirmStore(),
-        }"
-        label="Подтвердить ключом доступа"
-        loading-label="Подтверждаем…"
-        separator="Или подтвердите паролем"
-    />
 
     <Form
         v-bind="store.form()"
