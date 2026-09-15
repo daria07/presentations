@@ -4,6 +4,7 @@ import { ArrowRight, Mic, Pencil, Wand2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import CookieNotice from '@/components/CookieNotice.vue';
 import SlideCard from '@/components/landing/SlideCard.vue';
+import Wordmark from '@/components/Wordmark.vue';
 import { login, register } from '@/routes';
 
 type Theme = {
@@ -137,8 +138,8 @@ const audiences = [
             <div
                 class="mx-auto flex h-16 max-w-5xl items-center justify-between px-6"
             >
-                <Link href="/" class="font-display text-lg font-extrabold tracking-tight">
-                    Слайдуша
+                <Link href="/" class="text-lg">
+                    <Wordmark />
                 </Link>
 
                 <nav class="flex items-center gap-1 text-sm">
@@ -516,7 +517,7 @@ const audiences = [
             <div
                 class="text-muted-foreground mx-auto flex max-w-5xl flex-col gap-3 px-6 py-8 text-sm sm:flex-row sm:items-center sm:justify-between"
             >
-                <p class="font-display text-foreground font-bold">Слайдуша</p>
+                <p class="text-foreground"><Wordmark /></p>
                 <p class="flex flex-wrap gap-4">
                     <Link href="/offer" class="hover:underline">Оферта</Link>
                     <Link href="/privacy" class="hover:underline">Конфиденциальность</Link>

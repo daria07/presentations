@@ -11,6 +11,20 @@ use Inertia\Inertia;
 
 Route::get('/', HomeController::class)->name('home');
 
+/*
+   Лендинги под рекламу. Каждый — папка со статикой в public/l/<слug>,
+   доступная по /l/<slug>. Маршрут нужен, чтобы адрес работал и без
+   завершающего слэша: иначе всё зависело бы от директивы index в nginx,
+   а она на локальной машине и на сервере разная.
+*/
+Route::get('l/{slug}', function (string $slug) {
+    $file = public_path("l/{$slug}/index.html");
+
+    abort_unless(is_file($file), 404);
+
+    return response()->file($file);
+})->where('slug', '[a-z0-9-]+')->name('landing');
+
 // Правовые документы: открыты всем, реквизиты берутся из config/legal.php
 Route::get('offer', fn () => Inertia::render('legal/Offer', [
     'legal' => config('legal'),
