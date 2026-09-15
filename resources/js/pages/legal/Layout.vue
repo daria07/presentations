@@ -5,7 +5,8 @@ import Wordmark from '@/components/Wordmark.vue';
 
 defineProps<{
     title: string;
-    updatedAt: string;
+    /** Дата редакции — только у правовых документов, у тарифов её нет */
+    updatedAt?: string;
 }>();
 </script>
 
@@ -28,7 +29,7 @@ defineProps<{
             <h1 class="font-display text-3xl font-extrabold tracking-tight">
                 {{ title }}
             </h1>
-            <p class="text-muted-foreground mt-2 text-sm">
+            <p v-if="updatedAt" class="text-muted-foreground mt-2 text-sm">
                 Редакция от {{ updatedAt }}
             </p>
 
@@ -41,7 +42,8 @@ defineProps<{
         <footer class="border-rule border-t">
             <div class="text-muted-foreground mx-auto flex max-w-3xl flex-col gap-2 px-6 py-8 text-sm sm:flex-row sm:justify-between">
                 <p class="text-foreground"><Wordmark /></p>
-                <p class="flex gap-4">
+                <p class="flex flex-wrap gap-4">
+                    <Link href="/pricing" class="hover:underline">Тарифы</Link>
                     <Link href="/offer" class="hover:underline">Оферта</Link>
                     <Link href="/privacy" class="hover:underline">Конфиденциальность</Link>
                 </p>

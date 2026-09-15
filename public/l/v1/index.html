@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Слайдуша — презентации с помощью нейросети</title>
-  <meta name="description" content="Слайдуша создаёт красивые редактируемые презентации в PDF с помощью нейросети. От 46 ₽ за презентацию.">
+  <meta name="description" content="Слайдуша создаёт красивые редактируемые презентации в PDF с помощью нейросети. От 25 ₽ за презентацию.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="canonical" href="https://slaidusha.ru/l/v1">
   <meta property="og:type" content="website">
@@ -132,6 +132,9 @@
       .cards{grid-template-columns:1fr}.theme-row{grid-template-columns:repeat(3,1fr)}
       .footer-grid{grid-template-columns:1fr 1fr}.feature{padding-top:12px}
       .price{font-size:46px}
+      .legal-row{display:flex;flex-wrap:wrap;gap:20px;padding-top:22px;margin-top:22px;border-top:1px solid rgba(0,0,0,.08);font-size:13px}
+      .legal-row a{color:#777;text-decoration:none}
+      .legal-row a:hover{color:#111;text-decoration:underline}
     }
   </style>
 </head>
@@ -151,7 +154,7 @@
       <h1>Презентации, которые создаёт нейросеть</h1>
       <p class="lead">Опиши, о чём нужна презентация — и получи готовый результат в PDF. Быстро, красиво и с возможностью редактирования.</p>
       <a class="btn big" href="#pricing">Создать презентацию&nbsp; →</a>
-      <div class="price-note">От 46 рублей за презентацию</div>
+      <div class="price-note">От 25 рублей за презентацию</div>
     </div>
     <div class="hero-art">
       <div class="blob"></div>
@@ -189,7 +192,7 @@
 
 <section id="pricing" class="pricing">
   <div class="container price-grid">
-    <div><span class="eyebrow" style="background:#f4dced;color:#8a4e78">Доступно каждому</span><h2>От 46 рублей<br>за презентацию</h2><p class="section-copy">Нейросеть создаёт качественные презентации по доступной цене. Без сложностей и подписки.</p><a class="btn big cta-link" href="/register">Создать презентацию&nbsp; →</a></div>
+    <div><span class="eyebrow" style="background:#f4dced;color:#8a4e78">Доступно каждому</span><h2>От 25 рублей<br>за презентацию</h2><p class="section-copy">Нейросеть создаёт качественные презентации по доступной цене. Без сложностей и подписки.</p><a class="btn big cta-link" href="/register">Создать презентацию&nbsp; →</a></div>
     <div class="mock-slides"><div class="paper one"></div><div class="paper two"><h3>Большие цели<br>начинаются<br>с одной идеи</h3><small>Слайдуша</small></div></div>
   </div>
 </section>
@@ -202,6 +205,13 @@
     <div class="feature"><b>♡ Профессиональный результат</b><span>Современный дизайн и структура</span></div>
     <div class="feature"><b>✎ Полная свобода</b><span>Редактируйте, как вам удобно</span></div>
     <div class="feature"><b>♢ Безопасно</b><span>Ваши данные под защитой</span></div>
+  </div>
+  <!-- Ссылки нужны платёжному провайдеру: цены и условия должны
+       открываться с любой страницы, в том числе рекламной -->
+  <div class="container legal-row">
+    <a href="/pricing">Тарифы</a>
+    <a href="/offer">Оферта</a>
+    <a href="/privacy">Конфиденциальность</a>
   </div>
 </footer>
 <script>

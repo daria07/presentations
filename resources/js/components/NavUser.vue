@@ -17,12 +17,18 @@ import UserInfo from '@/components/UserInfo.vue';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 
 const page = usePage();
-const user = computed(() => page.props.auth.user);
+
+/*
+   Во время выхода Inertia успевает перерисовать боковое меню уже с
+   пустым auth.user — раскладка меняется не мгновенно. Поэтому здесь
+   не просто computed, а защита: без пользователя блок не рисуется.
+*/
+const user = computed(() => page.props.auth?.user ?? null);
 const { isMobile, state } = useSidebar();
 </script>
 
 <template>
-    <SidebarMenu>
+    <SidebarMenu v-if="user">
         <SidebarMenuItem>
             <DropdownMenu>
                 <DropdownMenuTrigger as-child>

@@ -11,9 +11,9 @@ return [
     | самозанятость → ИП) правится только этот файл.
     */
 
-    'name' => env('LEGAL_NAME', 'Илина Дарья Александровна'),
+    'name' => env('LEGAL_NAME', 'Куралесина Дарья Сергеевна'),
     'status' => env('LEGAL_STATUS', 'плательщик налога на профессиональный доход (самозанятый)'),
-    'inn' => env('LEGAL_INN', '000000000000'),
+    'inn' => env('LEGAL_INN', '421713602677'),
     'email' => env('LEGAL_EMAIL', 'hello@slaidusha.ru'),
     'site' => env('LEGAL_SITE', 'slaidusha.ru'),
 

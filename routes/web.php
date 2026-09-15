@@ -25,6 +25,7 @@ Route::get('l/{slug}', LandingController::class)
 // Правовые документы: открыты всем, реквизиты берутся из config/legal.php
 Route::get('offer', [LegalController::class, 'offer'])->name('legal.offer');
 Route::get('privacy', [LegalController::class, 'privacy'])->name('legal.privacy');
+Route::get('pricing', [LegalController::class, 'pricing'])->name('legal.pricing');
 
 // Публичная ссылка на готовую презентацию — без авторизации
 Route::get('p/{token}', [PublicPresentationController::class, 'show'])

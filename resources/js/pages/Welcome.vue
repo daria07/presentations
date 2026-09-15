@@ -519,6 +519,7 @@ const audiences = [
             >
                 <p class="text-foreground"><Wordmark /></p>
                 <p class="flex flex-wrap gap-4">
+                    <Link href="/pricing" class="hover:underline">Тарифы</Link>
                     <Link href="/offer" class="hover:underline">Оферта</Link>
                     <Link href="/privacy" class="hover:underline">Конфиденциальность</Link>
                     <span>{{ new Date().getFullYear() }}</span>
