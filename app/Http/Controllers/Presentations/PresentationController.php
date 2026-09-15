@@ -12,6 +12,7 @@ use App\Jobs\PrepareQuestions;
 use App\Jobs\RenderPresentation;
 use App\Models\Presentation;
 use App\Services\Deck\DeckRenderer;
+use App\Services\Deck\SpeechRenderer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -386,6 +387,27 @@ class PresentationController extends Controller
         return Storage::disk(config('deck.disk'))->download($presentation->file_path, $name);
     }
 
+    /**
+     * Речь докладчика — подарок к презентации: заметки, которые модель
+     * уже написала при сборке структуры, разложены по листу A4.
+     */
+    public function speech(Presentation $presentation, SpeechRenderer $renderer): \Illuminate\Http\Response
+    {
+        $this->authorize('view', $presentation);
+
+        abort_unless(filled($presentation->outline['slides'] ?? null), 404);
+
+        $name = str($presentation->title ?: $presentation->topic)
+            ->limit(50, '')
+            ->slug()
+            ->append('-rech.pdf')
+            ->value();
+
+        return response($renderer->pdf($presentation))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="'.$name.'"');
+    }
+
     public function destroy(Presentation $presentation): RedirectResponse
     {
         $this->authorize('delete', $presentation);
@@ -442,6 +464,11 @@ class PresentationController extends Controller
                 : null,
             'downloadUrl' => $presentation->isReady()
                 ? route('presentations.download', $presentation)
+                : null,
+            // Речь собирается из заметок: если модель их не заполнила,
+            // кнопку показывать нечем
+            'speechUrl' => $presentation->isReady() && $presentation->hasSpeakerNotes()
+                ? route('presentations.speech', $presentation)
                 : null,
             'editUrl' => filled($presentation->outline['slides'] ?? null)
                 ? route('presentations.edit', $presentation)

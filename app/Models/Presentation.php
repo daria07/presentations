@@ -58,6 +58,18 @@ class Presentation extends Model
         });
     }
 
+    /** Есть ли хоть одна заполненная заметка докладчика */
+    public function hasSpeakerNotes(): bool
+    {
+        foreach ($this->outline['slides'] ?? [] as $slide) {
+            if (trim((string) ($slide['notes'] ?? '')) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** Убирает готовый PDF с диска, если он там есть */
     public function deleteFile(): void
     {

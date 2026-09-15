@@ -89,6 +89,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('preview');
 
         Route::get('{presentation}/download', [PresentationController::class, 'download'])->name('download');
+
+        // Печатается на лету: свой Chrome на каждый запрос, поэтому
+        // ограничение строже, чем у готового файла
+        Route::get('{presentation}/speech', [PresentationController::class, 'speech'])
+            ->middleware('throttle:20,1')
+            ->name('speech');
         Route::delete('{presentation}', [PresentationController::class, 'destroy'])->name('destroy');
     });
 });

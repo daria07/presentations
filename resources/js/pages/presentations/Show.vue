@@ -6,6 +6,7 @@ import {
     Download,
     ExternalLink,
     Link2,
+    Mic,
     Pencil,
     RotateCcw,
     Trash2,
@@ -62,6 +63,7 @@ type Presentation = {
     shareUrl: string | null;
     previewUrl: string | null;
     downloadUrl: string | null;
+    speechUrl: string | null;
     editUrl: string | null;
     theme: string;
     palette: string;
@@ -564,6 +566,14 @@ async function copyShare() {
                         <a :href="current.shareUrl!" target="_blank" rel="noopener">
                             <ExternalLink class="size-4" />
                             Открыть
+                        </a>
+                    </Button>
+                    <!-- Речь печатается на лету, поэтому ссылка ведёт
+                         прямо на маршрут: пара секунд ожидания браузера -->
+                    <Button v-if="current.speechUrl" variant="outline" size="sm" as-child>
+                        <a :href="current.speechUrl">
+                            <Mic class="size-4" />
+                            Речь докладчика
                         </a>
                     </Button>
                     <Button
