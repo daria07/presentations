@@ -27,14 +27,18 @@ const { isCurrentUrl } = useCurrentUrl();
         </SidebarGroupLabel>
         <SidebarMenu>
             <SidebarMenuItem v-for="item in items" :key="item.title">
-                <!-- Выбранный пункт в макете — белая пилюля с рамкой
-                     и синей иконкой. Поверхность даёт токен
-                     --sidebar-accent, остальное дописываем здесь -->
+                <!-- Выбранный пункт — белая пилюля с синей иконкой.
+                     Поверхность даёт токен --sidebar-accent, форму от
+                     полотна отделяет мягкая тень: обводка поверх неё
+                     читалась вторым контуром и утяжеляла пункт.
+                     На наведении — та же белая подложка, но не в
+                     полную силу, чтобы выбранный пункт оставался
+                     заметно плотнее соседей -->
                 <SidebarMenuButton
                     as-child
                     :is-active="isCurrentUrl(item.href)"
                     :tooltip="item.title"
-                    class="h-auto gap-[11px] rounded-[10px] border border-transparent px-3 py-[11px] text-base [&>svg]:size-[18px] data-[active=true]:border-sidebar-border data-[active=true]:font-semibold data-[active=true]:shadow-[0_1px_2px_rgba(21,22,26,.06)] data-[active=true]:[&>svg]:text-accent-foreground"
+                    class="hover:bg-sidebar-accent/90 h-auto gap-[11px] rounded-[10px] px-3 py-[11px] text-base [&>svg]:size-[18px] data-[active=true]:font-semibold data-[active=true]:shadow-[0_1px_2px_rgba(21,22,26,.06)] data-[active=true]:[&>svg]:text-accent-foreground"
                 >
                     <Link :href="item.href">
                         <component :is="item.icon" />
