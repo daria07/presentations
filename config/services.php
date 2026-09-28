@@ -30,6 +30,14 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    /*
+     * Яндекс Метрика. Пусто — счётчик не подключается вовсе:
+     * так локальная разработка не попадает в статистику.
+     */
+    'metrika' => [
+        'id' => env('YANDEX_METRIKA_ID'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

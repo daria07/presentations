@@ -1,4 +1,4 @@
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
@@ -31,3 +31,27 @@ initializeTheme();
 
 // This will listen for flash toast data from the server...
 initializeFlashToast();
+
+/*
+   Переходы внутри приложения Inertia делает без перезагрузки страницы,
+   поэтому Метрика видит только самый первый заход. Сообщаем ей о
+   каждом следующем сама: id кладёт в window подключение счётчика в
+   resources/views/partials/metrika.blade.php, и без него (локально,
+   в тестах) этот код просто ничего не делает.
+*/
+declare global {
+    interface Window {
+        __metrikaId?: number;
+        ym?: (id: number, action: string, ...rest: unknown[]) => void;
+    }
+}
+
+router.on('navigate', () => {
+    const id = window.__metrikaId;
+
+    if (id && typeof window.ym === 'function') {
+        window.ym(id, 'hit', window.location.href, {
+            referer: document.referrer,
+        });
+    }
+});

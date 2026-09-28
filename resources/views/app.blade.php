@@ -56,5 +56,7 @@
     </head>
     <body class="font-sans antialiased">
         <x-inertia::app />
+
+        @include('partials.metrika')
     </body>
 </html>
