@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Новая система гамм: восемь пастельных наборов вместо прежних насыщенных.
@@ -27,7 +29,12 @@ return new class extends Migration
             DB::table('presentations')->where('palette', $old)->update(['palette' => $new]);
         }
 
-        DB::statement("ALTER TABLE presentations ALTER COLUMN palette SET DEFAULT 'fog'");
+        // Через построитель схемы, а не сырым ALTER: у SQLite, на
+        // которой гоняются тесты, такого синтаксиса нет вовсе, и
+        // миграция падала в CI, работая при этом в PostgreSQL.
+        Schema::table('presentations', function (Blueprint $table) {
+            $table->string('palette', 20)->default('fog')->change();
+        });
     }
 
     public function down(): void
@@ -43,6 +50,8 @@ return new class extends Migration
             DB::table('presentations')->where('palette', $new)->update(['palette' => $old]);
         }
 
-        DB::statement("ALTER TABLE presentations ALTER COLUMN palette SET DEFAULT 'graphite'");
+        Schema::table('presentations', function (Blueprint $table) {
+            $table->string('palette', 20)->default('graphite')->change();
+        });
     }
 };
