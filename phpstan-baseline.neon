@@ -1,0 +1,571 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Console/Commands/ListModels.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Console/Commands/ListModels.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/ListPresentations.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>email" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Console/Commands/ListPresentations.php
+
+		-
+			message: '#^Parameter \#1 \$string of method Illuminate\\Console\\Command\:\:line\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Console/Commands/TestClaude.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApiCall\:\:\$input\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/AdminController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApiCall\:\:\$output\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/AdminController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ApiCall\:\:\$total\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/AdminController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$last_seen\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/AdminController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$paid_total\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/AdminController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$spent_total\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/AdminController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\AdminController\:\:countByDay\(\) has parameter \$query with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/Admin/AdminController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: int, amount\: int, currency\: string, credits\: int, status\: ''failed''\|''paid''\|''pending''\|''refunded'', statusLabel\: string, provider\: string, createdAt\: string\|null\}, Closure\(App\\Models\\Payment\)\: array\{id\: int, amount\: int, currency\: string, credits\: int, status\: ''failed''\|''paid''\|''pending''\|''refunded'', statusLabel\: string, provider\: string, createdAt\: string\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/AdminController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: int, title\: string, status\: ''asking''\|''draft''\|''failed''\|''generating''\|''queued''\|''ready'', statusLabel\: string, slides\: int, theme\: string\|null, palette\: string, createdAt\: string\|null\}, Closure\(App\\Models\\Presentation\)\: array\{id\: int, title\: string, status\: ''asking''\|''draft''\|''failed''\|''generating''\|''queued''\|''ready'', statusLabel\: string, slides\: int, theme\: string\|null, palette\: string, createdAt\: string\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/AdminController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Billing\\BillingController\:\:webhook\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/Billing/BillingController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: int, amount\: string, credits\: int, status\: ''failed''\|''paid''\|''pending''\|''refunded'', statusLabel\: string, date\: string\|null\}, Closure\(App\\Models\\Payment\)\: array\{id\: int, amount\: string, credits\: int, status\: ''failed''\|''paid''\|''pending''\|''refunded'', statusLabel\: string, date\: string\|null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Billing/BillingController.php
+
+		-
+			message: '#^Parameter \#1 \$content of function response expects array\|Illuminate\\Contracts\\View\\View\|string\|null, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/LandingController.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: app/Http/Controllers/LegalController.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: app/Http/Controllers/LegalController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Presentations\\PresentationController\:\:detail\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Presentations/PresentationController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Presentations\\PresentationController\:\:layouts\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Presentations/PresentationController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Presentations\\PresentationController\:\:summary\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/Presentations/PresentationController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array, Closure\(App\\Models\\Presentation\)\: array given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Presentations/PresentationController.php
+
+		-
+			message: '#^Parameter \#1 \$presentation of job class App\\Jobs\\PrepareQuestions constructor expects App\\Models\\Presentation in App\\Jobs\\PrepareQuestions\:\:dispatch\(\), Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Presentations/PresentationController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>timestamp" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Presentations/PresentationController.php
+
+		-
+			message: '#^Call to function method_exists\(\) with Illuminate\\Filesystem\\FilesystemAdapter and ''path'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Controllers/Presentations/PublicPresentationController.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Presentations\\AnswerQuestionsRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Presentations/AnswerQuestionsRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Presentations\\StorePresentationRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Presentations/StorePresentationRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Presentations\\UpdateOutlineRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/Presentations/UpdateOutlineRequest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:notify\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Jobs/GeneratePresentation.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:refundCredit\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Jobs/GeneratePresentation.php
+
+		-
+			message: '#^Offset ''key'' on array\{key\: string, question\: string, options\: array\<int, string\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Jobs/PrepareQuestions.php
+
+		-
+			message: '#^Offset ''options'' on array\{key\: string, question\: string, options\: array\<int, string\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Jobs/PrepareQuestions.php
+
+		-
+			message: '#^Offset ''question'' on array\{key\: string, question\: string, options\: array\<int, string\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Jobs/PrepareQuestions.php
+
+		-
+			message: '#^Method App\\Models\\ApiCall\:\:presentation\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ApiCall.php
+
+		-
+			message: '#^Method App\\Models\\ApiCall\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ApiCall.php
+
+		-
+			message: '#^Class App\\Models\\Payment has PHPDoc tag @property for property \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/Payment.php
+
+		-
+			message: '#^Method App\\Models\\Payment\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Payment.php
+
+		-
+			message: '#^Class App\\Models\\Presentation has PHPDoc tag @property for property \$clarifications with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/Presentation.php
+
+		-
+			message: '#^Class App\\Models\\Presentation has PHPDoc tag @property for property \$outline with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/Presentation.php
+
+		-
+			message: '#^Method App\\Models\\Presentation\:\:apiCalls\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Presentation.php
+
+		-
+			message: '#^Method App\\Models\\Presentation\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Presentation.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:apiCalls\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:payments\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:presentations\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Notifications\\PresentationReady\:\:via\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Notifications/PresentationReady.php
+
+		-
+			message: '#^Method App\\Services\\Billing\\Billing\:\:handleWebhook\(\) has parameter \$headers with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Billing/Billing.php
+
+		-
+			message: '#^Method App\\Services\\Billing\\Billing\:\:handleWebhook\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Billing/Billing.php
+
+		-
+			message: '#^Method App\\Services\\Billing\\Billing\:\:settle\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Billing/Billing.php
+
+		-
+			message: '#^Parameter \#1 \$payment of method App\\Services\\Billing\\PaymentGateway\:\:checkout\(\) expects App\\Models\\Payment, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Billing/Billing.php
+
+		-
+			message: '#^Method App\\Services\\Billing\\Package\:\:fromConfig\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Billing/Package.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/Billing/Package.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Services/Billing/Package.php
+
+		-
+			message: '#^Method App\\Services\\Billing\\PaymentGateway\:\:parseWebhook\(\) has parameter \$headers with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Billing/PaymentGateway.php
+
+		-
+			message: '#^Method App\\Services\\Billing\\PaymentGateway\:\:parseWebhook\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Billing/PaymentGateway.php
+
+		-
+			message: '#^Method App\\Services\\Billing\\Providers\\FakeGateway\:\:parseWebhook\(\) has parameter \$headers with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Billing/Providers/FakeGateway.php
+
+		-
+			message: '#^Method App\\Services\\Billing\\Providers\\FakeGateway\:\:parseWebhook\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Billing/Providers/FakeGateway.php
+
+		-
+			message: '#^Method App\\Services\\Billing\\Providers\\YooKassaGateway\:\:parseWebhook\(\) has parameter \$headers with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Billing/Providers/YooKassaGateway.php
+
+		-
+			message: '#^Method App\\Services\\Billing\\Providers\\YooKassaGateway\:\:parseWebhook\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Billing/Providers/YooKassaGateway.php
+
+		-
+			message: '#^Method App\\Services\\Billing\\Providers\\YooKassaGateway\:\:request\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Services/Billing/Providers/YooKassaGateway.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\ClaudeClient\:\:extractText\(\) has parameter \$body with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/ClaudeClient.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\ClaudeClient\:\:findToolInput\(\) has parameter \$body with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/ClaudeClient.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\ClaudeClient\:\:findToolInput\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/ClaudeClient.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\ClaudeClient\:\:send\(\) has parameter \$messages with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/ClaudeClient.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\ClaudeClient\:\:send\(\) has parameter \$tools with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/ClaudeClient.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\ClaudeClient\:\:send\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/ClaudeClient.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\ClaudeClient\:\:structured\(\) has parameter \$schema with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/ClaudeClient.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\ClaudeResult\:\:__construct\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/ClaudeResult.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\ClaudeResult\:\:__construct\(\) has parameter \$raw with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/ClaudeResult.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\Json\:\:toArray\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/Json.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\Json\:\:unwrap\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/Json.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\PresentationPlanner\:\:buildOutline\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/PresentationPlanner.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\PresentationPlanner\:\:ensureTitleSlide\(\) has parameter \$slides with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/PresentationPlanner.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\PresentationPlanner\:\:ensureTitleSlide\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/PresentationPlanner.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\PresentationPlanner\:\:normalizeOutline\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/PresentationPlanner.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\PresentationPlanner\:\:normalizeOutline\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/PresentationPlanner.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\PresentationPlanner\:\:normalizeSlide\(\) has parameter \$slide with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/PresentationPlanner.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\PresentationPlanner\:\:normalizeSlide\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/PresentationPlanner.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\PresentationPlanner\:\:thinIcons\(\) has parameter \$slides with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/PresentationPlanner.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\PresentationPlanner\:\:thinIcons\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/PresentationPlanner.php
+
+		-
+			message: '#^Property App\\Services\\Claude\\PresentationPlanner\:\:\$lastRaw type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/PresentationPlanner.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\Schemas\:\:clarifyingQuestions\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/Schemas.php
+
+		-
+			message: '#^Method App\\Services\\Claude\\Schemas\:\:outline\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Claude/Schemas.php
+
+		-
+			message: '#^Parameter \#2 \$contents of method Illuminate\\Filesystem\\FilesystemAdapter\:\:put\(\) expects Illuminate\\Http\\File\|Illuminate\\Http\\UploadedFile\|Psr\\Http\\Message\\StreamInterface\|resource\|string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Deck/DeckRenderer.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: app/Services/Deck/DeckRenderer.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: app/Services/Deck/DeckRenderer.php
+
+		-
+			message: '#^Method App\\Services\\Deck\\FontLoader\:\:build\(\) has parameter \$families with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Deck/FontLoader.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Deck/FontLoader.php
+
+		-
+			message: '#^Parameter \#1 \$string of function base64_encode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Deck/FontLoader.php
+
+		-
+			message: '#^Offset string\|null might not exist on array\{clock\: ''\<circle cx\="12" cy\=…'', calendar\: ''\<rect x\="3" y\="5"…'', hourglass\: ''\<path d\="M6 3h12M6…'', growth\: ''\<polyline points\="3…'', decline\: ''\<polyline points\="3…'', chart\: ''\<path d\="M3 21h18"/…'', arrow\: ''\<path d\="M4 12h14"/…'', idea\: ''\<path d\="M9 18h6M10…'', \.\.\.\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Services/Deck/Icons.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: app/Services/Deck/Looks.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: app/Services/Deck/Looks.php
+
+		-
+			message: '#^Method App\\Services\\Deck\\SpeechRenderer\:\:pdf\(\) should return string but returns string\|false\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Deck/SpeechRenderer.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, list\<string\>\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Deck/SpeechRenderer.php
+
+		-
+			message: '#^Parameter \#1 \$string of function rtrim expects string, bool\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: config/services.php
