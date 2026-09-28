@@ -1,6 +1,10 @@
 includes:
     - vendor/larastan/larastan/extension.neon
     - vendor/nesbot/carbon/extension.neon
+    # Черта, проведённая по состоянию на 28 сентября 2026 года: ошибки,
+    # перечисленные в этом файле, CI не роняют, а любая новая — роняет.
+    # Починил файл из списка — удали его строки отсюда.
+    - phpstan-baseline.neon
 
 parameters:
     paths:
