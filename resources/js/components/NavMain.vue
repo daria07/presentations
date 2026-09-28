@@ -38,7 +38,7 @@ const { isCurrentUrl } = useCurrentUrl();
                     as-child
                     :is-active="isCurrentUrl(item.href)"
                     :tooltip="item.title"
-                    class="hover:bg-sidebar-accent/90 h-auto gap-[11px] rounded-[10px] px-3 py-[11px] text-base [&>svg]:size-[18px] data-[active=true]:font-semibold data-[active=true]:shadow-[0_1px_2px_rgba(21,22,26,.06)] data-[active=true]:[&>svg]:text-accent-foreground"
+                    class="hover:bg-sidebar-accent/90 data-[active=true]:[&>svg]:text-accent-foreground h-auto gap-[11px] rounded-[10px] px-3 py-[11px] text-base data-[active=true]:font-semibold data-[active=true]:shadow-[0_1px_2px_rgba(21,22,26,.06)] [&>svg]:size-[18px]"
                 >
                     <Link :href="item.href">
                         <component :is="item.icon" />

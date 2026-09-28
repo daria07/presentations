@@ -109,7 +109,11 @@ function when(iso: string | null): string {
                     {{ user.credits }}
                 </p>
                 <p class="text-muted-foreground mt-1 text-xs">
-                    {{ user.trialUsed ? 'проба использована' : 'проба не использована' }}
+                    {{
+                        user.trialUsed
+                            ? 'проба использована'
+                            : 'проба не использована'
+                    }}
                 </p>
             </div>
             <div class="border-border bg-card rounded-xl border p-4">
@@ -135,10 +139,18 @@ function when(iso: string | null): string {
             </div>
         </div>
 
-        <div class="border-border bg-card text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 rounded-xl border p-4 text-xs">
+        <div
+            class="border-border bg-card text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 rounded-xl border p-4 text-xs"
+        >
             <span>Регистрация: {{ when(user.createdAt) }}</span>
-            <span>Почта: {{ user.verified ? 'подтверждена' : 'не подтверждена' }}</span>
-            <span>Двухфакторка: {{ user.twoFactor ? 'включена' : 'выключена' }}</span>
+            <span
+                >Почта:
+                {{ user.verified ? 'подтверждена' : 'не подтверждена' }}</span
+            >
+            <span
+                >Двухфакторка:
+                {{ user.twoFactor ? 'включена' : 'выключена' }}</span
+            >
         </div>
 
         <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -153,17 +165,24 @@ function when(iso: string | null): string {
                     >
                         <div class="min-w-0">
                             <p class="truncate">{{ p.title }}</p>
-                            <p class="text-muted-foreground text-xs tabular-nums">
-                                {{ p.slides }} слайдов · {{ p.theme ?? '—' }} / {{ p.palette ?? '—' }}
+                            <p
+                                class="text-muted-foreground text-xs tabular-nums"
+                            >
+                                {{ p.slides }} слайдов · {{ p.theme ?? '—' }} /
+                                {{ p.palette ?? '—' }}
                             </p>
                         </div>
-                        <div class="text-muted-foreground shrink-0 text-right text-xs">
+                        <div
+                            class="text-muted-foreground shrink-0 text-right text-xs"
+                        >
                             <p>{{ p.statusLabel }}</p>
                             <p class="tabular-nums">{{ when(p.createdAt) }}</p>
                         </div>
                     </div>
                 </div>
-                <p v-else class="text-muted-foreground py-4 text-sm">Пока ничего не создавал</p>
+                <p v-else class="text-muted-foreground py-4 text-sm">
+                    Пока ничего не создавал
+                </p>
             </div>
 
             <div class="space-y-6">
@@ -180,16 +199,23 @@ function when(iso: string | null): string {
                                 <p class="tabular-nums">
                                     {{ rubles(p.amount) }} {{ p.currency }}
                                 </p>
-                                <p class="text-muted-foreground text-xs tabular-nums">
-                                    +{{ p.credits }} генераций · {{ when(p.createdAt) }}
+                                <p
+                                    class="text-muted-foreground text-xs tabular-nums"
+                                >
+                                    +{{ p.credits }} генераций ·
+                                    {{ when(p.createdAt) }}
                                 </p>
                             </div>
-                            <span class="text-muted-foreground shrink-0 text-xs">
+                            <span
+                                class="text-muted-foreground shrink-0 text-xs"
+                            >
                                 {{ p.statusLabel }}
                             </span>
                         </div>
                     </div>
-                    <p v-else class="text-muted-foreground py-4 text-sm">Не платил</p>
+                    <p v-else class="text-muted-foreground py-4 text-sm">
+                        Не платил
+                    </p>
                 </div>
 
                 <div class="border-border bg-card rounded-xl border p-5">
@@ -202,12 +228,16 @@ function when(iso: string | null): string {
                             class="flex items-baseline justify-between gap-3 py-2 text-sm"
                         >
                             <span>{{ PURPOSE[c.purpose] ?? c.purpose }}</span>
-                            <span class="text-muted-foreground text-xs tabular-nums">
+                            <span
+                                class="text-muted-foreground text-xs tabular-nums"
+                            >
                                 {{ c.total }} раз · ${{ dollars(c.cost) }}
                             </span>
                         </div>
                     </div>
-                    <p v-else class="text-muted-foreground py-4 text-sm">Вызовов не было</p>
+                    <p v-else class="text-muted-foreground py-4 text-sm">
+                        Вызовов не было
+                    </p>
                 </div>
             </div>
         </div>

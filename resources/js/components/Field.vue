@@ -21,11 +21,17 @@ defineProps<{
 
 <template>
     <div class="space-y-2">
-        <div v-if="label || counter" class="flex items-baseline justify-between gap-3">
+        <div
+            v-if="label || counter"
+            class="flex items-baseline justify-between gap-3"
+        >
             <label v-if="label" :for="$props.for" class="text-sm font-medium">
                 {{ label }}
             </label>
-            <span v-if="counter" class="text-muted-foreground text-xs tabular-nums">
+            <span
+                v-if="counter"
+                class="text-muted-foreground text-xs tabular-nums"
+            >
                 {{ counter }}
             </span>
         </div>

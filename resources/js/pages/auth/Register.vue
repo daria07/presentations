@@ -102,11 +102,23 @@ defineOptions({
 
             <!-- Согласие фиксируется самим фактом регистрации: отдельная
                  галочка ничего не добавляет юридически, но добавляет шаг -->
-            <p class="text-muted-foreground text-center text-xs leading-relaxed">
+            <p
+                class="text-muted-foreground text-center text-xs leading-relaxed"
+            >
                 Создавая аккаунт, вы принимаете
-                <a href="/offer" target="_blank" class="underline underline-offset-2">условия оферты</a>
+                <a
+                    href="/offer"
+                    target="_blank"
+                    class="underline underline-offset-2"
+                    >условия оферты</a
+                >
                 и даёте согласие на обработку персональных данных на условиях
-                <a href="/privacy" target="_blank" class="underline underline-offset-2">политики конфиденциальности</a>.
+                <a
+                    href="/privacy"
+                    target="_blank"
+                    class="underline underline-offset-2"
+                    >политики конфиденциальности</a
+                >.
             </p>
         </div>
 

@@ -19,7 +19,9 @@ const TONES: Record<string, string> = {
     failed: 'bg-[#FDECEE] text-[#C2364A]',
 };
 
-const tone = computed(() => TONES[props.status] ?? 'bg-secondary text-muted-foreground');
+const tone = computed(
+    () => TONES[props.status] ?? 'bg-secondary text-muted-foreground',
+);
 </script>
 
 <template>

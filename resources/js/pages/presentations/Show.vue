@@ -86,15 +86,19 @@ const current = ref<Presentation>(props.presentation);
 /* ---------- Ответы на уточняющие вопросы ---------- */
 
 const answers = ref<Record<string, string>>({});
-const theme = ref(props.presentation.theme ?? props.themes[0]?.key ?? 'precise');
+const theme = ref(
+    props.presentation.theme ?? props.themes[0]?.key ?? 'precise',
+);
 const palette = ref(
     props.presentation.palette ?? props.palettes[0]?.key ?? 'fog',
 );
 const sending = ref(false);
 const formError = ref<string | null>(null);
 
-const allAnswered = computed(
-    () => (current.value.questions ?? []).every((q, i) => answers.value[q.key ?? String(i)]),
+const allAnswered = computed(() =>
+    (current.value.questions ?? []).every(
+        (q, i) => answers.value[q.key ?? String(i)],
+    ),
 );
 
 function submitAnswers() {
@@ -155,9 +159,12 @@ async function poll() {
     let fresh: Presentation;
 
     try {
-        const response = await fetch(`/presentations/${current.value.id}/status`, {
-            headers: { Accept: 'application/json' },
-        });
+        const response = await fetch(
+            `/presentations/${current.value.id}/status`,
+            {
+                headers: { Accept: 'application/json' },
+            },
+        );
 
         if (!response.ok) return;
 
@@ -390,7 +397,6 @@ async function copyShare() {
     // Скопировать не вышло — показываем ссылку, чтобы взять руками
     copyFailed.value = true;
 }
-
 </script>
 
 <template>
@@ -400,18 +406,24 @@ async function copyShare() {
          просмотру слайдов — нет -->
     <div class="w-full px-4 py-8">
         <!-- Ждём: готовим вопросы или генерируем -->
-        <div v-if="current.isPending" class="mx-auto flex w-full max-w-3xl flex-col items-center gap-5 py-24 text-center">
+        <div
+            v-if="current.isPending"
+            class="mx-auto flex w-full max-w-3xl flex-col items-center gap-5 py-24 text-center"
+        >
             <template v-if="stalled">
                 <p class="text-lg font-medium">Что-то затянулось</p>
-                <p class="text-muted-foreground max-w-md text-sm leading-relaxed">
-                    Обычно всё занимает меньше минуты. Похоже, задача
-                    потерялась — можно запустить её заново, генерация при
-                    этом не спишется.
+                <p
+                    class="text-muted-foreground max-w-md text-sm leading-relaxed"
+                >
+                    Обычно всё занимает меньше минуты. Похоже, задача потерялась
+                    — можно запустить её заново, генерация при этом не спишется.
                 </p>
                 <div class="flex gap-2">
                     <Button
                         variant="outline"
-                        @click="router.post(`/presentations/${current.id}/retry`)"
+                        @click="
+                            router.post(`/presentations/${current.id}/retry`)
+                        "
                     >
                         <RotateCcw class="size-4" />
                         Запустить заново
@@ -425,7 +437,9 @@ async function copyShare() {
             <template v-else>
                 <Spinner class="size-7" />
                 <div class="space-y-1">
-                    <p class="text-lg font-medium">{{ current.statusLabel }}…</p>
+                    <p class="text-lg font-medium">
+                        {{ current.statusLabel }}…
+                    </p>
                     <p class="text-muted-foreground text-sm">
                         {{
                             current.status === 'draft'
@@ -434,7 +448,9 @@ async function copyShare() {
                         }}
                     </p>
                 </div>
-                <p class="text-muted-foreground max-w-md text-sm">{{ current.topic }}</p>
+                <p class="text-muted-foreground max-w-md text-sm">
+                    {{ current.topic }}
+                </p>
                 <p v-if="offline" class="text-muted-foreground text-xs">
                     Связь пропала — ждём восстановления
                 </p>
@@ -442,7 +458,10 @@ async function copyShare() {
         </div>
 
         <!-- Уточняющие вопросы -->
-        <div v-else-if="current.questions?.length" class="mx-auto w-full max-w-3xl space-y-8">
+        <div
+            v-else-if="current.questions?.length"
+            class="mx-auto w-full max-w-3xl space-y-8"
+        >
             <div class="border-rule border-b pb-6">
                 <h1 class="text-3xl font-extrabold">Уточним детали</h1>
                 <p class="text-muted-foreground mt-1.5 leading-relaxed">
@@ -451,14 +470,18 @@ async function copyShare() {
             </div>
 
             <div class="space-y-7">
-                <div v-for="(q, i) in current.questions" :key="q.key ?? i" class="space-y-3">
+                <div
+                    v-for="(q, i) in current.questions"
+                    :key="q.key ?? i"
+                    class="space-y-3"
+                >
                     <p class="font-medium">{{ q.question }}</p>
                     <div class="flex flex-wrap gap-2">
                         <button
                             v-for="option in q.options"
                             :key="option"
                             type="button"
-                            class="cursor-pointer border-border rounded-lg border px-4 py-2 text-sm transition-colors"
+                            class="border-border cursor-pointer rounded-lg border px-4 py-2 text-sm transition-colors"
                             :class="
                                 answers[q.key ?? String(i)] === option
                                     ? 'border-action bg-action text-white'
@@ -532,7 +555,11 @@ async function copyShare() {
                 <p v-if="formError" class="text-destructive flex-1 text-sm">
                     {{ formError }}
                 </p>
-                <Button size="lg" :disabled="!allAnswered || sending" @click="submitAnswers">
+                <Button
+                    size="lg"
+                    :disabled="!allAnswered || sending"
+                    @click="submitAnswers"
+                >
                     {{ sending ? 'Отправляем…' : 'Собрать презентацию' }}
                 </Button>
             </div>
@@ -547,7 +574,12 @@ async function copyShare() {
                  с заголовком они отбирали бы у него ширину -->
             <div class="space-y-3">
                 <div class="flex flex-wrap justify-end gap-2">
-                    <Button v-if="current.editUrl" variant="outline" size="sm" as-child>
+                    <Button
+                        v-if="current.editUrl"
+                        variant="outline"
+                        size="sm"
+                        as-child
+                    >
                         <Link :href="current.editUrl">
                             <Pencil class="size-4" />
                             Редактировать
@@ -573,7 +605,11 @@ async function copyShare() {
                         :class="reprinting && 'pointer-events-none opacity-50'"
                         :title="reprinting ? 'Файл ещё печатается' : undefined"
                     >
-                        <a :href="current.shareUrl!" target="_blank" rel="noopener">
+                        <a
+                            :href="current.shareUrl!"
+                            target="_blank"
+                            rel="noopener"
+                        >
                             <ExternalLink class="size-4" />
                             Открыть
                         </a>
@@ -581,7 +617,12 @@ async function copyShare() {
                     <!-- Речь печатается на лету, поэтому ссылка ведёт
                          прямо на маршрут: пара секунд ожидания браузера.
                          Открываем во вкладке — читать, а не складывать -->
-                    <Button v-if="current.speechUrl" variant="outline" size="sm" as-child>
+                    <Button
+                        v-if="current.speechUrl"
+                        variant="outline"
+                        size="sm"
+                        as-child
+                    >
                         <a
                             :href="current.speechUrl"
                             target="_blank"
@@ -640,7 +681,9 @@ async function copyShare() {
                 </div>
 
                 <div class="space-y-1">
-                    <p class="text-muted-foreground flex items-center gap-1.5 text-sm">
+                    <p
+                        class="text-muted-foreground flex items-center gap-1.5 text-sm"
+                    >
                         <CheckCircle2 class="size-4" />
                         Готово · {{ current.slideCount }} слайдов
                     </p>
@@ -676,7 +719,9 @@ async function copyShare() {
                      перепечатывается только файл -->
                 <aside class="flex w-full flex-none flex-col gap-6 lg:w-56">
                     <div class="space-y-2">
-                        <p class="text-muted-foreground text-xs tracking-wide uppercase">
+                        <p
+                            class="text-muted-foreground text-xs tracking-wide uppercase"
+                        >
                             Тема
                         </p>
                         <div class="flex flex-col gap-1.5">
@@ -693,7 +738,9 @@ async function copyShare() {
                                 @click="switchLook({ theme: t.key })"
                             >
                                 {{ t.name }}
-                                <span class="text-muted-foreground block text-xs">
+                                <span
+                                    class="text-muted-foreground block text-xs"
+                                >
                                     {{ t.note }}
                                 </span>
                             </button>
@@ -701,7 +748,9 @@ async function copyShare() {
                     </div>
 
                     <div class="space-y-2">
-                        <p class="text-muted-foreground text-xs tracking-wide uppercase">
+                        <p
+                            class="text-muted-foreground text-xs tracking-wide uppercase"
+                        >
                             Цветовая гамма
                         </p>
                         <div class="grid grid-cols-2 gap-1.5">
@@ -737,11 +786,17 @@ async function copyShare() {
         </div>
 
         <!-- Ошибка или неожиданное состояние -->
-        <div v-else class="mx-auto w-full max-w-3xl space-y-5 py-16 text-center">
+        <div
+            v-else
+            class="mx-auto w-full max-w-3xl space-y-5 py-16 text-center"
+        >
             <div class="space-y-1">
                 <p class="text-lg font-medium">Не получилось</p>
                 <p class="text-muted-foreground mx-auto max-w-md text-sm">
-                    {{ current.error ?? 'Что-то пошло не так во время генерации.' }}
+                    {{
+                        current.error ??
+                        'Что-то пошло не так во время генерации.'
+                    }}
                 </p>
                 <p class="text-muted-foreground/70 text-xs">
                     Состояние: {{ current.statusLabel }}

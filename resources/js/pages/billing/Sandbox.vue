@@ -50,7 +50,9 @@ function settle(paid: boolean) {
             </div>
         </div>
 
-        <p class="text-muted-foreground mt-6 text-center text-sm leading-relaxed">
+        <p
+            class="text-muted-foreground mt-6 text-center text-sm leading-relaxed"
+        >
             Это заглушка для разработки. Настоящий эквайринг подключается сменой
             одной строки в настройках.
         </p>

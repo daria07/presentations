@@ -226,9 +226,14 @@ function show(next: number) {
 
     index.value = Math.max(0, Math.min(slides.length - 1, next));
 
-    slides.forEach((slide, i) => slide.classList.toggle('is-active', i === index.value));
+    slides.forEach((slide, i) =>
+        slide.classList.toggle('is-active', i === index.value),
+    );
     thumbs.forEach((thumb, i) =>
-        thumb.setAttribute('aria-current', i === index.value ? 'true' : 'false'),
+        thumb.setAttribute(
+            'aria-current',
+            i === index.value ? 'true' : 'false',
+        ),
     );
 
     thumbs[index.value]?.scrollIntoView({ block: 'nearest' });
@@ -358,7 +363,9 @@ onBeforeUnmount(() => {
                     <ChevronLeft class="size-4" />
                 </button>
 
-                <p class="text-muted-foreground w-14 text-center text-sm tabular-nums">
+                <p
+                    class="text-muted-foreground w-14 text-center text-sm tabular-nums"
+                >
                     {{ index + 1 }} / {{ total }}
                 </p>
 

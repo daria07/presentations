@@ -30,7 +30,8 @@ function pluralize(n: number): string {
     const hundred = n % 100;
 
     if (ten === 1 && hundred !== 11) return 'генерация';
-    if (ten >= 2 && ten <= 4 && (hundred < 12 || hundred > 14)) return 'генерации';
+    if (ten >= 2 && ten <= 4 && (hundred < 12 || hundred > 14))
+        return 'генерации';
 
     return 'генераций';
 }
@@ -75,7 +76,7 @@ const mainNavItems = computed<NavItem[]>(() => [
                     -->
                     <Link
                         :href="dashboard()"
-                        class="flex h-12 items-center gap-2 rounded-md p-2 group-data-[collapsible=icon]:p-0! text-[var(--foreground)]"
+                        class="flex h-12 items-center gap-2 rounded-md p-2 text-[var(--foreground)] group-data-[collapsible=icon]:p-0!"
                     >
                         <AppLogo />
                     </Link>
@@ -120,7 +121,11 @@ const mainNavItems = computed<NavItem[]>(() => [
                 <template v-if="credits > 0">
                     <div class="flex items-baseline justify-between gap-3">
                         <span class="text-muted-foreground text-[13px]">
-                            {{ pluralize(credits) === 'генерация' ? 'Генерация' : 'Генерации' }}
+                            {{
+                                pluralize(credits) === 'генерация'
+                                    ? 'Генерация'
+                                    : 'Генерации'
+                            }}
                         </span>
                         <span class="text-[15px] font-bold tabular-nums">
                             {{ credits }}

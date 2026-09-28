@@ -222,7 +222,7 @@ watch(
                                     />
                                     <button
                                         @click="copy(manualSetupKey || '')"
-                                        class="cursor-pointer border-border hover:bg-muted relative block h-auto border-l px-3"
+                                        class="border-border hover:bg-muted relative block h-auto cursor-pointer border-l px-3"
                                     >
                                         <Check
                                             v-if="copied"

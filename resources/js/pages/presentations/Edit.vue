@@ -2,13 +2,7 @@
 import DeckViewer from '@/components/DeckViewer.vue';
 import Field from '@/components/Field.vue';
 import { Head, router } from '@inertiajs/vue3';
-import {
-    ArrowDown,
-    ArrowUp,
-    Plus,
-    RefreshCw,
-    Trash2,
-} from '@lucide/vue';
+import { ArrowDown, ArrowUp, Plus, RefreshCw, Trash2 } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -61,7 +55,7 @@ defineOptions({
    structuredClone тут не подходит — свойства Inertia обёрнуты
    в реактивные Proxy, а он такие объекты клонировать не умеет.
 */
-const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 const title = ref(props.presentation.title);
 const subtitle = ref(props.presentation.subtitle ?? '');
@@ -104,7 +98,9 @@ function warnBeforeUnload(event: BeforeUnloadEvent) {
 }
 
 window.addEventListener('beforeunload', warnBeforeUnload);
-onBeforeUnmount(() => window.removeEventListener('beforeunload', warnBeforeUnload));
+onBeforeUnmount(() =>
+    window.removeEventListener('beforeunload', warnBeforeUnload),
+);
 
 function done() {
     if (isDirty.value) {
@@ -273,7 +269,9 @@ function save(then?: () => void) {
 
     <div class="flex h-[calc(100vh-4rem)] flex-col">
         <!-- Шапка редактора -->
-        <div class="border-rule flex flex-none items-center gap-4 border-b px-4 py-3">
+        <div
+            class="border-rule flex flex-none items-center gap-4 border-b px-4 py-3"
+        >
             <!-- Прозрачное поле, а не Input: это заголовок страницы,
                  который можно править, а не элемент формы -->
             <input
@@ -289,7 +287,9 @@ function save(then?: () => void) {
                 Есть несохранённые правки
             </span>
 
-            <Button variant="ghost" size="sm" @click="done">Выйти из редактора</Button>
+            <Button variant="ghost" size="sm" @click="done"
+                >Выйти из редактора</Button
+            >
 
             <Button size="sm" :disabled="saving || !isDirty" @click="save()">
                 {{ saving ? 'Сохраняем…' : 'Сохранить' }}
@@ -305,13 +305,17 @@ function save(then?: () => void) {
 
         <div class="flex min-h-0 flex-1">
             <!-- Список слайдов -->
-            <aside class="border-rule w-56 flex-none overflow-y-auto border-r p-2">
+            <aside
+                class="border-rule w-56 flex-none overflow-y-auto border-r p-2"
+            >
                 <button
                     v-for="(slide, i) in slides"
                     :key="i"
                     type="button"
-                    class="cursor-pointer mb-1 w-full rounded-lg px-3 py-2.5 text-left transition-colors"
-                    :class="active === i ? 'bg-secondary' : 'hover:bg-secondary/60'"
+                    class="mb-1 w-full cursor-pointer rounded-lg px-3 py-2.5 text-left transition-colors"
+                    :class="
+                        active === i ? 'bg-secondary' : 'hover:bg-secondary/60'
+                    "
                     @click="active = i"
                 >
                     <p class="truncate text-sm font-medium">
@@ -322,7 +326,12 @@ function save(then?: () => void) {
                     </p>
                 </button>
 
-                <Button variant="ghost" size="sm" class="mt-1 w-full" @click="addSlide">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    class="mt-1 w-full"
+                    @click="addSlide"
+                >
                     <Plus class="size-4" />
                     Слайд
                 </Button>
@@ -335,8 +344,15 @@ function save(then?: () => void) {
             >
                 <div class="mx-auto max-w-xl space-y-6">
                     <div class="flex items-center gap-2">
-                        <SelectNative v-model="slides[active].layout" class="flex-1">
-                            <option v-for="l in layouts" :key="l.key" :value="l.key">
+                        <SelectNative
+                            v-model="slides[active].layout"
+                            class="flex-1"
+                        >
+                            <option
+                                v-for="l in layouts"
+                                :key="l.key"
+                                :value="l.key"
+                            >
                                 {{ l.name }}
                             </option>
                         </SelectNative>
@@ -383,7 +399,10 @@ function save(then?: () => void) {
                     </Field>
 
                     <!-- Пункты -->
-                    <div v-if="usesBullets(slides[active].layout)" class="space-y-3">
+                    <div
+                        v-if="usesBullets(slides[active].layout)"
+                        class="space-y-3"
+                    >
                         <Label>Пункты</Label>
 
                         <div
@@ -401,7 +420,9 @@ function save(then?: () => void) {
                                     variant="ghost"
                                     size="icon-sm"
                                     aria-label="Убрать пункт"
-                                    @click="slides[active].bullets.splice(bi, 1)"
+                                    @click="
+                                        slides[active].bullets.splice(bi, 1)
+                                    "
                                 >
                                     <Trash2 class="size-3.5" />
                                 </Button>
@@ -426,7 +447,10 @@ function save(then?: () => void) {
                     </div>
 
                     <!-- Числа -->
-                    <div v-if="usesStats(slides[active].layout)" class="space-y-3">
+                    <div
+                        v-if="usesStats(slides[active].layout)"
+                        class="space-y-3"
+                    >
                         <Label>Числа</Label>
 
                         <div
@@ -466,7 +490,10 @@ function save(then?: () => void) {
                     </div>
 
                     <!-- Цитата -->
-                    <div v-if="usesQuote(slides[active].layout)" class="space-y-3">
+                    <div
+                        v-if="usesQuote(slides[active].layout)"
+                        class="space-y-3"
+                    >
                         <Label>Цитата</Label>
                         <Textarea
                             :model-value="slides[active].quote?.text ?? ''"
@@ -474,7 +501,8 @@ function save(then?: () => void) {
                             class="resize-none"
                             @input="
                                 slides[active].quote = {
-                                    text: ($event.target as HTMLTextAreaElement).value,
+                                    text: ($event.target as HTMLTextAreaElement)
+                                        .value,
                                     author: slides[active].quote?.author ?? '',
                                 }
                             "
@@ -485,7 +513,8 @@ function save(then?: () => void) {
                             @input="
                                 slides[active].quote = {
                                     text: slides[active].quote?.text ?? '',
-                                    author: ($event.target as HTMLInputElement).value,
+                                    author: ($event.target as HTMLInputElement)
+                                        .value,
                                 }
                             "
                         />
@@ -509,7 +538,9 @@ function save(then?: () => void) {
             </section>
 
             <!-- Превью -->
-            <aside class="border-rule hidden w-[38%] flex-none border-l xl:block">
+            <aside
+                class="border-rule hidden w-[38%] flex-none border-l xl:block"
+            >
                 <div
                     class="border-rule text-muted-foreground flex items-center justify-between border-b px-4 py-2 text-xs"
                 >
@@ -521,7 +552,10 @@ function save(then?: () => void) {
                         :disabled="refreshing"
                         @click="refreshPreview"
                     >
-                        <RefreshCw class="size-3.5" :class="refreshing && 'animate-spin'" />
+                        <RefreshCw
+                            class="size-3.5"
+                            :class="refreshing && 'animate-spin'"
+                        />
                     </Button>
                 </div>
                 <!-- Тот же просмотрщик, что и на странице презентации:

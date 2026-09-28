@@ -27,8 +27,7 @@ const authConfigContent = computed<TwoFactorConfigContent>(() => {
 
     return {
         title: 'Код подтверждения',
-        description:
-            'Введите код из приложения-аутентификатора.',
+        description: 'Введите код из приложения-аутентификатора.',
         buttonText: 'войти по резервному коду',
     };
 });
@@ -89,7 +88,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     <span>or you can </span>
                     <button
                         type="button"
-                        class="cursor-pointer text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        class="text-foreground cursor-pointer underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
                         @click="() => toggleRecoveryMode(clearErrors)"
                     >
                         {{ authConfigContent.buttonText }}
@@ -121,7 +120,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                     <span>or you can </span>
                     <button
                         type="button"
-                        class="cursor-pointer text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        class="text-foreground cursor-pointer underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
                         @click="() => toggleRecoveryMode(clearErrors)"
                     >
                         {{ authConfigContent.buttonText }}

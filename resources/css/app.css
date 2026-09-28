@@ -18,8 +18,7 @@
 
     /* Заголовки тем же шрифтом: в макете интерфейс набран одной
        гарнитурой, разница только в кегле и весе */
-    --font-display:
-        'Onest', 'Golos Text', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Onest', 'Golos Text', ui-sans-serif, system-ui, sans-serif;
 
     --color-paper: var(--paper);
     --color-panel: var(--panel);

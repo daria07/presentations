@@ -22,12 +22,18 @@ defineProps<{
                 v-if="$slots.meta"
                 class="text-muted-foreground mt-2.5 flex items-center gap-2 text-[15px]"
             >
-                <span v-if="dot" class="bg-action size-[7px] flex-none rounded-full" />
+                <span
+                    v-if="dot"
+                    class="bg-action size-[7px] flex-none rounded-full"
+                />
                 <slot name="meta" />
             </p>
         </div>
 
-        <div v-if="$slots.actions" class="flex flex-none flex-wrap items-center gap-2">
+        <div
+            v-if="$slots.actions"
+            class="flex flex-none flex-wrap items-center gap-2"
+        >
             <slot name="actions" />
         </div>
     </div>

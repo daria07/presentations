@@ -15,11 +15,16 @@ defineProps<{
 
     <div class="landing bg-paper text-foreground min-h-screen">
         <header class="border-rule border-b">
-            <div class="mx-auto flex h-16 max-w-3xl items-center justify-between px-6">
+            <div
+                class="mx-auto flex h-16 max-w-3xl items-center justify-between px-6"
+            >
                 <Link href="/" class="text-lg">
                     <Wordmark />
                 </Link>
-                <Link href="/" class="text-muted-foreground text-sm hover:underline">
+                <Link
+                    href="/"
+                    class="text-muted-foreground text-sm hover:underline"
+                >
                     На главную
                 </Link>
             </div>
@@ -40,12 +45,16 @@ defineProps<{
         </main>
 
         <footer class="border-rule border-t">
-            <div class="text-muted-foreground mx-auto flex max-w-3xl flex-col gap-2 px-6 py-8 text-sm sm:flex-row sm:justify-between">
+            <div
+                class="text-muted-foreground mx-auto flex max-w-3xl flex-col gap-2 px-6 py-8 text-sm sm:flex-row sm:justify-between"
+            >
                 <p class="text-foreground"><Wordmark /></p>
                 <p class="flex flex-wrap gap-4">
                     <Link href="/pricing" class="hover:underline">Тарифы</Link>
                     <Link href="/offer" class="hover:underline">Оферта</Link>
-                    <Link href="/privacy" class="hover:underline">Конфиденциальность</Link>
+                    <Link href="/privacy" class="hover:underline"
+                        >Конфиденциальность</Link
+                    >
                 </p>
             </div>
         </footer>

@@ -34,7 +34,8 @@ const passwordInput = useTemplateRef('passwordInput');
             <div class="relative space-y-0.5 text-red-600 dark:text-red-100">
                 <p class="font-medium">Осторожно</p>
                 <p class="text-sm">
-                    Действие необратимо — восстановить аккаунт и презентации будет нельзя.
+                    Действие необратимо — восстановить аккаунт и презентации
+                    будет нельзя.
                 </p>
             </div>
             <Dialog>
@@ -69,9 +70,7 @@ const passwordInput = useTemplateRef('passwordInput');
                         </DialogHeader>
 
                         <div class="grid gap-2">
-                            <Label for="password" class="sr-only"
-                                >Пароль</Label
-                            >
+                            <Label for="password" class="sr-only">Пароль</Label>
                             <PasswordInput
                                 id="password"
                                 name="password"

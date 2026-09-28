@@ -48,9 +48,13 @@ const sending = ref<string | null>(null);
 
 function buy(key: string) {
     sending.value = key;
-    router.post('/billing/checkout', { package: key }, {
-        onFinish: () => (sending.value = null),
-    });
+    router.post(
+        '/billing/checkout',
+        { package: key },
+        {
+            onFinish: () => (sending.value = null),
+        },
+    );
 }
 
 function formatDate(iso: string | null): string {
@@ -126,24 +130,34 @@ function formatDate(iso: string | null): string {
                     >
                         {{ pack.amount }}
                     </span>
-                    <span class="text-muted-foreground text-xl font-semibold">₽</span>
+                    <span class="text-muted-foreground text-xl font-semibold"
+                        >₽</span
+                    >
                 </p>
 
                 <div class="bg-rule mt-5 mb-4 h-px" />
 
                 <ul class="flex flex-col gap-2.5 text-[15.5px]">
                     <li class="flex items-center gap-[9px]">
-                        <Presentation class="text-action size-[17px] flex-none" />
+                        <Presentation
+                            class="text-action size-[17px] flex-none"
+                        />
                         <span>
-                            <strong class="font-semibold">{{ pack.credits }}</strong>
+                            <strong class="font-semibold">{{
+                                pack.credits
+                            }}</strong>
                             генераций
                         </span>
                     </li>
                     <li class="flex items-center gap-[9px]">
-                        <CircleDollarSign class="text-action size-[17px] flex-none" />
+                        <CircleDollarSign
+                            class="text-action size-[17px] flex-none"
+                        />
                         <span>{{ pack.perCredit }} ₽ за презентацию</span>
                     </li>
-                    <li class="text-muted-foreground flex items-center gap-[9px]">
+                    <li
+                        class="text-muted-foreground flex items-center gap-[9px]"
+                    >
                         <Download class="size-[17px] flex-none" />
                         <span>PDF и редактирование</span>
                     </li>
@@ -160,7 +174,7 @@ function formatDate(iso: string | null): string {
                     class="mt-1.5 cursor-pointer rounded-[11px] border p-3.5 text-center text-base font-semibold transition-colors disabled:cursor-default disabled:opacity-60"
                     :class="
                         pack.popular
-                            ? 'bg-foreground text-background border-transparent shadow-[0_6px_16px_rgba(21,22,26,.2)] hover:bg-action'
+                            ? 'bg-foreground text-background hover:bg-action border-transparent shadow-[0_6px_16px_rgba(21,22,26,.2)]'
                             : 'bg-card border-input hover:border-action hover:text-action'
                     "
                     :disabled="sending !== null"
@@ -190,9 +204,14 @@ function formatDate(iso: string | null): string {
                 <Info class="text-action mt-0.5 size-[18px] flex-none" />
                 <span>
                     Оплата означает принятие
-                    <a href="/offer" target="_blank" class="underline underline-offset-2">
-                        условий оферты</a>. Чек придёт на вашу почту,
-                    неиспользованные генерации можно вернуть.
+                    <a
+                        href="/offer"
+                        target="_blank"
+                        class="underline underline-offset-2"
+                    >
+                        условий оферты</a
+                    >. Чек придёт на вашу почту, неиспользованные генерации
+                    можно вернуть.
                 </span>
             </p>
         </div>

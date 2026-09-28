@@ -111,7 +111,8 @@ function when(iso: string | null): string {
                     {{ cards.presentations }}
                 </p>
                 <p class="text-muted-foreground mt-1 text-xs tabular-nums">
-                    +{{ cards.presentationsWeek }} за неделю · {{ cards.failed }} с ошибкой
+                    +{{ cards.presentationsWeek }} за неделю ·
+                    {{ cards.failed }} с ошибкой
                 </p>
             </div>
 
@@ -140,7 +141,9 @@ function when(iso: string | null): string {
         <!-- Два ряда, а не один график с двумя шкалами: величины разного
              порядка, и вторая шкала справа позволила бы нарисовать любую
              историю -->
-        <div class="border-border bg-card grid gap-8 rounded-xl border p-5 lg:grid-cols-2">
+        <div
+            class="border-border bg-card grid gap-8 rounded-xl border p-5 lg:grid-cols-2"
+        >
             <DayColumns
                 title="Регистрации по дням"
                 :days="registrations"
@@ -165,10 +168,14 @@ function when(iso: string | null): string {
                     <span class="text-muted-foreground w-32 shrink-0 text-xs">
                         {{ s.label }}
                     </span>
-                    <div class="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+                    <div
+                        class="bg-muted h-2 flex-1 overflow-hidden rounded-full"
+                    >
                         <div
                             class="bg-series-1 h-full rounded-full"
-                            :style="{ width: (s.total / maxStatus) * 100 + '%' }"
+                            :style="{
+                                width: (s.total / maxStatus) * 100 + '%',
+                            }"
                         />
                     </div>
                     <span class="w-10 shrink-0 text-right text-xs tabular-nums">
@@ -199,9 +206,13 @@ function when(iso: string | null): string {
                                 <span v-else>пользователь удалён</span>
                             </p>
                         </div>
-                        <div class="text-muted-foreground shrink-0 text-right text-xs">
+                        <div
+                            class="text-muted-foreground shrink-0 text-right text-xs"
+                        >
                             <p>{{ item.statusLabel }}</p>
-                            <p class="tabular-nums">{{ when(item.createdAt) }}</p>
+                            <p class="tabular-nums">
+                                {{ when(item.createdAt) }}
+                            </p>
                         </div>
                     </div>
                 </div>

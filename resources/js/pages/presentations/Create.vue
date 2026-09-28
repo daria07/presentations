@@ -55,7 +55,9 @@ const canSubmit = computed(() =>
     <div class="mx-auto w-full max-w-2xl px-4 py-8">
         <div class="border-rule border-b pb-6">
             <h1 class="text-3xl font-extrabold">Новая презентация</h1>
-            <p class="text-muted-foreground mt-1.5 max-w-[48ch] leading-relaxed">
+            <p
+                class="text-muted-foreground mt-1.5 max-w-[48ch] leading-relaxed"
+            >
                 Опишите тему одной строкой — или вставьте готовый текст, и мы
                 разложим его по слайдам.
             </p>
@@ -65,16 +67,24 @@ const canSubmit = computed(() =>
         <div class="border-rule mt-8 flex gap-1 rounded-lg border p-1">
             <button
                 type="button"
-                class="cursor-pointer flex-1 rounded-md px-4 py-2.5 text-sm font-medium transition-colors"
-                :class="mode === 'topic' ? 'bg-foreground text-background' : 'hover:bg-secondary'"
+                class="flex-1 cursor-pointer rounded-md px-4 py-2.5 text-sm font-medium transition-colors"
+                :class="
+                    mode === 'topic'
+                        ? 'bg-foreground text-background'
+                        : 'hover:bg-secondary'
+                "
                 @click="mode = 'topic'"
             >
                 По теме
             </button>
             <button
                 type="button"
-                class="cursor-pointer flex-1 rounded-md px-4 py-2.5 text-sm font-medium transition-colors"
-                :class="mode === 'text' ? 'bg-foreground text-background' : 'hover:bg-secondary'"
+                class="flex-1 cursor-pointer rounded-md px-4 py-2.5 text-sm font-medium transition-colors"
+                :class="
+                    mode === 'text'
+                        ? 'bg-foreground text-background'
+                        : 'hover:bg-secondary'
+                "
                 @click="mode = 'text'"
             >
                 По готовому тексту
@@ -106,10 +116,14 @@ const canSubmit = computed(() =>
                         v-for="example in examples"
                         :key="example"
                         type="button"
-                        class="cursor-pointer text-muted-foreground hover:text-foreground hover:border-foreground/30 border-border rounded-full border px-3 py-1 text-xs transition-colors"
+                        class="text-muted-foreground hover:text-foreground hover:border-foreground/30 border-border cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors"
                         @click="topic = example"
                     >
-                        {{ example.length > 42 ? example.slice(0, 42) + '…' : example }}
+                        {{
+                            example.length > 42
+                                ? example.slice(0, 42) + '…'
+                                : example
+                        }}
                     </button>
                 </div>
             </div>
@@ -154,7 +168,7 @@ const canSubmit = computed(() =>
                         v-for="n in counts"
                         :key="n"
                         type="button"
-                        class="cursor-pointer border-border h-11 flex-1 rounded-lg border text-sm font-medium transition-colors"
+                        class="border-border h-11 flex-1 cursor-pointer rounded-lg border text-sm font-medium transition-colors"
                         :class="
                             slideCount === n
                                 ? 'border-action bg-action text-white'
@@ -184,7 +198,11 @@ const canSubmit = computed(() =>
                     </template>
                 </p>
 
-                <Button type="submit" :disabled="processing || !canSubmit" size="lg">
+                <Button
+                    type="submit"
+                    :disabled="processing || !canSubmit"
+                    size="lg"
+                >
                     {{ processing ? 'Готовим…' : 'Продолжить' }}
                 </Button>
             </div>

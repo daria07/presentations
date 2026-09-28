@@ -16,9 +16,13 @@ const name = usePage().props.name;
 </script>
 
 <template>
-    <span class="font-display inline-flex items-center gap-[.38em] font-extrabold tracking-tight">
+    <span
+        class="font-display inline-flex items-center gap-[.38em] font-extrabold tracking-tight"
+    >
         <!-- Знак декоративный: скринридеру достаточно названия -->
-        <span class="text-brand text-[1.2em] leading-none" aria-hidden="true">✦</span>
+        <span class="text-brand text-[1.2em] leading-none" aria-hidden="true"
+            >✦</span
+        >
         <span>{{ name }}</span>
     </span>
 </template>

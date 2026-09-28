@@ -183,7 +183,9 @@ const audiences = [
                 Презентация из одной строки
             </h1>
 
-            <p class="text-muted-foreground mt-7 max-w-[52ch] text-lg leading-relaxed">
+            <p
+                class="text-muted-foreground mt-7 max-w-[52ch] text-lg leading-relaxed"
+            >
                 Напишите тему — получите сверстанные слайды с фактами, датами и
                 структурой. Есть готовый текст? Вставьте его, и мы разложим по
                 слайдам, ничего не дописывая от себя.
@@ -194,7 +196,9 @@ const audiences = [
                 <div
                     class="border-rule flex items-center gap-3 rounded-xl border bg-white/70 py-3 pr-3 pl-5 shadow-[0_1px_2px_rgba(23,21,15,.04),0_12px_28px_-20px_rgba(23,21,15,.35)]"
                 >
-                    <p class="text-muted-foreground flex-1 truncate text-[15px]">
+                    <p
+                        class="text-muted-foreground flex-1 truncate text-[15px]"
+                    >
                         Пётр I и его реформы — для восьмого класса
                     </p>
                     <Link
@@ -220,10 +224,11 @@ const audiences = [
                         Так выглядит результат
                     </h2>
                     <p class="text-muted-foreground mt-3 leading-relaxed">
-                        {{ palettes.length }} цветовых гамм и {{ themes.length }}
-                        темы оформления — {{ combos }} сочетаний. Попробуйте прямо
-                        здесь: внутри сервиса переключение работает так же, без
-                        перезагрузки и без ожидания.
+                        {{ palettes.length }} цветовых гамм и
+                        {{ themes.length }} темы оформления —
+                        {{ combos }} сочетаний. Попробуйте прямо здесь: внутри
+                        сервиса переключение работает так же, без перезагрузки и
+                        без ожидания.
                     </p>
                 </div>
 
@@ -284,14 +289,19 @@ const audiences = [
                             @click="theme = t"
                         >
                             {{ t.name }}
-                            <span class="text-muted-foreground">· {{ t.font }}</span>
+                            <span class="text-muted-foreground"
+                                >· {{ t.font }}</span
+                            >
                         </button>
                     </div>
                 </div>
 
                 <!-- Переменные ставим на обёртку — карточки их наследуют,
                      ровно как слайды наследуют их от <html> в шаблоне -->
-                <div :style="vars" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div
+                    :style="vars"
+                    class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                >
                     <SlideCard
                         variant="cover"
                         eyebrow="Презентация"
@@ -301,7 +311,11 @@ const audiences = [
 
                     <SlideCard heading="Ключевые даты правления">
                         <div class="flex items-start gap-3">
-                            <div v-for="y in ['1682', '1703', '1721']" :key="y" class="flex-1">
+                            <div
+                                v-for="y in ['1682', '1703', '1721']"
+                                :key="y"
+                                class="flex-1"
+                            >
                                 <div
                                     class="mb-2 h-1 w-full rounded-full"
                                     :style="{ background: 'var(--p-accent)' }"
@@ -334,7 +348,9 @@ const audiences = [
                                 <div class="flex-1 space-y-1">
                                     <div
                                         class="h-1.5 w-2/5 rounded-full"
-                                        :style="{ background: 'var(--p-muted)' }"
+                                        :style="{
+                                            background: 'var(--p-muted)',
+                                        }"
                                     />
                                     <div
                                         class="h-1.5 w-full rounded-full"
@@ -347,9 +363,13 @@ const audiences = [
                 </div>
 
                 <p class="text-muted-foreground mt-5 text-sm">
-                    <span class="text-foreground font-medium">{{ palette.name }}</span>
+                    <span class="text-foreground font-medium">{{
+                        palette.name
+                    }}</span>
                     — {{ palette.note }}.
-                    <span class="text-foreground font-medium">{{ theme.name }}</span>
+                    <span class="text-foreground font-medium">{{
+                        theme.name
+                    }}</span>
                     — {{ theme.note.toLowerCase() }}.
                 </p>
             </div>
@@ -357,15 +377,18 @@ const audiences = [
 
         <!-- ── Десять типов слайдов ── -->
         <section class="border-rule border-t">
-            <div class="mx-auto grid max-w-5xl gap-10 px-6 py-16 md:grid-cols-[1fr_1.1fr]">
+            <div
+                class="mx-auto grid max-w-5xl gap-10 px-6 py-16 md:grid-cols-[1fr_1.1fr]"
+            >
                 <div>
                     <h2 class="text-2xl font-bold md:text-3xl">
                         Слайды не похожи друг на друга
                     </h2>
                     <p class="text-muted-foreground mt-3 leading-relaxed">
                         Каждый слайд получает свой тип вёрстки по смыслу: даты
-                        становятся хронологией, сравнение — двумя колонками, цифры
-                        — крупными акцентами. Не десять одинаковых списков подряд.
+                        становятся хронологией, сравнение — двумя колонками,
+                        цифры — крупными акцентами. Не десять одинаковых списков
+                        подряд.
                     </p>
                 </div>
 
@@ -384,7 +407,9 @@ const audiences = [
         <!-- ── Как это работает ── -->
         <section class="border-rule border-t">
             <div class="mx-auto max-w-5xl px-6 py-16">
-                <h2 class="mb-12 text-2xl font-bold md:text-3xl">Как это работает</h2>
+                <h2 class="mb-12 text-2xl font-bold md:text-3xl">
+                    Как это работает
+                </h2>
 
                 <ol class="grid gap-10 md:grid-cols-3">
                     <li v-for="(step, i) in steps" :key="step.title">
@@ -412,30 +437,34 @@ const audiences = [
                 <div class="grid gap-10 md:grid-cols-3">
                     <div>
                         <Wand2 class="text-brand mb-4 size-5" />
-                        <h3 class="mb-2 text-lg font-bold">Просмотр без перезагрузки</h3>
+                        <h3 class="mb-2 text-lg font-bold">
+                            Просмотр без перезагрузки
+                        </h3>
                         <p class="text-muted-foreground leading-relaxed">
-                            Слайды листаются прямо на странице, миниатюры слева. Меняете
-                            гамму или тему — оформление перекрашивается мгновенно, а файл
-                            тем временем перепечатывается сам. Перевыбор оформления
-                            бесплатный: генерация уже оплачена.
+                            Слайды листаются прямо на странице, миниатюры слева.
+                            Меняете гамму или тему — оформление перекрашивается
+                            мгновенно, а файл тем временем перепечатывается сам.
+                            Перевыбор оформления бесплатный: генерация уже
+                            оплачена.
                         </p>
                     </div>
                     <div>
                         <Pencil class="text-brand mb-4 size-5" />
                         <h3 class="mb-2 text-lg font-bold">Правка структуры</h3>
                         <p class="text-muted-foreground leading-relaxed">
-                            Заголовки, пункты, порядок слайдов, тип вёрстки — всё
-                            редактируется руками. Превью рядом обновляется на ходу, пока
-                            вы печатаете.
+                            Заголовки, пункты, порядок слайдов, тип вёрстки —
+                            всё редактируется руками. Превью рядом обновляется
+                            на ходу, пока вы печатаете.
                         </p>
                     </div>
                     <div>
                         <Mic class="text-brand mb-4 size-5" />
                         <h3 class="mb-2 text-lg font-bold">Речь докладчика</h3>
                         <p class="text-muted-foreground leading-relaxed">
-                            К каждому слайду пишется, что сказать вслух. Отдельный файл на
-                            A4 с оценкой времени — распечатать и держать в руках. Входит в
-                            генерацию, отдельно платить не надо.
+                            К каждому слайду пишется, что сказать вслух.
+                            Отдельный файл на A4 с оценкой времени — распечатать
+                            и держать в руках. Входит в генерацию, отдельно
+                            платить не надо.
                         </p>
                     </div>
                 </div>
@@ -444,33 +473,41 @@ const audiences = [
 
         <!-- ── Отличие от чата ── -->
         <section class="border-rule border-t">
-            <div class="mx-auto grid max-w-5xl gap-10 px-6 py-16 md:grid-cols-[1fr_1.1fr]">
+            <div
+                class="mx-auto grid max-w-5xl gap-10 px-6 py-16 md:grid-cols-[1fr_1.1fr]"
+            >
                 <h2 class="text-2xl font-bold md:text-3xl">
                     Чем это отличается от чата с нейросетью
                 </h2>
 
                 <div class="space-y-6">
                     <div>
-                        <h3 class="mb-1.5 font-bold">На выходе файл, а не текст</h3>
+                        <h3 class="mb-1.5 font-bold">
+                            На выходе файл, а не текст
+                        </h3>
                         <p class="text-muted-foreground leading-relaxed">
                             Чат выдаёт список пунктов, который вы потом полчаса
                             раскладываете по слайдам. Здесь вёрстка уже сделана.
                         </p>
                     </div>
                     <div>
-                        <h3 class="mb-1.5 font-bold">Уточнения до, а не после</h3>
+                        <h3 class="mb-1.5 font-bold">
+                            Уточнения до, а не после
+                        </h3>
                         <p class="text-muted-foreground leading-relaxed">
-                            Вопросы про аудиторию и глубину задаются заранее — не
-                            приходится переписывать всё, потому что получилось
-                            слишком сложно для восьмиклассников.
+                            Вопросы про аудиторию и глубину задаются заранее —
+                            не приходится переписывать всё, потому что
+                            получилось слишком сложно для восьмиклассников.
                         </p>
                     </div>
                     <div>
-                        <h3 class="mb-1.5 font-bold">Оформление можно перебрать потом</h3>
+                        <h3 class="mb-1.5 font-bold">
+                            Оформление можно перебрать потом
+                        </h3>
                         <p class="text-muted-foreground leading-relaxed">
-                            Текст и вёрстка разделены, поэтому смена гаммы не переписывает
-                            слайды заново. В чате пришлось бы просить всё сначала — и
-                            получить другой текст.
+                            Текст и вёрстка разделены, поэтому смена гаммы не
+                            переписывает слайды заново. В чате пришлось бы
+                            просить всё сначала — и получить другой текст.
                         </p>
                     </div>
                 </div>
@@ -480,7 +517,9 @@ const audiences = [
         <!-- ── Для кого ── -->
         <section class="border-rule border-t">
             <div class="mx-auto max-w-5xl px-6 py-16">
-                <h2 class="mb-12 text-2xl font-bold md:text-3xl">Кому пригодится</h2>
+                <h2 class="mb-12 text-2xl font-bold md:text-3xl">
+                    Кому пригодится
+                </h2>
 
                 <div class="grid gap-10 md:grid-cols-3">
                     <div v-for="item in audiences" :key="item.title">
@@ -496,12 +535,16 @@ const audiences = [
         <!-- ── Призыв ── -->
         <section class="border-rule border-t">
             <div class="mx-auto max-w-5xl px-6 py-24 text-center">
-                <h2 class="mx-auto max-w-[18ch] text-3xl font-extrabold md:text-5xl">
+                <h2
+                    class="mx-auto max-w-[18ch] text-3xl font-extrabold md:text-5xl"
+                >
                     Первая презентация — бесплатно
                 </h2>
-                <p class="text-muted-foreground mx-auto mt-5 max-w-[46ch] text-lg">
-                    Проверьте на своей теме. Если результат не понравится — вы ничего
-                    не потеряли.
+                <p
+                    class="text-muted-foreground mx-auto mt-5 max-w-[46ch] text-lg"
+                >
+                    Проверьте на своей теме. Если результат не понравится — вы
+                    ничего не потеряли.
                 </p>
                 <Link
                     :href="register()"
@@ -521,7 +564,9 @@ const audiences = [
                 <p class="flex flex-wrap gap-4">
                     <Link href="/pricing" class="hover:underline">Тарифы</Link>
                     <Link href="/offer" class="hover:underline">Оферта</Link>
-                    <Link href="/privacy" class="hover:underline">Конфиденциальность</Link>
+                    <Link href="/privacy" class="hover:underline"
+                        >Конфиденциальность</Link
+                    >
                     <span>{{ new Date().getFullYear() }}</span>
                 </p>
             </div>

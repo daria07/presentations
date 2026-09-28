@@ -35,7 +35,6 @@ defineProps<{
         {{ status }}
     </div>
 
-
     <Form
         v-bind="store.form()"
         :reset-on-success="['password']"
@@ -102,7 +101,9 @@ defineProps<{
 
         <div class="text-muted-foreground text-center text-sm">
             Ещё нет аккаунта?
-            <TextLink :href="register()" :tabindex="5">Зарегистрироваться</TextLink>
+            <TextLink :href="register()" :tabindex="5"
+                >Зарегистрироваться</TextLink
+            >
         </div>
     </Form>
 </template>

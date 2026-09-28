@@ -69,7 +69,6 @@ function destroy() {
         },
     });
 }
-
 </script>
 
 <template>
@@ -92,7 +91,10 @@ function destroy() {
             </template>
 
             <template #actions>
-                <Button as-child class="h-12 px-[22px] text-base shadow-[0_6px_16px_rgba(21,22,26,.2)]">
+                <Button
+                    as-child
+                    class="h-12 px-[22px] text-base shadow-[0_6px_16px_rgba(21,22,26,.2)]"
+                >
                     <Link href="/presentations/new">
                         <Plus class="size-[17px]" />
                         Создать
@@ -107,9 +109,12 @@ function destroy() {
             <li
                 v-for="item in presentations.data"
                 :key="item.id"
-                class="group border-rule bg-card hover:border-action hover:shadow-[0_6px_18px_rgba(43,74,203,.1)] relative flex items-center gap-[18px] rounded-[13px] border px-5 py-4 transition-all"
+                class="group border-rule bg-card hover:border-action relative flex items-center gap-[18px] rounded-[13px] border px-5 py-4 transition-all hover:shadow-[0_6px_18px_rgba(43,74,203,.1)]"
             >
-                <Link :href="item.url" class="flex min-w-0 flex-1 items-center gap-[18px]">
+                <Link
+                    :href="item.url"
+                    class="flex min-w-0 flex-1 items-center gap-[18px]"
+                >
                     <!-- Заглушка слайда: три полоски вместо картинки,
                          превью первой страницы у нас нет -->
                     <div
@@ -117,23 +122,34 @@ function destroy() {
                         aria-hidden="true"
                     >
                         <div class="h-1 w-[70%] rounded-sm bg-[#C9C3B6]" />
-                        <div class="mt-[5px] h-[3px] w-[46%] rounded-sm bg-[#DDD7CB]" />
-                        <div class="mt-1 h-[3px] w-[56%] rounded-sm bg-[#DDD7CB]" />
+                        <div
+                            class="mt-[5px] h-[3px] w-[46%] rounded-sm bg-[#DDD7CB]"
+                        />
+                        <div
+                            class="mt-1 h-[3px] w-[56%] rounded-sm bg-[#DDD7CB]"
+                        />
                     </div>
 
                     <div class="min-w-0 flex-1">
-                        <p class="truncate text-[18px] font-semibold tracking-[-0.01em]">
+                        <p
+                            class="truncate text-[18px] font-semibold tracking-[-0.01em]"
+                        >
                             {{ item.title }}
                         </p>
                         <p class="mt-[7px] flex items-center gap-2.5">
-                            <StatusBadge :status="item.status" :label="item.statusLabel" />
+                            <StatusBadge
+                                :status="item.status"
+                                :label="item.statusLabel"
+                            />
                             <span class="text-muted-foreground text-sm">
                                 {{ item.slideCount }} слайдов
                             </span>
                         </p>
                     </div>
 
-                    <span class="text-muted-foreground flex-none text-sm tabular-nums">
+                    <span
+                        class="text-muted-foreground flex-none text-sm tabular-nums"
+                    >
                         {{ formatDate(item.createdAt) }}
                     </span>
                     <ChevronRight class="text-rule size-[18px] flex-none" />
@@ -160,7 +176,9 @@ function destroy() {
                 variant="outline"
                 size="sm"
                 :disabled="!presentations.prevUrl"
-                @click="presentations.prevUrl && router.get(presentations.prevUrl)"
+                @click="
+                    presentations.prevUrl && router.get(presentations.prevUrl)
+                "
             >
                 <ChevronLeft class="size-4" />
                 Назад
@@ -174,7 +192,9 @@ function destroy() {
                 variant="outline"
                 size="sm"
                 :disabled="!presentations.nextUrl"
-                @click="presentations.nextUrl && router.get(presentations.nextUrl)"
+                @click="
+                    presentations.nextUrl && router.get(presentations.nextUrl)
+                "
             >
                 Дальше
                 <ChevronRight class="size-4" />
@@ -182,9 +202,11 @@ function destroy() {
         </nav>
 
         <div v-if="!presentations.data.length" class="py-24 text-center">
-            <p class="text-muted-foreground mx-auto max-w-[38ch] leading-relaxed">
-                Пока пусто. Опишите тему одной строкой — структуру, факты и вёрстку
-                возьмём на себя.
+            <p
+                class="text-muted-foreground mx-auto max-w-[38ch] leading-relaxed"
+            >
+                Пока пусто. Опишите тему одной строкой — структуру, факты и
+                вёрстку возьмём на себя.
             </p>
             <Button as-child variant="outline" class="mt-6">
                 <Link href="/presentations/new">Создать первую</Link>

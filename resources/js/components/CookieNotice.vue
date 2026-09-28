@@ -48,13 +48,14 @@ function dismiss() {
             >
                 <p class="text-muted-foreground text-sm leading-relaxed">
                     Сайт использует cookie: технические — чтобы хранить вашу
-                    сессию и защищать формы, и cookie сервиса статистики —
-                    чтобы видеть обезличенную посещаемость. Подробнее в
+                    сессию и защищать формы, и cookie сервиса статистики — чтобы
+                    видеть обезличенную посещаемость. Подробнее в
                     <a
                         href="/privacy"
                         target="_blank"
                         class="text-foreground underline underline-offset-2"
-                    >политике конфиденциальности</a>.
+                        >политике конфиденциальности</a
+                    >.
                 </p>
 
                 <Button size="sm" class="shrink-0" @click="dismiss">
