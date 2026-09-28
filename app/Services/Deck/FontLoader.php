@@ -71,8 +71,8 @@ class FontLoader
             $encoded = base64_encode(file_get_contents($file));
 
             $rules[] = sprintf(
-                "@font-face{font-family:\"%s\";font-style:%s;font-weight:%d;font-display:block;".
-                "src:url(data:font/woff2;charset=utf-8;base64,%s) format(\"woff2\");}",
+                '@font-face{font-family:"%s";font-style:%s;font-weight:%d;font-display:block;'.
+                'src:url(data:font/woff2;charset=utf-8;base64,%s) format("woff2");}',
                 $variant['family'],
                 $variant['style'] ?? 'normal',
                 $variant['weight'] ?? 400,

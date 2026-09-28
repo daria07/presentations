@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\PresentationStatus;
 use App\Models\Presentation;
 use App\Services\Deck\DeckRenderer;
 use Illuminate\Console\Command;
@@ -69,7 +70,7 @@ class RenderDeck extends Command
         $presentation->update([
             'file_path' => $path,
             'file_format' => 'pdf',
-            'status' => \App\Enums\PresentationStatus::Ready,
+            'status' => PresentationStatus::Ready,
             'generated_at' => now(),
         ]);
 

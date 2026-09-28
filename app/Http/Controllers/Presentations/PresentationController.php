@@ -12,6 +12,7 @@ use App\Jobs\PrepareQuestions;
 use App\Jobs\RenderPresentation;
 use App\Models\Presentation;
 use App\Services\Deck\DeckRenderer;
+use App\Services\Deck\Icons;
 use App\Services\Deck\Looks;
 use App\Services\Deck\SpeechRenderer;
 use Illuminate\Http\JsonResponse;
@@ -52,7 +53,7 @@ class PresentationController extends Controller
     public function create(Request $request): Response
     {
         return Inertia::render('presentations/Create', [
-            'maxSource' => \App\Http\Requests\Presentations\StorePresentationRequest::MAX_SOURCE,
+            'maxSource' => StorePresentationRequest::MAX_SOURCE,
             'credits' => $request->user()->credits,
             'trialAvailable' => ! $request->user()->trial_used,
             'themes' => Looks::themes(),
@@ -296,7 +297,7 @@ class PresentationController extends Controller
                 'showUrl' => route('presentations.show', $presentation),
             ],
             'layouts' => $this->layouts(),
-            'icons' => \App\Services\Deck\Icons::names(),
+            'icons' => Icons::names(),
         ]);
     }
 
