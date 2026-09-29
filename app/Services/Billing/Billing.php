@@ -63,7 +63,12 @@ class Billing
             return false;
         }
 
-        return $this->settle($event['id'], $event['paid'], $payload);
+        return $this->settle(
+            $event['id'],
+            $event['paid'],
+            $payload,
+            $event['amount'] ?? null,
+        );
     }
 
     /**
@@ -72,10 +77,19 @@ class Billing
      * Внутри транзакция с блокировкой строки и проверка текущего
      * статуса: провайдеры регулярно шлют одно уведомление дважды,
      * и без этого кредиты начислились бы повторно.
+     *
+     * $paidAmount — сколько, по данным провайдера, действительно
+     * принято, в копейках. Если не совпадает с суммой платежа,
+     * генерации не начисляются: расхождение значит, что платёж
+     * подменили или мы смотрим не на тот заказ.
      */
-    public function settle(string $providerPaymentId, bool $paid, array $payload = []): bool
-    {
-        return DB::transaction(function () use ($providerPaymentId, $paid, $payload): bool {
+    public function settle(
+        string $providerPaymentId,
+        bool $paid,
+        array $payload = [],
+        ?int $paidAmount = null,
+    ): bool {
+        return DB::transaction(function () use ($providerPaymentId, $paid, $payload, $paidAmount): bool {
             $payment = Payment::query()
                 ->where('provider_payment_id', $providerPaymentId)
                 ->lockForUpdate()
@@ -97,6 +111,18 @@ class Billing
             ]);
 
             if (! $paid) {
+                return false;
+            }
+
+            if ($paidAmount !== null && $paidAmount !== $payment->amount) {
+                Log::error('Сумма платежа не совпала с ожидаемой', [
+                    'payment' => $payment->id,
+                    'ожидали' => $payment->amount,
+                    'пришло' => $paidAmount,
+                ]);
+
+                $payment->update(['status' => PaymentStatus::Failed]);
+
                 return false;
             }
 

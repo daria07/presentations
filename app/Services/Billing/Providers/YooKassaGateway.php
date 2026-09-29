@@ -4,6 +4,7 @@ namespace App\Services\Billing\Providers;
 
 use App\Models\Payment;
 use App\Services\Billing\PaymentGateway;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -25,7 +26,7 @@ class YooKassaGateway implements PaymentGateway
             ->withHeaders(['Idempotence-Key' => (string) $payment->id])
             ->post(self::ENDPOINT, [
                 'amount' => [
-                    'value' => number_format($payment->amount / 100, 2, '.', ''),
+                    'value' => $this->money($payment->amount),
                     'currency' => $payment->currency,
                 ],
                 'capture' => true,
@@ -35,6 +36,7 @@ class YooKassaGateway implements PaymentGateway
                 ],
                 'description' => "Пакет генераций: {$payment->credits_granted} шт.",
                 'metadata' => ['payment_id' => $payment->id],
+                'receipt' => $this->receipt($payment),
             ]);
 
         if ($response->failed()) {
@@ -48,24 +50,103 @@ class YooKassaGateway implements PaymentGateway
 
         $payment->update(['provider_payment_id' => $response->json('id')]);
 
-        return $response->json('confirmation.confirmation_url');
+        return (string) $response->json('confirmation.confirmation_url');
     }
 
+    /**
+     * Разбирает уведомление — и НЕ верит ему.
+     *
+     * Адрес вебхука открыт всему интернету: без входа в аккаунт и без
+     * проверки CSRF, иначе ЮKassa до него не достучится. Если верить
+     * телу запроса, любой может завести платёж, подсмотреть его
+     * идентификатор, не заплатить и прислать сюда «succeeded».
+     * Идемпотентность от этого не спасает: она защищает от повторного
+     * начисления, а не от поддельного.
+     *
+     * Поэтому уведомление здесь — только сигнал «сходи проверь».
+     * Статус и сумму берём из ответа API ЮKassa на наш собственный
+     * запрос, с нашим же ключом.
+     *
+     * @return array{id: string, paid: bool, amount: int, currency: string}|null
+     */
     public function parseWebhook(array $payload, array $headers): ?array
     {
-        $object = $payload['object'] ?? [];
+        $id = $payload['object']['id'] ?? null;
 
-        if (blank($object['id'] ?? null)) {
+        if (blank($id) || ! is_string($id)) {
+            return null;
+        }
+
+        $response = $this->request()->get(self::ENDPOINT.'/'.urlencode($id));
+
+        if ($response->status() === 404) {
+            Log::warning('ЮKassa: в уведомлении платёж, которого у провайдера нет', [
+                'id' => $id,
+            ]);
+
+            return null;
+        }
+
+        if ($response->failed()) {
+            // Не молчим: пусть контроллер ответит ошибкой, а ЮKassa
+            // повторит уведомление позже. Если проглотить, платёж
+            // навсегда останется в состоянии «ожидает».
+            throw new RuntimeException(
+                'ЮKassa: не удалось проверить платёж '.$id.', код '.$response->status()
+            );
+        }
+
+        $status = $response->json('status');
+
+        // pending и waiting_for_capture — платёж ещё в пути, решать рано
+        if (! in_array($status, ['succeeded', 'canceled'], true)) {
             return null;
         }
 
         return [
-            'id' => (string) $object['id'],
-            'paid' => ($object['status'] ?? null) === 'succeeded',
+            'id' => (string) $response->json('id'),
+            'paid' => $status === 'succeeded',
+            'amount' => (int) round(((float) $response->json('amount.value')) * 100),
+            'currency' => (string) $response->json('amount.currency'),
         ];
     }
 
-    private function request()
+    /**
+     * Чек для покупателя.
+     *
+     * В оферте обещано, что чек придёт на почту, а самозанятый обязан
+     * выдать его по закону. ЮKassa делает это сама, но только если
+     * состав заказа передан здесь и в личном кабинете включена выдача
+     * чеков НПД.
+     *
+     * @return array<string, mixed>
+     */
+    private function receipt(Payment $payment): array
+    {
+        return [
+            'customer' => ['email' => $payment->user->email],
+            'items' => [[
+                'description' => "Генерации презентаций, {$payment->credits_granted} шт.",
+                'quantity' => '1.00',
+                'amount' => [
+                    'value' => $this->money($payment->amount),
+                    'currency' => $payment->currency,
+                ],
+                // 1 — без НДС: самозанятый его не платит
+                'vat_code' => 1,
+                'payment_subject' => 'service',
+                'payment_mode' => 'full_payment',
+            ]],
+        ];
+    }
+
+    /** Копейки в строку вида «199.00», как того требует API */
+    private function money(int $kopecks): string
+    {
+        return number_format($kopecks / 100, 2, '.', '');
+    }
+
+    private function request(): PendingRequest
     {
         $config = config('billing.yookassa');
 

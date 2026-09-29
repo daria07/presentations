@@ -24,6 +24,8 @@ class FakeGateway implements PaymentGateway
             return null;
         }
 
+        // Суммы заглушка не сообщает: проверять нечего, платежа
+        // в реальном мире не было
         return [
             'id' => (string) $payload['id'],
             'paid' => ($payload['status'] ?? null) === 'succeeded',
