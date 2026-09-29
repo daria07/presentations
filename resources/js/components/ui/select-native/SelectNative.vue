@@ -32,7 +32,7 @@ const modelValue = useVModel(props, 'modelValue', emits, { passive: true });
             data-slot="select-native"
             :class="
                 cn(
-                    'border-input bg-card dark:bg-input/30 h-11 w-full cursor-pointer appearance-none rounded-lg border py-2 pr-10 pl-3.5 text-[15px] font-medium transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+                    'border-input bg-card dark:bg-input/30 h-11 w-full cursor-pointer appearance-none rounded-lg border py-2 pr-10 pl-3.5 text-base font-medium sm:text-[15px] transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
                     'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
                     props.class,
                 )

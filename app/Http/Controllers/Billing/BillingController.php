@@ -23,7 +23,7 @@ class BillingController extends Controller
         $user = $request->user();
 
         return Inertia::render('billing/Index', [
-            'packages' => collect(Package::all())->map(fn (Package $p) => [
+            'packages' => collect(Package::all($user->email))->map(fn (Package $p) => [
                 'key' => $p->key,
                 'title' => $p->title,
                 'credits' => $p->credits,
@@ -64,8 +64,14 @@ class BillingController extends Controller
      */
     public function checkout(Request $request): RedirectResponse|SymfonyResponse
     {
+        // Список для проверки — тот же, что и на витрине: чужой ключ
+        // пакета не пройдёт, даже если его подставить руками в запрос
+        $available = collect(Package::all($request->user()->email))
+            ->pluck('key')
+            ->all();
+
         $request->validate([
-            'package' => ['required', 'string', 'in:'.implode(',', array_keys(config('billing.packages')))],
+            'package' => ['required', 'string', 'in:'.implode(',', $available)],
         ]);
 
         try {

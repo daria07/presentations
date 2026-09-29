@@ -24,6 +24,7 @@ class LegalController extends Controller
         return Inertia::render('legal/Offer', [
             'legal' => config('legal'),
             'packages' => collect(config('billing.packages'))
+                ->reject(fn (array $pack) => $pack['test'] ?? false)
                 ->map(fn (array $pack) => [
                     'title' => $pack['title'],
                     'credits' => $pack['credits'],
@@ -45,6 +46,7 @@ class LegalController extends Controller
         return Inertia::render('legal/Pricing', [
             'legal' => config('legal'),
             'packages' => collect(config('billing.packages'))
+                ->reject(fn (array $pack) => $pack['test'] ?? false)
                 ->map(fn (array $pack, string $key) => [
                     'key' => $key,
                     'title' => $pack['title'],

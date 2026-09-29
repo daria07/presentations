@@ -17,6 +17,7 @@ readonly class Package
         public int $amount,      // в копейках
         public string $note,
         public bool $popular,
+        public bool $test = false,
     ) {}
 
     public static function find(string $key): self
@@ -30,11 +31,28 @@ readonly class Package
         return self::fromConfig($key, $all[$key]);
     }
 
-    /** @return array<int, self> */
-    public static function all(): array
+    /**
+     * Пакеты, доступные этому человеку.
+     *
+     * Служебный пакет за 10 ₽ видят только почты из
+     * billing.test_emails — остальным его не существует ни на
+     * витрине, ни при оплате.
+     *
+     * @return array<int, self>
+     */
+    public static function all(?string $email = null): array
     {
+        $testers = config('billing.test_emails', []);
+
+        // Звёздочка — всем, кто вошёл в аккаунт. Так удобно гонять
+        // оплату с чужого аккаунта, пока трафика нет; убрать — значит
+        // стереть звёздочку из BILLING_TEST_EMAILS
+        $allowed = in_array('*', $testers, true)
+            || ($email !== null && in_array(mb_strtolower($email), $testers, true));
+
         return collect(config('billing.packages'))
             ->map(fn (array $data, string $key) => self::fromConfig($key, $data))
+            ->reject(fn (self $p) => $p->test && ! $allowed)
             ->values()
             ->all();
     }
@@ -48,6 +66,7 @@ readonly class Package
             amount: $data['amount'],
             note: $data['note'] ?? '',
             popular: $data['popular'] ?? false,
+            test: $data['test'] ?? false,
         );
     }
 

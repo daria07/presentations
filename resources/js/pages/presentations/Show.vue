@@ -699,7 +699,7 @@ async function copyShare() {
                 <input
                     :value="current.shareUrl"
                     readonly
-                    class="w-full flex-1 bg-transparent font-mono text-sm outline-none"
+                    class="w-full flex-1 bg-transparent font-mono text-base outline-none sm:text-sm"
                     @focus="($event.target as HTMLInputElement).select()"
                 />
             </div>
