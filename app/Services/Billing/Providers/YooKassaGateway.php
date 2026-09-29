@@ -24,26 +24,33 @@ class YooKassaGateway implements PaymentGateway
 
     public function checkout(Payment $payment, string $returnUrl): string
     {
+        $body = [
+            'amount' => [
+                'value' => $this->money($payment->amount),
+                'currency' => $payment->currency,
+            ],
+            'capture' => true,
+            'confirmation' => [
+                'type' => 'redirect',
+                'return_url' => $returnUrl,
+            ],
+            'description' => "Пакет генераций: {$payment->credits_granted} шт.",
+            'metadata' => ['payment_id' => $payment->id],
+        ];
+
+        // Состав заказа для чека передаём, только если фискализация
+        // включена. Подробности — в config/billing.php
+        if (config('billing.yookassa.receipts')) {
+            $body['receipt'] = $this->receipt($payment);
+        }
+
         $response = $this->request()
             // Ключ привязан к нашему платежу, а не случайный: если
             // человек нажал «Купить» дважды или запрос оборвался,
             // ЮKassa вернёт тот же платёж, а не заведёт второй.
             // Документация разрешает любое значение до 64 символов.
             ->withHeaders(['Idempotence-Key' => 'payment-'.$payment->id])
-            ->post(self::ENDPOINT, [
-                'amount' => [
-                    'value' => $this->money($payment->amount),
-                    'currency' => $payment->currency,
-                ],
-                'capture' => true,
-                'confirmation' => [
-                    'type' => 'redirect',
-                    'return_url' => $returnUrl,
-                ],
-                'description' => "Пакет генераций: {$payment->credits_granted} шт.",
-                'metadata' => ['payment_id' => $payment->id],
-                'receipt' => $this->receipt($payment),
-            ]);
+            ->post(self::ENDPOINT, $body);
 
         if ($response->failed()) {
             Log::error('ЮKassa: не удалось создать платёж', [
@@ -134,10 +141,10 @@ class YooKassaGateway implements PaymentGateway
     /**
      * Чек для покупателя.
      *
-     * В оферте обещано, что чек придёт на почту, а самозанятый обязан
-     * выдать его по закону. ЮKassa делает это сама, но только если
-     * состав заказа передан здесь и в личном кабинете включена выдача
-     * чеков НПД.
+     * Сейчас спит: включается настройкой billing.yookassa.receipts,
+     * которая выключена, потому что 29 декабря 2025 года ЮKassa
+     * закрыла выдачу чеков самозанятым. Метод оставлен готовым —
+     * состав заказа собран так, как того требует их API.
      *
      * @return array<string, mixed>
      */

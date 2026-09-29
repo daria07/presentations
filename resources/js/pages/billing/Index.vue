@@ -29,6 +29,7 @@ type Payment = {
     status: string;
     statusLabel: string;
     date: string | null;
+    receipt: string | null;
 };
 
 defineProps<{
@@ -210,8 +211,8 @@ function formatDate(iso: string | null): string {
                         class="underline underline-offset-2"
                     >
                         условий оферты</a
-                    >. Чек придёт на вашу почту, неиспользованные генерации
-                    можно вернуть.
+                    >. Чек появится в истории платежей ниже, неиспользованные
+                    генерации можно вернуть.
                 </span>
             </p>
         </div>
@@ -248,6 +249,20 @@ function formatDate(iso: string | null): string {
                         <Check v-if="item.status === 'paid'" class="size-3.5" />
                         {{ item.statusLabel }}
                     </span>
+
+                    <!-- Чек появляется не сразу: его выбивают вручную
+                         в «Мой налог». Пока его нет — ничего не обещаем
+                         в этой строке, условие есть в сноске выше -->
+                    <a
+                        v-if="item.receipt"
+                        :href="item.receipt"
+                        target="_blank"
+                        rel="noopener"
+                        class="text-action w-14 text-sm hover:underline"
+                    >
+                        Чек
+                    </a>
+                    <span v-else class="w-14" />
 
                     <span class="w-20 text-right font-medium tabular-nums">
                         {{ item.amount }} ₽

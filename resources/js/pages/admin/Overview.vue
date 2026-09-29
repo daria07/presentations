@@ -87,6 +87,9 @@ function when(iso: string | null): string {
 
             <template #actions>
                 <Button variant="outline" size="sm" as-child>
+                    <Link href="/admin/receipts">Чеки</Link>
+                </Button>
+                <Button variant="outline" size="sm" as-child>
                     <Link href="/admin/users">Все пользователи</Link>
                 </Button>
             </template>

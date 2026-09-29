@@ -9,6 +9,7 @@ use App\Services\Billing\Billing;
 use App\Services\Billing\Package;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -44,6 +45,9 @@ class BillingController extends Controller
                     'status' => $p->status->value,
                     'statusLabel' => $p->status->label(),
                     'date' => $p->created_at?->toIso8601String(),
+                    'receipt' => $p->hasReceipt()
+                        ? route('billing.receipt', $p)
+                        : null,
                 ]),
         ]);
     }
@@ -80,6 +84,33 @@ class BillingController extends Controller
         }
 
         return Inertia::location($url);
+    }
+
+    /**
+     * Чек по платежу.
+     *
+     * Ссылка на «Мой налог» — перенаправлением, файл — отдаём сами:
+     * он лежит вне публичной папки, иначе чужой чек открывался бы по
+     * прямому адресу без всякой проверки.
+     */
+    public function receipt(Request $request, Payment $payment): SymfonyResponse
+    {
+        abort_unless(
+            $payment->user_id === $request->user()?->id || $request->user()?->isAdmin(),
+            404,
+        );
+
+        if (filled($payment->receipt_url)) {
+            return redirect()->away($payment->receipt_url);
+        }
+
+        abort_unless(filled($payment->receipt_path), 404);
+        abort_unless(Storage::disk('local')->exists($payment->receipt_path), 404);
+
+        return Storage::disk('local')->download(
+            $payment->receipt_path,
+            'Чек '.$payment->amountForHumans().' ₽.'.pathinfo($payment->receipt_path, PATHINFO_EXTENSION),
+        );
     }
 
     /**

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\ReceiptController;
 use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LandingController;
@@ -50,6 +51,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('checkout');
 
         // Песочница видна только при провайдере fake
+        // Чек по платежу: свой — всегда, чужой — только администратору
+        Route::get('receipt/{payment}', [BillingController::class, 'receipt'])->name('receipt');
+
         Route::get('sandbox/{payment}', [BillingController::class, 'sandbox'])->name('sandbox');
         Route::post('sandbox/{payment}', [BillingController::class, 'sandboxSettle'])->name('sandbox.settle');
     });
@@ -59,6 +63,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('index');
         Route::get('users', [AdminController::class, 'users'])->name('users');
         Route::get('users/{user}', [AdminController::class, 'user'])->name('user');
+
+        // Единственное, что админка пишет: чеки НПД выбиваются вручную
+        // в «Мой налог», сюда приносится ссылка или файл
+        Route::get('receipts', [ReceiptController::class, 'index'])->name('receipts');
+        Route::post('receipts/{payment}', [ReceiptController::class, 'store'])
+            ->name('receipts.store');
     });
 
     Route::prefix('presentations')->name('presentations.')->group(function () {
