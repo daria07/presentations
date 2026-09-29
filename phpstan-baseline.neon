@@ -223,12 +223,6 @@ parameters:
 			path: app/Models/Payment.php
 
 		-
-			message: '#^Method App\\Models\\Payment\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/Payment.php
-
-		-
 			message: '#^Class App\\Models\\Presentation has PHPDoc tag @property for property \$clarifications with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
