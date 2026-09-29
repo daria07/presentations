@@ -73,26 +73,8 @@ parameters:
 			path: app/Http/Controllers/Admin/AdminController.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: int, amount\: int, currency\: string, credits\: int, status\: ''failed''\|''paid''\|''pending''\|''refunded'', statusLabel\: string, provider\: string, createdAt\: string\|null\}, Closure\(App\\Models\\Payment\)\: array\{id\: int, amount\: int, currency\: string, credits\: int, status\: ''failed''\|''paid''\|''pending''\|''refunded'', statusLabel\: string, provider\: string, createdAt\: string\|null\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Admin/AdminController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: int, title\: string, status\: ''asking''\|''draft''\|''failed''\|''generating''\|''queued''\|''ready'', statusLabel\: string, slides\: int, theme\: string\|null, palette\: string, createdAt\: string\|null\}, Closure\(App\\Models\\Presentation\)\: array\{id\: int, title\: string, status\: ''asking''\|''draft''\|''failed''\|''generating''\|''queued''\|''ready'', statusLabel\: string, slides\: int, theme\: string\|null, palette\: string, createdAt\: string\|null\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Admin/AdminController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\Billing\\BillingController\:\:webhook\(\) has no return type specified\.$#'
 			identifier: missingType.return
-			count: 1
-			path: app/Http/Controllers/Billing/BillingController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: int, amount\: string, credits\: int, status\: ''failed''\|''paid''\|''pending''\|''refunded'', statusLabel\: string, date\: string\|null\}, Closure\(App\\Models\\Payment\)\: array\{id\: int, amount\: string, credits\: int, status\: ''failed''\|''paid''\|''pending''\|''refunded'', statusLabel\: string, date\: string\|null\} given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Http/Controllers/Billing/BillingController.php
 
@@ -129,18 +111,6 @@ parameters:
 		-
 			message: '#^Method App\\Http\\Controllers\\Presentations\\PresentationController\:\:summary\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
-			count: 1
-			path: app/Http/Controllers/Presentations/PresentationController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array, Closure\(App\\Models\\Presentation\)\: array given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Presentations/PresentationController.php
-
-		-
-			message: '#^Parameter \#1 \$presentation of job class App\\Jobs\\PrepareQuestions constructor expects App\\Models\\Presentation in App\\Jobs\\PrepareQuestions\:\:dispatch\(\), Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Http/Controllers/Presentations/PresentationController.php
 
@@ -247,24 +217,6 @@ parameters:
 			path: app/Models/Presentation.php
 
 		-
-			message: '#^Method App\\Models\\User\:\:apiCalls\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/User.php
-
-		-
-			message: '#^Method App\\Models\\User\:\:payments\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/User.php
-
-		-
-			message: '#^Method App\\Models\\User\:\:presentations\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/User.php
-
-		-
 			message: '#^Method App\\Notifications\\PresentationReady\:\:via\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -285,12 +237,6 @@ parameters:
 		-
 			message: '#^Method App\\Services\\Billing\\Billing\:\:settle\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/Billing/Billing.php
-
-		-
-			message: '#^Parameter \#1 \$payment of method App\\Services\\Billing\\PaymentGateway\:\:checkout\(\) expects App\\Models\\Payment, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Services/Billing/Billing.php
 

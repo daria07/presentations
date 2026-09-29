@@ -72,16 +72,19 @@ class User extends Authenticatable implements PasskeyUser
         return in_array(mb_strtolower($this->email), config('admin.emails', []), true);
     }
 
+    /** @return HasMany<Presentation, $this> */
     public function presentations(): HasMany
     {
         return $this->hasMany(Presentation::class)->latest();
     }
 
+    /** @return HasMany<Payment, $this> */
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
     }
 
+    /** @return HasMany<ApiCall, $this> */
     public function apiCalls(): HasMany
     {
         return $this->hasMany(ApiCall::class);
