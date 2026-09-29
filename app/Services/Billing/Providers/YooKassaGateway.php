@@ -5,9 +5,11 @@ namespace App\Services\Billing\Providers;
 use App\Models\Payment;
 use App\Services\Billing\PaymentGateway;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 /**
  * ЮKassa. Работает и с самозанятыми.
@@ -23,7 +25,11 @@ class YooKassaGateway implements PaymentGateway
     public function checkout(Payment $payment, string $returnUrl): string
     {
         $response = $this->request()
-            ->withHeaders(['Idempotence-Key' => (string) $payment->id])
+            // Ключ привязан к нашему платежу, а не случайный: если
+            // человек нажал «Купить» дважды или запрос оборвался,
+            // ЮKassa вернёт тот же платёж, а не заведёт второй.
+            // Документация разрешает любое значение до 64 символов.
+            ->withHeaders(['Idempotence-Key' => 'payment-'.$payment->id])
             ->post(self::ENDPOINT, [
                 'amount' => [
                     'value' => $this->money($payment->amount),
@@ -50,7 +56,21 @@ class YooKassaGateway implements PaymentGateway
 
         $payment->update(['provider_payment_id' => $response->json('id')]);
 
-        return (string) $response->json('confirmation.confirmation_url');
+        $url = $response->json('confirmation.confirmation_url');
+
+        if (blank($url)) {
+            // Платёж создан, но идти некуда: ЮKassa вернула его сразу
+            // в финальном статусе. Это не наша ошибка формата, а редкий
+            // случай — например, отказ ещё на этапе создания.
+            Log::error('ЮKassa: платёж без адреса подтверждения', [
+                'payment' => $payment->id,
+                'status' => $response->json('status'),
+            ]);
+
+            throw new RuntimeException('Не удалось начать оплату. Попробуйте позже.');
+        }
+
+        return (string) $url;
     }
 
     /**
@@ -155,7 +175,24 @@ class YooKassaGateway implements PaymentGateway
         }
 
         return Http::withBasicAuth($config['shop_id'], $config['secret_key'])
-            ->timeout(30)
-            ->acceptJson();
+            ->timeout(35)
+            ->acceptJson()
+            // По документации ЮKassa 500 не означает неудачу: результат
+            // операции просто неизвестен, и его положено переспросить.
+            // 429 — мы слишком частим. Оба случая лечатся повтором, а
+            // 4xx повторять бессмысленно: запрос не станет правильнее.
+            // Повтор безопасен: создание платежа защищено ключом
+            // идемпотентности, а проверка статуса — обычный GET.
+            ->retry(3, 300, function (Throwable $exception): bool {
+                // Не RequestException — значит ответа не было вовсе:
+                // обрыв связи или таймаут. Результат неизвестен, пробуем
+                if (! $exception instanceof RequestException) {
+                    return true;
+                }
+
+                $status = $exception->response->status();
+
+                return $status === 429 || $status >= 500;
+            }, throw: false);
     }
 }
