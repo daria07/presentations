@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
 class BillingController extends Controller
@@ -47,8 +48,17 @@ class BillingController extends Controller
         ]);
     }
 
-    /** Уводим человека на оплату */
-    public function checkout(Request $request): RedirectResponse
+    /**
+     * Уводим человека на оплату.
+     *
+     * Inertia::location, а не redirect()->away: кнопка отправляет POST
+     * через XHR, и обычное перенаправление браузер отработал бы внутри
+     * этого же запроса — на чужой домен так нельзя, ответ не придёт, а
+     * кнопка навсегда останется в состоянии «Переходим…». location
+     * отвечает кодом 409 с заголовком, по которому клиент Inertia
+     * уходит на адрес целой страницей.
+     */
+    public function checkout(Request $request): RedirectResponse|SymfonyResponse
     {
         $request->validate([
             'package' => ['required', 'string', 'in:'.implode(',', array_keys(config('billing.packages')))],
@@ -69,7 +79,7 @@ class BillingController extends Controller
             ]);
         }
 
-        return redirect()->away($url);
+        return Inertia::location($url);
     }
 
     /**
