@@ -112,7 +112,14 @@ defineOptions({
                     class="underline underline-offset-2"
                     >условия оферты</a
                 >
-                и даёте согласие на обработку персональных данных на условиях
+                и даёте
+                <a
+                    href="/consent"
+                    target="_blank"
+                    class="underline underline-offset-2"
+                    >согласие на обработку персональных данных</a
+                >
+                на условиях
                 <a
                     href="/privacy"
                     target="_blank"

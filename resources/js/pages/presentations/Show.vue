@@ -688,6 +688,12 @@ async function copyShare() {
                         Готово · {{ current.slideCount }} слайдов
                     </p>
                     <h1 class="text-2xl font-extrabold">{{ current.title }}</h1>
+                    <!-- Рядом с «Готово»: именно здесь человек решает,
+                         нести ли это дальше как есть -->
+                    <p class="text-muted-foreground max-w-prose pt-1 text-sm">
+                        Собрано нейросетью — проверьте факты, числа и имена
+                        перед выступлением.
+                    </p>
                 </div>
             </div>
 

@@ -6,7 +6,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Открытые страницы: оферта, политика конфиденциальности и тарифы.
+ * Открытые страницы: оферта, политика конфиденциальности, согласие на
+ * обработку персональных данных и тарифы.
  *
  * Тарифы продублированы наружу не ради красоты: платёжный провайдер
  * требует, чтобы цены, условия и реквизиты были видны без входа в
@@ -37,6 +38,13 @@ class LegalController extends Controller
     public function privacy(): Response
     {
         return Inertia::render('legal/Privacy', [
+            'legal' => config('legal'),
+        ]);
+    }
+
+    public function consent(): Response
+    {
+        return Inertia::render('legal/Consent', [
             'legal' => config('legal'),
         ]);
     }

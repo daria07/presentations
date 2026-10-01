@@ -567,6 +567,9 @@ const audiences = [
                     <Link href="/privacy" class="hover:underline"
                         >Конфиденциальность</Link
                     >
+                    <Link href="/consent" class="hover:underline"
+                        >Согласие на обработку</Link
+                    >
                     <span>{{ new Date().getFullYear() }}</span>
                 </p>
             </div>
