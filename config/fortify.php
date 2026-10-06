@@ -164,11 +164,15 @@ return [
         Features::registration(),
         Features::resetPasswords(),
         Features::emailVerification(),
-        Features::twoFactorAuthentication([
-            'confirm' => true,
-            'confirmPassword' => true,
-            // 'window' => 0
-        ]),
+        // Двухфакторная проверка выключена: она требует приложения
+        // с кодами и своей ветки восстановления доступа, а объяснять
+        // это каждому, кто делает презентацию к уроку, незачем.
+        // Код и экраны оставлены — чтобы вернуть, достаточно
+        // расскомментировать.
+        // Features::twoFactorAuthentication([
+        //     'confirm' => true,
+        //     'confirmPassword' => true,
+        // ]),
         // Ключи доступа (passkeys) выключены. Вход у нас по почте и
         // паролю; кнопка «Подтвердить ключом доступа» показывалась всем,
         // включая тех, у кого ключа нет, и упиралась в отказ браузера.
