@@ -217,7 +217,7 @@ const audiences = [
         </section>
 
         <!-- ── Оформление: живая примерочная ── -->
-        <section class="border-rule border-t">
+        <section id="themes" class="border-rule border-t">
             <div class="mx-auto max-w-5xl px-6 py-16">
                 <div class="mb-8 max-w-[56ch]">
                     <h2 class="text-2xl font-bold md:text-3xl">
@@ -376,7 +376,7 @@ const audiences = [
         </section>
 
         <!-- ── Десять типов слайдов ── -->
-        <section class="border-rule border-t">
+        <section id="slides" class="border-rule border-t">
             <div
                 class="mx-auto grid max-w-5xl gap-10 px-6 py-16 md:grid-cols-[1fr_1.1fr]"
             >
@@ -405,7 +405,7 @@ const audiences = [
         </section>
 
         <!-- ── Как это работает ── -->
-        <section class="border-rule border-t">
+        <section id="how" class="border-rule border-t">
             <div class="mx-auto max-w-5xl px-6 py-16">
                 <h2 class="mb-12 text-2xl font-bold md:text-3xl">
                     Как это работает
@@ -428,7 +428,7 @@ const audiences = [
         </section>
 
         <!-- ── Что есть внутри ── -->
-        <section class="border-rule border-t">
+        <section id="inside" class="border-rule border-t">
             <div class="mx-auto max-w-5xl px-6 py-16">
                 <h2 class="mb-10 text-2xl font-bold md:text-3xl">
                     Что ещё есть внутри
@@ -472,7 +472,7 @@ const audiences = [
         </section>
 
         <!-- ── Отличие от чата ── -->
-        <section class="border-rule border-t">
+        <section id="why" class="border-rule border-t">
             <div
                 class="mx-auto grid max-w-5xl gap-10 px-6 py-16 md:grid-cols-[1fr_1.1fr]"
             >
@@ -515,7 +515,7 @@ const audiences = [
         </section>
 
         <!-- ── Для кого ── -->
-        <section class="border-rule border-t">
+        <section id="for-whom" class="border-rule border-t">
             <div class="mx-auto max-w-5xl px-6 py-16">
                 <h2 class="mb-12 text-2xl font-bold md:text-3xl">
                     Кому пригодится
@@ -533,7 +533,7 @@ const audiences = [
         </section>
 
         <!-- ── Призыв ── -->
-        <section class="border-rule border-t">
+        <section id="start" class="border-rule border-t">
             <div class="mx-auto max-w-5xl px-6 py-24 text-center">
                 <h2
                     class="mx-auto max-w-[18ch] text-3xl font-extrabold md:text-5xl"
