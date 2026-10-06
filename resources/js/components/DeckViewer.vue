@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight } from '@lucide/vue';
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { ChevronLeft, ChevronRight, LayoutGrid } from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = withDefaults(
     defineProps<{
@@ -24,11 +24,37 @@ const props = withDefaults(
         framed?: boolean;
         /** Номер показанного слайда — для связи с внешним списком */
         active?: number;
+        /** Разрешать перестроение под узкий экран */
+        feed?: boolean;
     }>(),
-    { rail: true, controls: true, framed: true },
+    { rail: true, controls: true, framed: true, feed: true },
 );
 
 const emit = defineEmits<{ 'update:active': [number] }>();
+
+/*
+   На узком экране деление «лента миниатюр слева + сцена» не работает:
+   ленте нужно 120px, и слайду остаётся полоска, на которой ничего не
+   прочесть. Там слайд занимает всю ширину, а лента переезжает в
+   панель, которая выдвигается снизу по кнопке «Слайды».
+
+   Порог 640px — та же граница, что у остальной вёрстки (sm в Tailwind).
+   Слушаем медиазапрос, а не ширину окна: он срабатывает ровно на
+   переходе через границу, а не на каждом пикселе перетаскивания.
+*/
+const COMPACT_BELOW = '(max-width: 639px)';
+
+const narrow = ref(false);
+const compact = computed(() => props.feed && props.rail && narrow.value);
+
+/** Панель с миниатюрами открыта (только в узком режиме) */
+const sheet = ref(false);
+
+let media: MediaQueryList | null = null;
+
+function onMediaChange(event: MediaQueryListEvent) {
+    narrow.value = event.matches;
+}
 
 /*
    Слайды приходят готовой вёрсткой — той же, что уходит в печать.
@@ -55,6 +81,9 @@ let deck: HTMLElement | null = null;
 let slides: HTMLElement[] = [];
 let thumbs: HTMLElement[] = [];
 
+/* Последняя разметка: смена режима — это пересборка из неё, без сети */
+let markup: string | null = null;
+
 /** Размер слайда в пикселях при 96 dpi */
 let slideWidth = 1280;
 let slideHeight = 720;
@@ -73,8 +102,6 @@ async function load() {
 
     loading.value = true;
     failed.value = false;
-
-    let markup: string;
 
     if (props.html !== undefined) {
         if (!props.html) {
@@ -100,6 +127,12 @@ async function load() {
             return;
         }
     }
+
+    render();
+}
+
+function render() {
+    if (!stageHost.value || !railHost.value || markup === null) return;
 
     const parsed = new DOMParser().parseFromString(markup, 'text/html');
 
@@ -127,7 +160,14 @@ async function load() {
         .slide { display: none; flex: none; transform-origin: center center; }
         .slide.is-active { display: flex; }
 
-        .rail { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+        /* В колонке миниатюры идут одна под другой, в выдвижной
+           панели — сеткой: там ширины хватает на две-три в ряд */
+        .rail {
+            display: flex; gap: 8px; padding: 8px;
+            flex-direction: ${compact.value ? 'row' : 'column'};
+            flex-wrap: ${compact.value ? 'wrap' : 'nowrap'};
+            justify-content: ${compact.value ? 'center' : 'flex-start'};
+        }
         /* Миниатюра — это кнопка, а у кнопок браузер сам ставит
            выравнивание по центру и свой шрифт. Внутри лежит клон
            слайда, и всё это наследуется: гасим. */
@@ -213,7 +253,10 @@ function buildThumbs() {
         clone.style.transform = `scale(${scale})`;
         box.appendChild(clone);
 
-        box.addEventListener('click', () => show(i));
+        box.addEventListener('click', () => {
+            show(i);
+            sheet.value = false;
+        });
         rail.appendChild(box);
         thumbs.push(box);
     });
@@ -309,13 +352,25 @@ watch(
     },
 );
 
+/* Смена режима — это другая раскладка миниатюр, то есть пересборка.
+   Разметка уже в памяти, в сеть не ходим */
+watch(compact, () => {
+    sheet.value = false;
+    render();
+});
+
 onMounted(() => {
+    media = window.matchMedia(COMPACT_BELOW);
+    narrow.value = media.matches;
+    media.addEventListener('change', onMediaChange);
+
     load();
     window.addEventListener('resize', fit);
     document.addEventListener('keydown', keys);
 });
 
 onBeforeUnmount(() => {
+    media?.removeEventListener('change', onMediaChange);
     window.removeEventListener('resize', fit);
     document.removeEventListener('keydown', keys);
 });
@@ -326,11 +381,48 @@ onBeforeUnmount(() => {
         class="bg-muted/40 flex overflow-hidden"
         :class="framed && 'border-border rounded-xl border'"
     >
-        <!-- Лента миниатюр: свой изолированный корень со стилями слайдов -->
+        <!--
+            Лента миниатюр: свой изолированный корень со стилями слайдов.
+            Узел один на оба режима — колонку слева и выдвижную панель.
+            Если бы их было два, у каждого был бы свой теневой корень,
+            и миниатюры пришлось бы строить дважды.
+        -->
         <div
-            v-show="rail"
-            ref="railHost"
-            class="bg-muted/70 border-rule w-[120px] flex-none overflow-y-auto border-r"
+            v-show="rail && (!compact || sheet)"
+            :class="
+                compact
+                    ? 'bg-card fixed inset-x-0 bottom-0 z-50 max-h-[70vh] overflow-y-auto rounded-t-2xl border-t shadow-2xl'
+                    : 'bg-muted/70 border-rule w-[120px] flex-none overflow-y-auto border-r'
+            "
+            :style="
+                compact
+                    ? { paddingBottom: 'env(safe-area-inset-bottom, 0px)' }
+                    : undefined
+            "
+        >
+            <div
+                v-if="compact"
+                class="bg-card border-rule sticky top-0 flex items-center justify-between border-b px-4 py-3"
+            >
+                <p class="text-sm font-semibold">Слайды</p>
+                <button
+                    type="button"
+                    class="text-muted-foreground hover:text-foreground cursor-pointer text-sm"
+                    @click="sheet = false"
+                >
+                    Закрыть
+                </button>
+            </div>
+
+            <div ref="railHost" />
+        </div>
+
+        <!-- Затемнение под панелью: отдельным узлом, чтобы нажатие мимо
+             миниатюр закрывало её, а не проваливалось на слайд -->
+        <div
+            v-if="compact && sheet"
+            class="fixed inset-0 z-40 bg-black/40"
+            @click="sheet = false"
         />
 
         <!-- Сцена -->
@@ -351,7 +443,7 @@ onBeforeUnmount(() => {
             <!-- Управление в пустом поле под слайдом -->
             <div
                 v-else-if="controls && !loading"
-                class="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3"
+                class="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap"
             >
                 <button
                     type="button"
@@ -363,7 +455,23 @@ onBeforeUnmount(() => {
                     <ChevronLeft class="size-4" />
                 </button>
 
+                <!-- В узком режиме счётчик заодно открывает панель
+                     с миниатюрами: отдельной кнопке рядом места нет -->
+                <!-- whitespace-nowrap обязателен: на 343px ряду не
+                     хватает ширины, и дробь ломается на две строки -->
+                <button
+                    v-if="compact"
+                    type="button"
+                    class="border-border bg-background/80 text-muted-foreground hover:text-foreground flex h-8 flex-none cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-sm leading-none whitespace-nowrap tabular-nums"
+                    aria-label="Все слайды"
+                    @click="sheet = true"
+                >
+                    <LayoutGrid class="size-3.5 flex-none" />
+                    {{ index + 1 }} / {{ total }}
+                </button>
+
                 <p
+                    v-else
                     class="text-muted-foreground w-14 text-center text-sm tabular-nums"
                 >
                     {{ index + 1 }} / {{ total }}

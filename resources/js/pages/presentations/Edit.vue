@@ -2,7 +2,14 @@
 import DeckViewer from '@/components/DeckViewer.vue';
 import Field from '@/components/Field.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { ArrowDown, ArrowUp, Plus, RefreshCw, Trash2 } from '@lucide/vue';
+import {
+    ArrowDown,
+    ArrowUp,
+    Pencil,
+    Plus,
+    RefreshCw,
+    Trash2,
+} from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -262,6 +269,38 @@ function save(then?: () => void) {
         },
     );
 }
+
+/*
+   Ниже 1024px три колонки рядом не помещаются: списку нужно 224px,
+   правке — поля во всю ширину, просмотру — хотя бы треть экрана.
+
+   Поэтому там главное — просмотр: он показывает результат, ради
+   которого всё и затевалось. Список слайдов живёт в самом просмотре
+   (кнопка с сеткой открывает миниатюры), а правка выезжает поверх
+   экрана по кнопке и занимает его целиком.
+*/
+const NARROW = '(max-width: 1023px)';
+
+const narrow = ref(false);
+const editing = ref(false);
+
+let media: MediaQueryList | null = null;
+
+function onNarrowChange(event: MediaQueryListEvent) {
+    narrow.value = event.matches;
+
+    // Вернулись на широкий экран — накладка больше не нужна,
+    // правка и так видна колонкой
+    if (!event.matches) editing.value = false;
+}
+
+onMounted(() => {
+    media = window.matchMedia(NARROW);
+    narrow.value = media.matches;
+    media.addEventListener('change', onNarrowChange);
+});
+
+onBeforeUnmount(() => media?.removeEventListener('change', onNarrowChange));
 </script>
 
 <template>
@@ -270,29 +309,77 @@ function save(then?: () => void) {
     <div class="flex h-[calc(100vh-4rem)] flex-col">
         <!-- Шапка редактора -->
         <div
-            class="border-rule flex flex-none items-center gap-4 border-b px-4 py-3"
+            class="border-rule flex flex-none flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-3"
         >
             <!-- Прозрачное поле, а не Input: это заголовок страницы,
-                 который можно править, а не элемент формы -->
-            <input
+                 который можно править, а не элемент формы.
+                 На телефоне занимает всю строку: в одном ряду с тремя
+                 кнопками от него оставалось полтора слова -->
+            <!--
+                textarea, а не input: заголовок бывает длинным, и в
+                однострочном поле он уезжает за край, а прочитать его
+                можно только прокруткой. field-sizing-content растит
+                поле по содержимому, перенос по словам.
+
+                Enter перехватываем: это название, а не текст, и
+                переносы строк в нём не нужны — но строка должна
+                переноситься сама, по ширине.
+            -->
+            <textarea
                 v-model="title"
-                class="focus-visible:ring-ring/50 min-w-0 flex-1 rounded-md bg-transparent px-1 text-lg font-bold outline-none focus-visible:ring-[3px]"
+                rows="1"
+                class="focus-visible:ring-ring/50 order-1 field-sizing-content w-full min-w-0 resize-none rounded-md bg-transparent px-1 text-lg leading-snug font-bold outline-none focus-visible:ring-[3px] sm:w-auto sm:flex-1"
                 placeholder="Название презентации"
+                @keydown.enter.prevent
             />
 
+            <!-- Полную фразу читать некогда и негде: на узком экране
+                 о несохранённом говорит точка у кнопки «Сохранить» -->
             <span
                 v-if="isDirty"
-                class="text-muted-foreground flex-none text-sm"
+                class="text-muted-foreground order-2 hidden flex-none text-sm sm:inline"
             >
                 Есть несохранённые правки
             </span>
 
-            <Button variant="ghost" size="sm" @click="done"
-                >Выйти из редактора</Button
-            >
+            <div class="order-3 ml-auto flex flex-none items-center gap-2">
+                <Button variant="ghost" size="sm" @click="done">
+                    Выйти
+                    <span class="hidden sm:inline">из редактора</span>
+                </Button>
 
-            <Button size="sm" :disabled="saving || !isDirty" @click="save()">
-                {{ saving ? 'Сохраняем…' : 'Сохранить' }}
+                <Button
+                    size="sm"
+                    :disabled="saving || !isDirty"
+                    @click="save()"
+                >
+                    <span
+                        v-if="isDirty && !saving"
+                        class="bg-background size-1.5 rounded-full sm:hidden"
+                        aria-hidden="true"
+                    />
+                    {{ saving ? 'Сохраняем…' : 'Сохранить' }}
+                </Button>
+            </div>
+        </div>
+
+        <!-- Действия над слайдом на узком экране: сам список живёт
+             в просмотре, кнопкой с сеткой. Выше 1024px всё это есть
+             в колонках, и панель не нужна -->
+        <div class="border-rule flex flex-none gap-2 border-b p-2 lg:hidden">
+            <Button
+                variant="outline"
+                size="sm"
+                class="flex-1"
+                @click="editing = true"
+            >
+                <Pencil class="size-4" />
+                Править слайд
+            </Button>
+
+            <Button variant="ghost" size="sm" @click="addSlide">
+                <Plus class="size-4" />
+                Слайд
             </Button>
         </div>
 
@@ -306,7 +393,7 @@ function save(then?: () => void) {
         <div class="flex min-h-0 flex-1">
             <!-- Список слайдов -->
             <aside
-                class="border-rule w-56 flex-none overflow-y-auto border-r p-2"
+                class="border-rule hidden w-56 flex-none overflow-y-auto p-2 lg:block lg:border-r"
             >
                 <button
                     v-for="(slide, i) in slides"
@@ -338,54 +425,80 @@ function save(then?: () => void) {
             </aside>
 
             <!-- Правка выбранного слайда -->
+            <!--
+                Один и тот же узел: на широком экране — колонка,
+                на узком — накладка во весь экран. Так поля правки
+                существуют в единственном экземпляре: две копии
+                разошлись бы при первой же правке одной из них.
+            -->
             <section
                 v-if="slides[active]"
-                class="min-w-0 flex-1 overflow-y-auto p-6"
+                class="bg-background hidden min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:block"
+                :class="
+                    editing &&
+                    'max-lg:fixed max-lg:inset-0 max-lg:z-50 max-lg:block'
+                "
             >
                 <div class="mx-auto max-w-xl space-y-6">
-                    <div class="flex items-center gap-2">
-                        <SelectNative
-                            v-model="slides[active].layout"
-                            class="flex-1"
-                        >
-                            <option
-                                v-for="l in layouts"
-                                :key="l.key"
-                                :value="l.key"
-                            >
-                                {{ l.name }}
-                            </option>
-                        </SelectNative>
-
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Выше"
-                            :disabled="active === 0"
-                            @click="move(active, -1)"
-                        >
-                            <ArrowUp class="size-4" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Ниже"
-                            :disabled="active === slides.length - 1"
-                            @click="move(active, 1)"
-                        >
-                            <ArrowDown class="size-4" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            class="hover:text-destructive"
-                            aria-label="Удалить слайд"
-                            :disabled="slides.length === 1"
-                            @click="removeSlide(active)"
-                        >
-                            <Trash2 class="size-4" />
+                    <!-- Закрыть накладку. На широком экране закрывать
+                         нечего: правка там и так колонка -->
+                    <div
+                        v-if="editing"
+                        class="bg-background border-rule sticky -top-4 z-10 -mx-4 mb-2 flex items-center justify-between border-b px-4 py-3 sm:-top-6 lg:hidden"
+                    >
+                        <p class="text-sm font-semibold">
+                            Слайд {{ active + 1 }} из {{ slides.length }}
+                        </p>
+                        <Button size="sm" @click="editing = false">
+                            Готово
                         </Button>
                     </div>
+
+                    <Field label="Тип слайда">
+                        <div class="flex items-center gap-2">
+                            <SelectNative
+                                v-model="slides[active].layout"
+                                class="flex-1"
+                            >
+                                <option
+                                    v-for="l in layouts"
+                                    :key="l.key"
+                                    :value="l.key"
+                                >
+                                    {{ l.name }}
+                                </option>
+                            </SelectNative>
+
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label="Выше"
+                                :disabled="active === 0"
+                                @click="move(active, -1)"
+                            >
+                                <ArrowUp class="size-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label="Ниже"
+                                :disabled="active === slides.length - 1"
+                                @click="move(active, 1)"
+                            >
+                                <ArrowDown class="size-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                class="hover:text-destructive"
+                                aria-label="Удалить слайд"
+                                :disabled="slides.length === 1"
+                                @click="removeSlide(active)"
+                            >
+                                <Trash2 class="size-4" />
+                            </Button>
+                        </div>
+                    </Field>
 
                     <Field label="Заголовок">
                         <Input v-model="slides[active].heading" />
@@ -538,11 +651,14 @@ function save(then?: () => void) {
             </section>
 
             <!-- Превью -->
+            <!-- Ниже 1024px — главная область: ради результата сюда
+                 и приходят. На 1024–1279 места нет, скрыт. С 1280px —
+                 боковая колонка рядом с правкой -->
             <aside
-                class="border-rule hidden w-[38%] flex-none border-l xl:block"
+                class="border-rule flex min-w-0 flex-1 flex-col lg:hidden xl:flex xl:w-[38%] xl:flex-none xl:border-l"
             >
                 <div
-                    class="border-rule text-muted-foreground flex items-center justify-between border-b px-4 py-2 text-xs"
+                    class="border-rule text-muted-foreground flex flex-none items-center justify-between border-b px-4 py-2 text-xs"
                 >
                     <span>{{ refreshing ? 'Обновляем…' : 'Превью' }}</span>
                     <Button
@@ -561,12 +677,16 @@ function save(then?: () => void) {
                 <!-- Тот же просмотрщик, что и на странице презентации:
                      слайд вписывается в колонку, а не торчит за край,
                      и следит за выбранным в списке слайдом -->
+                <!-- Лента миниатюр включается только на узком экране:
+                     там она и есть список слайдов, кнопка с сеткой
+                     открывает её поверх просмотра. На широком список
+                     стоит отдельной колонкой слева -->
                 <DeckViewer
                     v-model:active="active"
                     :html="previewHtml"
-                    :rail="false"
+                    :rail="narrow"
                     :framed="false"
-                    class="h-[calc(100%-2.5rem)] w-full"
+                    class="min-h-0 w-full flex-1"
                 />
             </aside>
         </div>

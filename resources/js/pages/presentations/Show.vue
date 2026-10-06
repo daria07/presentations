@@ -3,6 +3,8 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import DeckViewer from '@/components/DeckViewer.vue';
 import {
     CheckCircle2,
+    ChevronLeft,
+    Ellipsis,
     Download,
     ExternalLink,
     Link2,
@@ -21,9 +23,16 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Spinner } from '@/components/ui/spinner';
+import { slides } from '@/lib/plural';
 
 type Question = {
     key: string | null;
@@ -332,6 +341,10 @@ function switchLook(next: { theme?: string; palette?: string }) {
 
 const deleting = ref(false);
 
+/* Диалог удаления один на две раскладки: на широком экране его
+   открывает корзина в ряду кнопок, на узком — пункт меню */
+const removing = ref(false);
+
 function destroy() {
     deleting.value = true;
     router.delete(`/presentations/${current.value.id}`, {
@@ -405,6 +418,19 @@ async function copyShare() {
     <!-- Ширину ограничивают сами экраны: тексту узкая колонка нужна,
          просмотру слайдов — нет -->
     <div class="w-full px-4 py-8">
+        <!--
+            Возврат к списку. Хлебные крошки в шапке есть, но они мелкие
+            и на телефоне прячутся за кнопкой меню — отсюда человек
+            уходит либо кнопкой браузера, либо никак.
+        -->
+        <Link
+            href="/presentations"
+            class="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm transition-colors"
+        >
+            <ChevronLeft class="size-4" />
+            Все презентации
+        </Link>
+
         <!-- Ждём: готовим вопросы или генерируем -->
         <div
             v-if="current.isPending"
@@ -573,7 +599,7 @@ async function copyShare() {
                  («Скачать PDF» → «Обновляем файл…»), и в одной строке
                  с заголовком они отбирали бы у него ширину -->
             <div class="space-y-3">
-                <div class="flex flex-wrap justify-end gap-2">
+                <div class="hidden flex-wrap justify-end gap-2 sm:flex">
                     <Button
                         v-if="current.editUrl"
                         variant="outline"
@@ -644,48 +670,127 @@ async function copyShare() {
                         </a>
                     </Button>
 
-                    <Dialog>
-                        <DialogTrigger as-child>
-                            <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label="Удалить презентацию"
-                            >
-                                <Trash2 class="size-4" />
-                            </Button>
-                        </DialogTrigger>
-
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Удалить презентацию?</DialogTitle>
-                                <DialogDescription>
-                                    Файл и публичная ссылка перестанут работать.
-                                    Отменить это действие нельзя.
-                                </DialogDescription>
-                            </DialogHeader>
-
-                            <DialogFooter class="gap-2">
-                                <DialogClose as-child>
-                                    <Button variant="outline">Оставить</Button>
-                                </DialogClose>
-                                <Button
-                                    variant="destructive"
-                                    :disabled="deleting"
-                                    @click="destroy"
-                                >
-                                    Удалить
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Удалить презентацию"
+                        @click="removing = true"
+                    >
+                        <Trash2 class="size-4" />
+                    </Button>
                 </div>
+
+                <!--
+                    На узком экране те же действия — списком в меню.
+                    В ряд они не помещаются: пять подписей переносятся
+                    в три строки и занимают пол-экрана выше заголовка.
+                -->
+                <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                        <Button
+                            variant="outline"
+                            class="w-full justify-between sm:hidden"
+                        >
+                            Действия
+                            <Ellipsis class="size-5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent
+                        align="end"
+                        class="w-[calc(100vw-2rem)] max-w-xs sm:hidden"
+                    >
+                        <DropdownMenuItem v-if="current.editUrl" as-child>
+                            <Link :href="current.editUrl">
+                                <Pencil class="size-4" />
+                                Редактировать
+                            </Link>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                            :disabled="reprinting"
+                            @select="copyShare"
+                        >
+                            <Link2 class="size-4" />
+                            {{ copied ? 'Скопировано' : 'Скопировать ссылку' }}
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem :disabled="reprinting" as-child>
+                            <a
+                                :href="current.shareUrl!"
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                <ExternalLink class="size-4" />
+                                Открыть
+                            </a>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem v-if="current.speechUrl" as-child>
+                            <a
+                                :href="current.speechUrl"
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                <Mic class="size-4" />
+                                Речь докладчика
+                            </a>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem :disabled="reprinting" as-child>
+                            <a :href="current.downloadUrl!">
+                                <Download class="size-4" />
+                                {{
+                                    reprinting
+                                        ? 'Обновляем файл…'
+                                        : 'Скачать PDF'
+                                }}
+                            </a>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuItem
+                            variant="destructive"
+                            @select="removing = true"
+                        >
+                            <Trash2 class="size-4" />
+                            Удалить
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Dialog v-model:open="removing">
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Удалить презентацию?</DialogTitle>
+                            <DialogDescription>
+                                Файл и публичная ссылка перестанут работать.
+                                Отменить это действие нельзя.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <DialogFooter class="gap-2">
+                            <DialogClose as-child>
+                                <Button variant="outline">Оставить</Button>
+                            </DialogClose>
+                            <Button
+                                variant="destructive"
+                                :disabled="deleting"
+                                @click="destroy"
+                            >
+                                Удалить
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 <div class="space-y-1">
                     <p
                         class="text-muted-foreground flex items-center gap-1.5 text-sm"
                     >
                         <CheckCircle2 class="size-4" />
-                        Готово · {{ current.slideCount }} слайдов
+                        Готово · {{ slides(current.slideCount) }}
                     </p>
                     <h1 class="text-2xl font-extrabold">{{ current.title }}</h1>
                     <!-- Рядом с «Готово»: именно здесь человек решает,
@@ -718,7 +823,7 @@ async function copyShare() {
                     :theme="current.theme"
                     :palette="current.palette"
                     :deck-style="styleOf(current.theme)"
-                    class="h-[440px] min-w-0 flex-1 lg:h-[560px]"
+                    class="h-[300px] w-full min-w-0 sm:h-[440px] lg:h-[560px] lg:flex-1"
                 />
 
                 <!-- Оформление меняется бесплатно: структура уже готова,

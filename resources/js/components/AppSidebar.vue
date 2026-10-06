@@ -14,6 +14,7 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
@@ -23,20 +24,15 @@ const page = usePage();
 const credits = computed(() => Number(page.props.auth?.credits ?? 0));
 const trialUsed = computed(() => Boolean(page.props.auth?.trialUsed));
 
-// «1 генерация», «2 генерации», «5 генераций» — иначе интерфейс
-// выглядит машинным ровно в том месте, где речь о деньгах
-function pluralize(n: number): string {
-    const ten = n % 10;
-    const hundred = n % 100;
-
-    if (ten === 1 && hundred !== 11) return 'генерация';
-    if (ten >= 2 && ten <= 4 && (hundred < 12 || hundred > 14))
-        return 'генерации';
-
-    return 'генераций';
-}
-
 const isAdmin = computed(() => Boolean(page.props.auth?.isAdmin));
+
+/* Любой переход из меню на телефоне должен его закрывать: иначе
+   оно остаётся поверх той самой страницы, ради которой нажали */
+const { isMobile, setOpenMobile } = useSidebar();
+
+function close() {
+    if (isMobile.value) setOpenMobile(false);
+}
 
 const mainNavItems = computed<NavItem[]>(() => [
     {
@@ -76,6 +72,7 @@ const mainNavItems = computed<NavItem[]>(() => [
                     -->
                     <Link
                         :href="dashboard()"
+                        @click="close"
                         class="flex h-12 items-center gap-2 rounded-md p-2 text-[var(--foreground)] group-data-[collapsible=icon]:p-0!"
                     >
                         <AppLogo />
@@ -95,7 +92,7 @@ const mainNavItems = computed<NavItem[]>(() => [
                             tooltip="Создать"
                             class="bg-foreground text-background hover:bg-foreground/90 hover:text-background active:bg-foreground/90 active:text-background h-auto gap-2.5 rounded-[11px] px-4 py-[13px] text-base font-semibold shadow-[0_4px_12px_rgba(21,22,26,.18)] [&>svg]:size-[17px]"
                         >
-                            <Link href="/presentations/new">
+                            <Link href="/presentations/new" @click="close">
                                 <Plus />
                                 <span>Создать</span>
                             </Link>
@@ -116,16 +113,13 @@ const mainNavItems = computed<NavItem[]>(() => [
         <div class="px-3 pb-2 group-data-[collapsible=icon]:hidden">
             <Link
                 href="/billing"
+                @click="close"
                 class="border-sidebar-border bg-card hover:border-action/40 block rounded-xl border px-3.5 py-3 transition-colors"
             >
                 <template v-if="credits > 0">
                     <div class="flex items-baseline justify-between gap-3">
                         <span class="text-muted-foreground text-[13px]">
-                            {{
-                                pluralize(credits) === 'генерация'
-                                    ? 'Генерация'
-                                    : 'Генерации'
-                            }}
+                            Осталось генераций:
                         </span>
                         <span class="text-[15px] font-bold tabular-nums">
                             {{ credits }}

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import PageHeader from '@/components/PageHeader.vue';
+import { slides } from '@/lib/plural';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -168,7 +169,7 @@ function when(iso: string | null): string {
                             <p
                                 class="text-muted-foreground text-xs tabular-nums"
                             >
-                                {{ p.slides }} слайдов · {{ p.theme ?? '—' }} /
+                                {{ slides(p.slides) }} · {{ p.theme ?? '—' }} /
                                 {{ p.palette ?? '—' }}
                             </p>
                         </div>

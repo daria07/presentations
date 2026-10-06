@@ -15,12 +15,17 @@ defineProps<{
 <template>
     <div class="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div class="min-w-0">
-            <h1 class="text-[40px] leading-none font-bold tracking-[-0.02em]">
+            <!-- 40px из макета — для широкого экрана. На телефоне такой
+                 заголовок съедает половину первого экрана и переносится
+                 посреди слова, поэтому там он мельче -->
+            <h1
+                class="text-[30px] leading-none font-bold tracking-[-0.02em] sm:text-[40px]"
+            >
                 {{ title }}
             </h1>
             <p
                 v-if="$slots.meta"
-                class="text-muted-foreground mt-2.5 flex items-center gap-2 text-[15px]"
+                class="text-muted-foreground mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px]"
             >
                 <span
                     v-if="dot"

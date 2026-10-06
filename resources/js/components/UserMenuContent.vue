@@ -8,6 +8,7 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import UserInfo from '@/components/UserInfo.vue';
+import { useSidebar } from '@/components/ui/sidebar';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
@@ -16,7 +17,19 @@ type Props = {
     user: User;
 };
 
+/*
+   На телефоне меню выезжает поверх страницы и само по себе не
+   закрывается: выпадающий список схлопывается, а полотно меню
+   остаётся висеть над тем, куда человек только что перешёл.
+*/
+const { isMobile, setOpenMobile } = useSidebar();
+
+function close() {
+    if (isMobile.value) setOpenMobile(false);
+}
+
 const handleLogout = () => {
+    close();
     router.flushAll();
 };
 
@@ -32,7 +45,12 @@ defineProps<Props>();
     <DropdownMenuSeparator />
     <DropdownMenuGroup>
         <DropdownMenuItem :as-child="true">
-            <Link class="block w-full cursor-pointer" :href="edit()" prefetch>
+            <Link
+                class="block w-full cursor-pointer"
+                :href="edit()"
+                prefetch
+                @click="close"
+            >
                 <Settings class="mr-2 h-4 w-4" />
                 Настройки
             </Link>

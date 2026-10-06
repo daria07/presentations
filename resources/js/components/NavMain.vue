@@ -6,6 +6,7 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import type { NavItem } from '@/types';
@@ -15,6 +16,18 @@ defineProps<{
 }>();
 
 const { isCurrentUrl } = useCurrentUrl();
+
+/*
+   На телефоне меню выезжает поверх страницы. После перехода оно
+   остаётся открытым и закрывает собой то, ради чего человек нажимал,
+   поэтому закрываем сами. На широком экране меню — часть раскладки,
+   и закрывать его не нужно.
+*/
+const { isMobile, setOpenMobile } = useSidebar();
+
+function close() {
+    if (isMobile.value) setOpenMobile(false);
+}
 </script>
 
 <template>
@@ -40,7 +53,7 @@ const { isCurrentUrl } = useCurrentUrl();
                     :tooltip="item.title"
                     class="hover:bg-sidebar-accent/90 data-[active=true]:[&>svg]:text-accent-foreground h-auto gap-[11px] rounded-[10px] px-3 py-[11px] text-base data-[active=true]:font-semibold data-[active=true]:shadow-[0_1px_2px_rgba(21,22,26,.06)] [&>svg]:size-[18px]"
                 >
-                    <Link :href="item.href">
+                    <Link :href="item.href" @click="close">
                         <component :is="item.icon" />
                         <span>{{ item.title }}</span>
                     </Link>

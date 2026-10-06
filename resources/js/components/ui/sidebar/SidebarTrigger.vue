@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
-import { PanelLeftClose, PanelLeftOpen } from "@lucide/vue"
+import { Menu, PanelLeftClose, PanelLeftOpen } from "@lucide/vue"
 import { cn } from "@/lib/utils"
 import { Button } from '@/components/ui/button'
 import { useSidebar } from "./utils"
@@ -21,8 +21,13 @@ const { isMobile, state, toggleSidebar } = useSidebar()
     :class="cn('h-7 w-7', props.class)"
     @click="toggleSidebar"
   >
-    <PanelLeftOpen v-if="isMobile || state === 'collapsed'" />
+    <!-- На телефоне меню выезжает поверх экрана, а не раздвигает
+         раскладку, и привычный знак для этого — три линии. Стрелки
+         в панели остаются на широком экране, где меню и правда
+         сворачивается в колонку -->
+    <Menu v-if="isMobile" />
+    <PanelLeftOpen v-else-if="state === 'collapsed'" />
     <PanelLeftClose v-else />
-    <span class="sr-only">Toggle sidebar</span>
+    <span class="sr-only">Меню</span>
   </Button>
 </template>
