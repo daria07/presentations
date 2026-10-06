@@ -85,6 +85,32 @@ class PresentationPlanner
             );
         }
 
+        /*
+           Слайдов заметно меньше заказанного — молча отдавать такое
+           нельзя: человек просил восемь, а получил один. Разбираться
+           постфактум не в чем, если не сохранить сырой ответ, поэтому
+           сохраняем — вместе с тем, сколько слайдов было до разбора.
+           Расхождение этих двух чисел сразу говорит, кто виноват:
+           модель недодала или мы потеряли при нормализации.
+        */
+        $asked = $presentation->slide_count;
+        $got = count($outline['slides']);
+        $beforeNormalize = count(
+            Json::toArray(Json::unwrap($result->data)['slides'] ?? [])
+        );
+
+        if ($got < $asked - 1) {
+            Log::warning('Слайдов меньше, чем просили', [
+                'presentation' => $presentation->id,
+                'просили' => $asked,
+                'после разбора' => $got,
+                'до разбора' => $beforeNormalize,
+                'stop_reason' => $result->raw['stop_reason'] ?? null,
+                'usage' => $result->raw['usage'] ?? null,
+                'data' => $result->data,
+            ]);
+        }
+
         return $outline;
     }
 

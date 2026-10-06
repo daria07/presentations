@@ -3,6 +3,7 @@
 namespace App\Services\Deck;
 
 use App\Models\Presentation;
+use App\Support\Plural;
 use Illuminate\Support\Facades\View;
 use RuntimeException;
 use Spatie\Browsershot\Browsershot;
@@ -63,9 +64,9 @@ class SpeechRenderer
             'title' => $outline['title'] ?? $presentation->topic,
             'items' => $items,
             'slideCount' => count($items),
-            'slideWord' => $this->plural(count($items), 'слайд', 'слайда', 'слайдов'),
+            'slideWord' => Plural::word(count($items), 'слайд', 'слайда', 'слайдов'),
             'totalMinutes' => $minutes,
-            'minuteWord' => $this->plural($minutes, 'минута', 'минуты', 'минут'),
+            'minuteWord' => Plural::word($minutes, 'минута', 'минуты', 'минут'),
             'accent' => $palette['accent_ink'],
             'fontDisplay' => $theme['font_display'],
             'fontBody' => $theme['font_body'],
@@ -107,26 +108,5 @@ class SpeechRenderer
                 }
             }
         }
-    }
-
-    /** Русские числительные: 1 слайд, 2 слайда, 5 слайдов */
-    private function plural(int $n, string $one, string $few, string $many): string
-    {
-        $mod100 = $n % 100;
-        $mod10 = $n % 10;
-
-        if ($mod100 >= 11 && $mod100 <= 14) {
-            return $many;
-        }
-
-        if ($mod10 === 1) {
-            return $one;
-        }
-
-        if ($mod10 >= 2 && $mod10 <= 4) {
-            return $few;
-        }
-
-        return $many;
     }
 }

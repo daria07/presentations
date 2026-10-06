@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Presentation;
+use App\Support\Plural;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -36,7 +37,7 @@ class PresentationReady extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject("Презентация готова: {$title}")
             ->greeting('Готово')
-            ->line("«{$title}» — {$slides} слайдов.")
+            ->line('«'.$title.'» — '.Plural::slides($slides).'.')
             ->action('Посмотреть', route('presentations.show', $this->presentation))
             ->line('Файл можно скачать или отправить ссылкой — она откроется без входа в аккаунт.')
             ->salutation('С уважением, '.config('app.name'));

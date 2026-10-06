@@ -141,6 +141,43 @@ const mainNavItems = computed<NavItem[]>(() => [
 
         <SidebarFooter>
             <NavUser />
+
+            <!--
+                Правовые документы. Нужны именно здесь: человек читает
+                их не при регистрации, а когда решает заплатить, хочет
+                отозвать согласие или удалить аккаунт — то есть находясь
+                внутри кабинета. Набрано мелко и приглушённо: это не то,
+                чем пользуются, но то, что всегда должно быть под рукой.
+
+                В свёрнутом меню скрыто — там и обычные подписи не видны.
+            -->
+            <p
+                class="text-muted-foreground flex flex-wrap gap-x-2 gap-y-1 px-2 pb-1 text-[11px] leading-tight group-data-[collapsible=icon]:hidden"
+            >
+                <Link
+                    href="/offer"
+                    class="hover:text-foreground transition-colors"
+                    @click="close"
+                >
+                    Оферта
+                </Link>
+                <span aria-hidden="true">·</span>
+                <Link
+                    href="/privacy"
+                    class="hover:text-foreground transition-colors"
+                    @click="close"
+                >
+                    Конфиденциальность
+                </Link>
+                <span aria-hidden="true">·</span>
+                <Link
+                    href="/consent"
+                    class="hover:text-foreground transition-colors"
+                    @click="close"
+                >
+                    Согласие на обработку
+                </Link>
+            </p>
         </SidebarFooter>
     </Sidebar>
     <slot />

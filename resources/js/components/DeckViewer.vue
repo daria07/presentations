@@ -88,7 +88,21 @@ let markup: string | null = null;
 let slideWidth = 1280;
 let slideHeight = 720;
 
+/** Ширина миниатюры в колонке слева */
 const THUMB_WIDTH = 104;
+
+/**
+ * В выдвижной панели миниатюры крупнее: там вся ширина экрана, и
+ * 104px превращали сетку в россыпь марок, по которым не узнать слайд.
+ * Считаем так, чтобы в ряд помещалось ровно две штуки.
+ */
+function thumbWidth(): number {
+    if (!compact.value) return THUMB_WIDTH;
+
+    const available = window.innerWidth - 16 - 8; // поля панели и зазор
+
+    return Math.max(120, Math.min(260, Math.floor(available / 2)));
+}
 
 /** Свой корень на каждый узел: после пересборки узлы новые */
 function rootFor(host: HTMLElement, current: ShadowRoot | null): ShadowRoot {
@@ -173,7 +187,7 @@ function render() {
            слайда, и всё это наследуется: гасим. */
         .thumb {
             position: relative; flex: none; padding: 0; overflow: hidden;
-            width: ${THUMB_WIDTH}px; border-radius: 4px; cursor: pointer;
+            border-radius: 4px; cursor: pointer;
             border: 1px solid #E2DCD1; background: #fff;
             text-align: left; font: inherit; color: inherit;
         }
@@ -238,13 +252,15 @@ function buildThumbs() {
     rail.className = 'rail deck';
     applyLook(rail);
 
-    const scale = THUMB_WIDTH / slideWidth;
+    const width = thumbWidth();
+    const scale = width / slideWidth;
     thumbs = [];
 
     slides.forEach((slide, i) => {
         const box = document.createElement('button');
         box.type = 'button';
         box.className = 'thumb';
+        box.style.width = `${width}px`;
         box.style.height = `${Math.round(slideHeight * scale)}px`;
         box.setAttribute('aria-label', `Слайд ${i + 1}`);
 

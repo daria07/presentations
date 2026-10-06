@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, Link } from '@inertiajs/vue3';
+import { ChevronLeft } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import Field from '@/components/Field.vue';
 import InputError from '@/components/InputError.vue';
@@ -53,6 +54,18 @@ const canSubmit = computed(() =>
     <Head title="Новая презентация" />
 
     <div class="mx-auto w-full max-w-2xl px-4 py-8">
+        <!--
+            Возврат к списку. Хлебные крошки в шапке есть, но они мелкие
+            и на телефоне их не видно совсем — отсюда человек уходит
+            либо кнопкой браузера, либо никак.
+        -->
+        <Link
+            href="/presentations"
+            class="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm transition-colors"
+        >
+            <ChevronLeft class="size-4" />
+            Все презентации
+        </Link>
         <div class="border-rule border-b pb-6">
             <h1 class="text-3xl font-extrabold">Новая презентация</h1>
             <p

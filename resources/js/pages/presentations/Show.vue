@@ -420,8 +420,8 @@ async function copyShare() {
     <div class="w-full px-4 py-8">
         <!--
             Возврат к списку. Хлебные крошки в шапке есть, но они мелкие
-            и на телефоне прячутся за кнопкой меню — отсюда человек
-            уходит либо кнопкой браузера, либо никак.
+            и на телефоне их не видно совсем — отсюда человек уходит
+            либо кнопкой браузера, либо никак.
         -->
         <Link
             href="/presentations"
@@ -507,7 +507,7 @@ async function copyShare() {
                             v-for="option in q.options"
                             :key="option"
                             type="button"
-                            class="border-border cursor-pointer rounded-lg border px-4 py-2 text-sm transition-colors"
+                            class="border-border cursor-pointer rounded-lg border px-4 py-2 text-left text-sm transition-colors"
                             :class="
                                 answers[q.key ?? String(i)] === option
                                     ? 'border-action bg-action text-white'
