@@ -1,0 +1,72 @@
+# Выкладка на боевой сервер.
+#
+# Запускается сама после зелёной сборки в main и вручную кнопкой
+# «Run workflow». Руками на сервер заходить больше не нужно: всё, что
+# раньше делалось через ssh и bash deploy/deploy.sh, делает этот файл.
+name: deploy
+
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Две выкладки одновременно — это гонка за один и тот же каталог на
+# сервере. Вторая ждёт, пока закончится первая.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    # Красная сборка на сервер не едет. Кнопка «Run workflow» этой
+    # проверки не касается — ей веришь ты сама.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    environment:
+      name: production
+      url: https://slaidusha.ru
+
+    steps:
+      - name: Подключаем ключ
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Выкладываем
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          ssh -p "$PORT" -o BatchMode=yes "$USER@$HOST" \
+            'cd /var/www/slaidusha && bash deploy/deploy.sh'
+
+      - name: Проверяем, что сайт поднялся
+        run: |
+          for i in $(seq 1 10); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' https://slaidusha.ru/up || true)
+            if [ "$code" = "200" ]; then
+              echo "Сайт отвечает"
+              exit 0
+            fi
+            echo "Попытка $i: ответ $code, ждём"
+            sleep 6
+          done
+          echo "Сайт не ответил 200 за минуту"
+          exit 1

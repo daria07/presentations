@@ -232,6 +232,9 @@ ldd $CHROME | grep 'not found'
 su - deploy && cd /var/www/slaidusha && bash deploy/deploy.sh
 ```
 
+Это ручной путь. Чтобы выкладка шла сама по пушу в `main` — см.
+[deploy/AUTODEPLOY.md](deploy/AUTODEPLOY.md).
+
 ## 12a. Защита от ботов
 
 Сканеры находят новый сайт за минуты и начинают перебирать `/.env`,
