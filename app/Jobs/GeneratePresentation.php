@@ -28,10 +28,16 @@ class GeneratePresentation implements ShouldQueue
 
     public int $timeout = 300;
 
+    /**
+     * @param  string|null  $spent  чем заплатили за эту генерацию:
+     *                              'trial', 'credit' или null, если
+     *                              не списывали (перезапуск застрявшей)
+     */
     public function __construct(
         public Presentation $presentation,
         public ?string $theme = null,
         public ?string $palette = null,
+        public ?string $spent = null,
     ) {}
 
     public function handle(PresentationPlanner $planner, DeckRenderer $renderer): void
@@ -123,13 +129,20 @@ class GeneratePresentation implements ShouldQueue
             'error' => $e->getMessage(),
         ]);
 
-        // Человек не виноват, что у нас не получилось — возвращаем кредит
-        $this->presentation->user->refundCredit();
+        // Человек не виноват, что у нас не получилось — возвращаем
+        // ровно то, что списали
+        $this->presentation->user->refundCredit($this->spent);
+
+        $returned = $this->spent === null
+            ? ''
+            : ' '.($this->spent === 'trial'
+                ? 'Пробную генерацию вернули.'
+                : 'Кредит вернули на счёт.');
 
         $this->presentation->markFailed(match (true) {
             $e instanceof ClaudeException => $e->forUser(),
             config('app.debug') => class_basename($e).': '.$e->getMessage(),
-            default => 'Не получилось собрать презентацию. Кредит вернули на счёт.',
+            default => 'Не получилось собрать презентацию.'.$returned,
         });
     }
 }

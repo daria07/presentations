@@ -113,6 +113,12 @@ class ClaudeClient
 
         Log::info('Claude: ответ получен', [
             'tool' => $toolName,
+            // Чем представилась модель на самом деле: у шлюза имя в
+            // каталоге и то, что реально отвечает, совпадают не всегда.
+            // stop_reason рядом: при нашем tool_choice он обязан быть
+            // tool_use, и end_turn выдаёт переводную прослойку
+            'ответила' => $body['model'] ?? null,
+            'stop_reason' => $body['stop_reason'] ?? null,
             'seconds' => $seconds,
             'input' => $inputTokens,
             'output' => $outputTokens,
@@ -186,8 +192,14 @@ class ClaudeClient
                 'usage' => $body['usage'] ?? null,
             ]);
 
-            throw new ClaudeException(
-                "Ответ не поместился в {$maxTokens} токенов. Уменьши количество слайдов или подними max_tokens."
+            /*
+               content: повторять бессмысленно — ответ не помещается
+               в лимит. Человеку про токены знать незачем, подробности
+               ушли в журнал строкой выше.
+            */
+            throw ClaudeException::content(
+                'Ответ получился слишком длинным и не поместился целиком. '
+                .'Попробуйте уменьшить количество слайдов.'
             );
         }
 

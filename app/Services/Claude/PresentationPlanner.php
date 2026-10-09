@@ -73,7 +73,7 @@ class PresentationPlanner
             schema: Schemas::brief(),
             toolName: 'write_brief',
             toolDescription: 'Продумать содержание презентации до разбивки по слайдам.',
-            maxTokens: 6000,
+            maxTokens: 12000,
         );
 
         $this->record($presentation, 'brief', $result);

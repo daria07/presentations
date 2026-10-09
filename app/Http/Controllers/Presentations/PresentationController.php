@@ -124,7 +124,11 @@ class PresentationController extends Controller
 
         // Всё в одной транзакции с блокировкой строки: иначе двойной
         // клик успевает списать два кредита и запустить две генерации.
-        $outcome = DB::transaction(function () use ($presentation, $user, $answers): string {
+        // Чем заплатили, нужно знать задаче: при сбое она возвращает
+        // ровно это, а не всегда кредит
+        $spent = null;
+
+        $outcome = DB::transaction(function () use ($presentation, $user, $answers, &$spent): string {
             $locked = Presentation::query()
                 ->whereKey($presentation->getKey())
                 ->lockForUpdate()
@@ -134,7 +138,9 @@ class PresentationController extends Controller
                 return 'busy';
             }
 
-            if (! $user->spendCredit()) {
+            $spent = $user->spendCredit();
+
+            if ($spent === null) {
                 return 'no-credits';
             }
 
@@ -169,6 +175,7 @@ class PresentationController extends Controller
                     $presentation->refresh(),
                     $request->input('theme'),
                     $request->input('palette'),
+                    $spent,
                 ),
             ),
         };
@@ -190,7 +197,11 @@ class PresentationController extends Controller
 
         $user = $request->user();
 
-        $outcome = DB::transaction(function () use ($presentation, $user): string {
+        // Перезапуск застрявшей задачи ничего не списывает — тогда
+        // при сбое и возвращать нечего
+        $spent = null;
+
+        $outcome = DB::transaction(function () use ($presentation, $user, &$spent): string {
             $locked = Presentation::query()
                 ->whereKey($presentation->getKey())
                 ->lockForUpdate()
@@ -206,8 +217,12 @@ class PresentationController extends Controller
                 return 'nothing-to-do';
             }
 
-            if ($failed && ! $user->spendCredit()) {
-                return 'no-credits';
+            if ($failed) {
+                $spent = $user->spendCredit();
+
+                if ($spent === null) {
+                    return 'no-credits';
+                }
             }
 
             $locked->update([
@@ -234,7 +249,10 @@ class PresentationController extends Controller
                         ? 'Задача потерялась, запускаем заново. Генерация не списывается.'
                         : 'Запустили заново.',
                 ]),
-                fn () => GeneratePresentation::dispatch($presentation->refresh()),
+                fn () => GeneratePresentation::dispatch(
+                    $presentation->refresh(),
+                    spent: $spent,
+                ),
             ),
         };
     }

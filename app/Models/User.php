@@ -97,37 +97,41 @@ class User extends Authenticatable implements PasskeyUser
 
     /**
      * Списывает одну генерацию. Первая — за счёт пробного доступа.
-     * Возвращает false, если списывать нечего.
+     *
+     * Возвращает, чем именно заплатили: 'trial' — пробной генерацией,
+     * 'credit' — кредитом с баланса, null — платить было нечем.
+     * Это важно знать для возврата: пробная генерация не стоила денег,
+     * и возвращать за неё кредит нельзя.
      *
      * Всё внутри транзакции с блокировкой строки: без неё два
      * одновременных запроса успевают оба пройти проверку остатка
      * и списать по кредиту с одного и того же баланса.
      */
-    public function spendCredit(): bool
+    public function spendCredit(): ?string
     {
-        $spent = DB::transaction(function (): bool {
+        $spent = DB::transaction(function (): ?string {
             $locked = static::query()
                 ->whereKey($this->getKey())
                 ->lockForUpdate()
                 ->first();
 
             if (! $locked) {
-                return false;
+                return null;
             }
 
             if (! $locked->trial_used) {
                 $locked->forceFill(['trial_used' => true])->save();
 
-                return true;
+                return 'trial';
             }
 
             if ($locked->credits < 1) {
-                return false;
+                return null;
             }
 
             $locked->decrement('credits');
 
-            return true;
+            return 'credit';
         });
 
         if ($spent) {
@@ -137,9 +141,23 @@ class User extends Authenticatable implements PasskeyUser
         return $spent;
     }
 
-    /** Возврат кредита, если генерация упала по нашей вине */
-    public function refundCredit(): void
+    /**
+     * Возврат, если генерация упала по нашей вине.
+     *
+     * Возвращаем ровно то, что списали. Раньше здесь всегда
+     * прибавлялся кредит — и человек, у которого сгорела пробная
+     * генерация, получал взамен настоящий кредит. Несколько сбоев
+     * подряд — и на балансе три-четыре генерации без единой оплаты.
+     *
+     * null означает, что не списывали ничего (перезапуск застрявшей
+     * задачи) — тогда и возвращать нечего.
+     */
+    public function refundCredit(?string $spent): void
     {
-        $this->increment('credits');
+        match ($spent) {
+            'trial' => $this->forceFill(['trial_used' => false])->save(),
+            'credit' => $this->increment('credits'),
+            default => null,
+        };
     }
 }
