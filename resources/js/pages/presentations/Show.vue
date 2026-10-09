@@ -145,9 +145,40 @@ let startedAt = Date.now();
 const stalled = ref(false);
 const offline = ref(false);
 
+/*
+   Пока идёт генерация, подпись меняется: одна и та же строка, висящая
+   три минуты, читается как «всё зависло». Строки идут по кругу и
+   рассказывают, что сейчас происходит на самом деле — ожидание
+   переносится легче, когда видно работу, а не спиннер.
+*/
+const HINTS = [
+    'Продумываем содержание',
+    'Собираем слайды и печатаем файл',
+    'Обычно это меньше пяти минут',
+];
+
+const HINT_DELAY = 5500;
+
+const hint = ref(0);
+let hintTimer: number | undefined;
+
+function startHints() {
+    if (hintTimer) return;
+
+    hintTimer = window.setInterval(() => {
+        hint.value = (hint.value + 1) % HINTS.length;
+    }, HINT_DELAY);
+}
+
+function stopHints() {
+    window.clearInterval(hintTimer);
+    hintTimer = undefined;
+}
+
 function stopPolling() {
     window.clearInterval(timer);
     timer = undefined;
+    stopHints();
 }
 
 function startPolling() {
@@ -156,6 +187,7 @@ function startPolling() {
     startedAt = Date.now();
     stalled.value = false;
     timer = window.setInterval(poll, POLL_INTERVAL);
+    startHints();
 }
 
 async function poll() {
@@ -497,13 +529,23 @@ async function copyShare() {
                     <p class="text-lg font-medium">
                         {{ current.statusLabel }}…
                     </p>
-                    <p class="text-muted-foreground text-sm">
-                        {{
-                            current.status === 'draft'
-                                ? 'Читаем тему и подбираем вопросы'
-                                : 'Продумываем содержание, собираем слайды и печатаем файл. Обычно это меньше пяти минут.'
-                        }}
+                    <p
+                        v-if="current.status === 'draft'"
+                        class="text-muted-foreground text-sm"
+                    >
+                        Читаем тему и подбираем вопросы
                     </p>
+
+                    <!-- Высота задана, иначе строки разной длины дёргают
+                         всё, что под ними, на каждой смене -->
+                    <Transition v-else name="hint" mode="out-in">
+                        <p
+                            :key="hint"
+                            class="text-muted-foreground flex h-5 items-center justify-center text-sm"
+                        >
+                            {{ HINTS[hint] }}
+                        </p>
+                    </Transition>
                 </div>
                 <p class="text-muted-foreground max-w-md text-sm">
                     {{ current.topic }}
@@ -524,13 +566,6 @@ async function copyShare() {
                         >списке</Link
                     >.
                 </p>
-                <p
-                    class="text-muted-foreground/70 max-w-sm text-xs"
-                    v-if="current.status !== 'draft'"
-                >
-                    Дольше минуты, потому что сначала разбираемся в теме.
-                </p>
-
                 <p v-if="offline" class="text-muted-foreground text-xs">
                     Связь пропала — ждём восстановления
                 </p>
@@ -992,3 +1027,36 @@ async function copyShare() {
         </div>
     </div>
 </template>
+
+<style scoped>
+/* Мягкая смена подсказок: строка уходит вверх, следующая приходит
+   снизу. 180 мс — заметно, но не отвлекает от ожидания. */
+.hint-enter-active,
+.hint-leave-active {
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease;
+}
+
+.hint-enter-from {
+    opacity: 0;
+    transform: translateY(4px);
+}
+
+.hint-leave-to {
+    opacity: 0;
+    transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hint-enter-active,
+    .hint-leave-active {
+        transition: opacity 0.18s ease;
+    }
+
+    .hint-enter-from,
+    .hint-leave-to {
+        transform: none;
+    }
+}
+</style>
