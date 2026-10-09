@@ -9,9 +9,11 @@ use App\Models\ApiCall;
 use App\Models\Payment;
 use App\Models\Presentation;
 use App\Models\User;
+use App\Support\Attribution;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -154,6 +156,13 @@ class AdminController extends Controller
                 'twoFactor' => $user->two_factor_confirmed_at !== null,
                 'createdAt' => $user->created_at?->toIso8601String(),
             ],
+            // Источник регистрации: пусто у всех, кто завёл аккаунт
+            // до того, как мы начали запоминать метки
+            'source' => collect($user->only(Attribution::FIELDS))
+                ->mapWithKeys(fn (mixed $value, string $key) => [
+                    Str::camel($key) => $value,
+                ])
+                ->all(),
             'presentations' => $user->presentations()
                 ->get()
                 ->map(fn (Presentation $p) => [

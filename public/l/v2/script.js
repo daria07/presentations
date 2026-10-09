@@ -16,12 +16,13 @@ btn?.addEventListener('click', () => {
 });
 
 /*
-   Метки из рекламы переносим на кнопку: человек уходит на /register,
-   и без этого utm_source терялся бы ровно на том шаге, по которому
-   и считают, какой лендинг сработал.
+   Метки из рекламы переносим на все внутренние ссылки: лендинг
+   отдаёт nginx, PHP его не видит, и метки живут только в адресе.
+   Стоит человеку уйти по любой кнопке — и utm_source пропадёт
+   ровно на том шаге, по которому и считают, что сработало.
 */
 if (window.location.search) {
-    document.querySelectorAll('a.cta-link').forEach(function (link) {
+    document.querySelectorAll('a[href^="/"]').forEach(function (link) {
         var url = new URL(link.getAttribute('href'), window.location.origin);
 
         new URLSearchParams(window.location.search).forEach(

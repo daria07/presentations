@@ -15,6 +15,16 @@ const props = defineProps<{
         twoFactor: boolean;
         createdAt: string | null;
     };
+    source: {
+        utmSource: string | null;
+        utmMedium: string | null;
+        utmCampaign: string | null;
+        utmContent: string | null;
+        utmTerm: string | null;
+        clickId: string | null;
+        referrer: string | null;
+        landingUrl: string | null;
+    };
     presentations: {
         id: number;
         title: string;
@@ -74,6 +84,24 @@ const spentTotal = computed(() =>
 
 const tokens = computed(() =>
     props.calls.reduce((sum, c) => sum + c.input + c.output, 0),
+);
+
+/* Источник регистрации: показываем только заполненное */
+const SOURCE_LABELS: [keyof typeof props.source, string][] = [
+    ['utmSource', 'Источник'],
+    ['utmMedium', 'Канал'],
+    ['utmCampaign', 'Кампания'],
+    ['utmContent', 'Объявление'],
+    ['utmTerm', 'Ключевое слово'],
+    ['clickId', 'ID клика'],
+    ['referrer', 'Переход с'],
+    ['landingUrl', 'Точка входа'],
+];
+
+const source = computed(() =>
+    SOURCE_LABELS.filter(([key]) => props.source?.[key]).map(
+        ([key, label]) => ({ label, value: props.source[key] as string }),
+    ),
 );
 
 const PURPOSE: Record<string, string> = {
@@ -152,6 +180,32 @@ function when(iso: string | null): string {
                 >Двухфакторка:
                 {{ user.twoFactor ? 'включена' : 'выключена' }}</span
             >
+        </div>
+
+        <div class="border-border bg-card rounded-xl border p-5">
+            <h2 class="mb-3 text-sm font-medium">Источник регистрации</h2>
+
+            <dl
+                v-if="source.length"
+                class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2"
+            >
+                <div
+                    v-for="row in source"
+                    :key="row.label"
+                    class="flex min-w-0 items-baseline gap-2"
+                >
+                    <dt class="text-muted-foreground shrink-0 text-xs">
+                        {{ row.label }}
+                    </dt>
+                    <dd class="min-w-0 truncate" :title="row.value">
+                        {{ row.value }}
+                    </dd>
+                </div>
+            </dl>
+            <p v-else class="text-muted-foreground text-sm">
+                Меток нет — прямой заход или регистрация до того, как мы начали
+                их запоминать
+            </p>
         </div>
 
         <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
