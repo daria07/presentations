@@ -19,7 +19,7 @@ return [
         // Базовый URL. Прямо в Anthropic — https://api.anthropic.com,
         // через посредника — адрес шлюза. Путь /v1/messages добавляется сам.
         'base_url' => rtrim(env('ANTHROPIC_BASE_URL', 'https://api.anthropic.com'), '/'),
-        'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-5'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-5-5'),
         // Цены за миллион токенов, в сотых доли цента: 10000 = $1.
         // Задаются по тарифу шлюза, а не по прайсу Anthropic.
         'price_input' => env('ANTHROPIC_PRICE_INPUT', 2700),

@@ -13,6 +13,7 @@ type Row = {
     presentations: number;
     paid: number;
     spent: number;
+    source: string | null;
     createdAt: string | null;
     lastSeen: string | null;
     url: string;
@@ -98,6 +99,7 @@ function day(iso: string | null): string {
                 >
                     <tr>
                         <th class="px-4 py-2.5 font-medium">Пользователь</th>
+                        <th class="px-4 py-2.5 font-medium">Источник</th>
                         <th class="px-4 py-2.5 text-right font-medium">
                             Презентаций
                         </th>
@@ -135,6 +137,16 @@ function day(iso: string | null): string {
                                 {{ user.email }}
                             </p>
                         </td>
+                        <td
+                            class="text-muted-foreground max-w-44 px-4 py-2.5 text-xs"
+                        >
+                            <span
+                                class="block truncate"
+                                :title="user.source ?? ''"
+                            >
+                                {{ user.source ?? '—' }}
+                            </span>
+                        </td>
                         <td class="px-4 py-2.5 text-right tabular-nums">
                             {{ user.presentations }}
                         </td>
@@ -167,7 +179,7 @@ function day(iso: string | null): string {
 
                     <tr v-if="!users.data.length">
                         <td
-                            colspan="7"
+                            colspan="8"
                             class="text-muted-foreground px-4 py-10 text-center"
                         >
                             Никого не нашлось

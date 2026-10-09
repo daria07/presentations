@@ -117,6 +117,7 @@ class AdminController extends Controller
                 'presentations' => (int) $u->presentations_count,
                 'paid' => (int) $u->paid_total,
                 'spent' => (int) $u->spent_total,
+                'source' => $this->shortSource($u),
                 'createdAt' => $u->created_at?->toIso8601String(),
                 'lastSeen' => $u->last_seen ? Date::parse($u->last_seen)->toIso8601String() : null,
                 'url' => route('admin.user', $u),
@@ -200,6 +201,27 @@ class AdminController extends Controller
                 ])
                 ->all(),
         ]);
+    }
+
+    /**
+     * Источник одной строкой для списка: метка и кампания, а если
+     * рекламы не было — хотя бы сайт, с которого человек пришёл.
+     */
+    private function shortSource(User $user): ?string
+    {
+        if (filled($user->utm_source)) {
+            return filled($user->utm_campaign)
+                ? $user->utm_source.' / '.$user->utm_campaign
+                : $user->utm_source;
+        }
+
+        if (filled($user->referrer)) {
+            $host = parse_url($user->referrer, PHP_URL_HOST);
+
+            return is_string($host) ? $host : null;
+        }
+
+        return null;
     }
 
     /**

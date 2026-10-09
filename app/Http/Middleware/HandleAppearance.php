@@ -16,7 +16,14 @@ class HandleAppearance
      */
     public function handle(Request $request, Closure $next): Response
     {
-        View::share('appearance', $request->cookie('appearance') ?? 'system');
+        /*
+           По умолчанию светлая, а не системная: кабинет свёрстан по
+           светлому макету, и человек с тёмной системой до сих пор
+           попадал в тёмную тему, ничего такого не выбирав. Кто хочет
+           тёмную — включает её в настройках оформления, там же есть
+           и «Системная».
+        */
+        View::share('appearance', $request->cookie('appearance') ?? 'light');
 
         return $next($request);
     }

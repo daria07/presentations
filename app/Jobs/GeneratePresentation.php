@@ -51,6 +51,20 @@ class GeneratePresentation implements ShouldQueue
         // не напечатался файл, платить за неё второй раз незачем.
         if (! $this->hasSlides($presentation)) {
             try {
+                /*
+                   Сначала конспект, потом слайды. Конспект, купленный
+                   на прошлой попытке, переиспользуем: он не зависит ни
+                   от темы оформления, ни от того, почему сорвалась
+                   печать.
+                */
+                if (blank($presentation->brief)) {
+                    $presentation->update([
+                        'brief' => $planner->buildBrief($presentation),
+                    ]);
+
+                    $presentation->refresh();
+                }
+
                 $outline = $planner->buildOutline($presentation);
             } catch (ClaudeException $e) {
                 $this->stopUnlessRetryable($e);

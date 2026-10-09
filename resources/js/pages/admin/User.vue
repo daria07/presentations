@@ -106,6 +106,7 @@ const source = computed(() =>
 
 const PURPOSE: Record<string, string> = {
     clarify: 'Уточняющие вопросы',
+    brief: 'Конспект темы',
     outline: 'Структура',
     retry: 'Повтор',
 };

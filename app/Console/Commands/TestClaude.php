@@ -64,6 +64,13 @@ class TestClaude extends Command
 
             $planner = PresentationPlanner::make();
 
+            $this->components->task('Продумываем содержание', function () use ($planner, $presentation) {
+                $presentation->update(['brief' => $planner->buildBrief($presentation)]);
+                $presentation->refresh();
+
+                return true;
+            });
+
             $this->components->task('Собираем структуру', function () use ($planner, $presentation, &$outline) {
                 $outline = $planner->buildOutline($presentation);
 

@@ -19,6 +19,7 @@ use Illuminate\Support\Str;
  * @property string|null $source_text
  * @property int $slide_count
  * @property array|null $clarifications
+ * @property array<string, mixed>|null $brief
  * @property array|null $outline
  * @property PresentationStatus $status
  * @property string|null $file_path
@@ -30,7 +31,7 @@ use Illuminate\Support\Str;
  */
 #[Fillable([
     'user_id', 'title', 'topic', 'source_text', 'slide_count',
-    'clarifications', 'outline', 'status',
+    'clarifications', 'brief', 'outline', 'status',
     'file_path', 'file_format', 'theme', 'palette', 'generated_at', 'error_message',
 ])]
 class Presentation extends Model
@@ -39,6 +40,7 @@ class Presentation extends Model
     {
         return [
             'clarifications' => 'array',
+            'brief' => 'array',
             'outline' => 'array',
             'status' => PresentationStatus::class,
             'generated_at' => 'datetime',
