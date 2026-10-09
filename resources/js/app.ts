@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
+import { hit } from '@/lib/metrika';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -39,19 +40,4 @@ initializeFlashToast();
    resources/views/partials/metrika.blade.php, и без него (локально,
    в тестах) этот код просто ничего не делает.
 */
-declare global {
-    interface Window {
-        __metrikaId?: number;
-        ym?: (id: number, action: string, ...rest: unknown[]) => void;
-    }
-}
-
-router.on('navigate', () => {
-    const id = window.__metrikaId;
-
-    if (id && typeof window.ym === 'function') {
-        window.ym(id, 'hit', window.location.href, {
-            referer: document.referrer,
-        });
-    }
-});
+router.on('navigate', () => hit());

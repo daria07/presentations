@@ -9,8 +9,9 @@ import {
     Presentation,
     ReceiptText,
 } from '@lucide/vue';
-import { ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
+import { goal } from '@/lib/metrika';
 
 type Package = {
     key: string;
@@ -25,6 +26,7 @@ type Package = {
 type Payment = {
     id: number;
     amount: string;
+    amountValue: number;
     credits: number;
     status: string;
     statusLabel: string;
@@ -32,7 +34,7 @@ type Payment = {
     receipt: string | null;
 };
 
-defineProps<{
+const props = defineProps<{
     packages: Package[];
     credits: number;
     trialAvailable: boolean;
@@ -46,6 +48,79 @@ defineOptions({
 });
 
 const sending = ref<string | null>(null);
+
+/*
+   Цель Метрики «оплачен пакет».
+
+   Из Юкассы человек возвращается на эту страницу, но деньги зачисляет
+   не он, а уведомление от провайдера — оно приходит на сервер своим
+   запросом и обычно успевает раньше, но не обязано. Поэтому смотрим на
+   последний платёж в истории: оплачен — засчитываем цель, ещё в
+   ожидании — ненадолго перезапрашиваем историю.
+
+   Ключ в localStorage защищает от повторного счёта: перезагрузка
+   страницы или возврат на неё не должны давать вторую конверсию.
+*/
+const PAID_POLL_MS = 4000;
+const PAID_POLL_LIMIT = 15;
+const FRESH_MS = 30 * 60 * 1000;
+
+let paidTimer: number | undefined;
+let paidTries = 0;
+
+function isFresh(iso: string | null): boolean {
+    return !!iso && Date.now() - new Date(iso).getTime() < FRESH_MS;
+}
+
+function checkPayment() {
+    const last = props.history[0];
+
+    if (!last || !isFresh(last.date)) {
+        window.clearInterval(paidTimer);
+
+        return;
+    }
+
+    if (last.status === 'paid') {
+        window.clearInterval(paidTimer);
+
+        const key = `ym-goal-payment-${last.id}`;
+
+        try {
+            if (localStorage.getItem(key)) return;
+            localStorage.setItem(key, '1');
+        } catch {
+            // Приватный режим — цель засчитаем, защиты от повтора не будет
+        }
+
+        goal('payment_success', {
+            order_price: last.amountValue,
+            currency: 'RUB',
+            credits: last.credits,
+        });
+
+        return;
+    }
+
+    if (last.status !== 'pending' || paidTries >= PAID_POLL_LIMIT) {
+        window.clearInterval(paidTimer);
+
+        return;
+    }
+
+    paidTries += 1;
+    router.reload({ only: ['history', 'credits'] });
+}
+
+onMounted(() => {
+    checkPayment();
+
+    if (props.history[0]?.status === 'pending') {
+        paidTimer = window.setInterval(checkPayment, PAID_POLL_MS);
+    }
+});
+
+onBeforeUnmount(() => window.clearInterval(paidTimer));
 
 function buy(key: string) {
     sending.value = key;

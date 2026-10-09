@@ -14,6 +14,7 @@ import {
     Trash2,
 } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { goal } from '@/lib/metrika';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -193,6 +194,14 @@ async function poll() {
     // чтобы подтянуть готовые данные, и прекращаем опрос
     if (changed && !fresh.isPending) {
         stopPolling();
+
+        // Цель Метрики: человек получил готовую презентацию. Именно
+        // здесь, а не в момент отправки формы — иначе в цель попадут
+        // и неудачные генерации
+        if (fresh.isReady) {
+            goal('presentation_ready', { slides: fresh.slideCount });
+        }
+
         router.reload();
     }
 }
@@ -296,7 +305,20 @@ function styleOf(themeKey: string): string {
    скачанный файл совпадал с тем, что человек видит.
 
    Обе оси сохраняются одной ручкой: печать всё равно одна.
+
+   Отправку придерживаем: оформление выбирают перебором, щёлкая гаммы
+   одну за другой. Слать запрос на каждый клик — это десяток лишних
+   перепечаток, каждая со своим запуском Chrome на сервере, и упор
+   в ограничение частоты на ровном месте. Ждём, пока человек
+   остановится, и сохраняем то, на чём он остановился.
 */
+const LOOK_SAVE_DELAY = 900;
+
+let lookTimer: number | undefined;
+
+// Уходим со страницы — отложенное сохранение уже некуда применять
+onBeforeUnmount(() => window.clearTimeout(lookTimer));
+
 function switchLook(next: { theme?: string; palette?: string }) {
     const themeKey = next.theme ?? current.value.theme;
     const paletteKey = next.palette ?? current.value.palette;
@@ -311,6 +333,14 @@ function switchLook(next: { theme?: string; palette?: string }) {
     current.value = { ...current.value, theme: themeKey, palette: paletteKey };
     switching.value = themeKey + paletteKey;
 
+    window.clearTimeout(lookTimer);
+    lookTimer = window.setTimeout(
+        () => saveLook(themeKey, paletteKey),
+        LOOK_SAVE_DELAY,
+    );
+}
+
+function saveLook(themeKey: string, paletteKey: string) {
     // XSRF-токен Laravel кладёт в cookie; в заголовок он идёт
     // раскодированным, иначе проверка не сойдётся
     const token = decodeURIComponent(

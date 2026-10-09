@@ -41,6 +41,9 @@ class BillingController extends Controller
                 ->map(fn (Payment $p) => [
                     'id' => $p->id,
                     'amount' => $p->amountForHumans(),
+                    // Сумма числом нужна цели Метрики: в Директе по ней
+                    // считается доход с рекламы
+                    'amountValue' => round($p->amount / 100, 2),
                     'credits' => $p->credits_granted,
                     'status' => $p->status->value,
                     'statusLabel' => $p->status->label(),
