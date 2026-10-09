@@ -238,7 +238,7 @@ const switching = ref<string | null>(null);
 
 /*
    Экран перекрашивается мгновенно, а PDF на сервере печатается заново
-   и занимает около минуты. Пока он не готов, «Открыть» и «Скачать PDF»
+   и занимает до минуты. Пока он не готов, «Открыть» и «Скачать PDF»
    отдали бы файл в прежнем оформлении — честнее подождать.
 */
 const reprinting = ref(false);
@@ -471,8 +471,9 @@ async function copyShare() {
                 <p
                     class="text-muted-foreground max-w-md text-sm leading-relaxed"
                 >
-                    Обычно всё занимает меньше минуты. Похоже, задача потерялась
-                    — можно запустить её заново, генерация при этом не спишется.
+                    Обычно всё занимает меньше пяти минут. Похоже, задача
+                    потерялась — можно запустить её заново, генерация при этом
+                    не спишется.
                 </p>
                 <div class="flex gap-2">
                     <Button
@@ -500,13 +501,36 @@ async function copyShare() {
                         {{
                             current.status === 'draft'
                                 ? 'Читаем тему и подбираем вопросы'
-                                : 'Собираем слайды и печатаем файл. Обычно это меньше минуты.'
+                                : 'Продумываем содержание, собираем слайды и печатаем файл. Обычно это меньше пяти минут.'
                         }}
                     </p>
                 </div>
                 <p class="text-muted-foreground max-w-md text-sm">
                     {{ current.topic }}
                 </p>
+
+                <!-- Два коротких предложения вместо плашки: человеку
+                     здесь нужно разрешение уйти и причина ждать,
+                     а не абзац, который он не станет читать. -->
+                <p
+                    v-if="current.status !== 'draft'"
+                    class="text-muted-foreground max-w-sm text-sm leading-relaxed"
+                >
+                    Страницу можно закрыть — пришлём письмо, когда будет готово,
+                    и презентация появится в
+                    <Link
+                        href="/presentations"
+                        class="underline underline-offset-2"
+                        >списке</Link
+                    >.
+                </p>
+                <p
+                    class="text-muted-foreground/70 max-w-sm text-xs"
+                    v-if="current.status !== 'draft'"
+                >
+                    Дольше минуты, потому что сначала разбираемся в теме.
+                </p>
+
                 <p v-if="offline" class="text-muted-foreground text-xs">
                     Связь пропала — ждём восстановления
                 </p>
