@@ -40,7 +40,10 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            // Больше, чем --timeout воркера (300 с) и $timeout задач: генерация
+            // идёт 2–3 минуты, и при 90 секундах второй воркер считал задачу
+            // зависшей и запускал её повторно — двойные запросы к модели
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 360),
             'after_commit' => false,
         ],
 
