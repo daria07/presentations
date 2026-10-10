@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ReceiptController;
 use App\Http\Controllers\Billing\BillingController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\LegalController;
@@ -71,6 +72,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('receipts/{payment}', [ReceiptController::class, 'store'])
             ->name('receipts.store');
     });
+
+    // Отзыв о сервисе: форма в кабинете, письмо владельцу
+    Route::get('feedback', [FeedbackController::class, 'create'])->name('feedback');
+    Route::post('feedback', [FeedbackController::class, 'store'])
+        // Письмо — действие с последствиями, и злоупотреблять им
+        // незачем: трёх отзывов в минуту хватит любому
+        ->middleware('throttle:3,1')
+        ->name('feedback.store');
 
     Route::prefix('presentations')->name('presentations.')->group(function () {
         Route::get('/', [PresentationController::class, 'index'])->name('index');
