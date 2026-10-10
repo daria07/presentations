@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { Link, usePage } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import {
     CreditCard,
     MessageCircle,
     Plus,
     Presentation,
     ShieldCheck,
-} from "@lucide/vue";
-import AppLogo from "@/components/AppLogo.vue";
-import NavMain from "@/components/NavMain.vue";
-import NavUser from "@/components/NavUser.vue";
+} from '@lucide/vue';
+import AppLogo from '@/components/AppLogo.vue';
+import NavMain from '@/components/NavMain.vue';
+import NavUser from '@/components/NavUser.vue';
 import {
     Sidebar,
     SidebarContent,
@@ -21,9 +21,9 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
     useSidebar,
-} from "@/components/ui/sidebar";
-import { dashboard } from "@/routes";
-import type { NavItem } from "@/types";
+} from '@/components/ui/sidebar';
+import { dashboard } from '@/routes';
+import type { NavItem } from '@/types';
 
 const page = usePage();
 
@@ -42,24 +42,24 @@ function close() {
 
 const mainNavItems = computed<NavItem[]>(() => [
     {
-        title: "Презентации",
-        href: "/presentations",
+        title: 'Презентации',
+        href: '/presentations',
         icon: Presentation,
     },
     {
-        title: "Тарифы",
-        href: "/billing",
+        title: 'Тарифы',
+        href: '/billing',
         icon: CreditCard,
     },
     {
-        title: "Обратная связь",
-        href: "/feedback",
+        title: 'Обратная связь',
+        href: '/feedback',
         icon: MessageCircle,
     },
     // Пункт видят только свои — маршрут всё равно закрыт на сервере,
     // это лишь чтобы не мозолил глаза остальным
     ...(isAdmin.value
-        ? [{ title: "Админка", href: "/admin", icon: ShieldCheck }]
+        ? [{ title: 'Админка', href: '/admin', icon: ShieldCheck }]
         : []),
 ]);
 </script>

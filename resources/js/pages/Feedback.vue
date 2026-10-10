@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { Form, Head } from "@inertiajs/vue3";
-import { computed, ref } from "vue";
-import Field from "@/components/Field.vue";
-import PageHeader from "@/components/PageHeader.vue";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Form, Head } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import Field from '@/components/Field.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: "Обратная связь", href: "/feedback" }],
+        breadcrumbs: [{ title: 'Обратная связь', href: '/feedback' }],
     },
 });
 
 const MAX = 5000;
 
-const body = ref("");
+const body = ref('');
 
 const left = computed(() => MAX - body.value.length);
 
@@ -63,7 +63,7 @@ const canSend = computed(
             </Field>
 
             <Button type="submit" :disabled="!canSend || processing">
-                {{ processing ? "Отправляем…" : "Отправить" }}
+                {{ processing ? 'Отправляем…' : 'Отправить' }}
             </Button>
         </Form>
     </div>
