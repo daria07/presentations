@@ -190,8 +190,8 @@ function formatDate(iso: string | null): string {
             v-if="discount"
             class="border-action bg-action-soft text-action-ink mb-5 rounded-[13px] border px-[18px] py-3.5 text-[15px] font-semibold"
         >
-            Ваша скидка {{ discount.percent }}% на одну покупку — действует
-            до {{ formatUntil(discount.until) }}
+            Ваша скидка {{ discount.percent }}% на одну покупку — действует до
+            {{ formatUntil(discount.until) }}
         </div>
 
         <!-- Размеры из макета: скругление 15, поля 26/28/24, промежуток 20.

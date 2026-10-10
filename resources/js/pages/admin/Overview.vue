@@ -264,9 +264,7 @@ function when(iso: string | null): string {
         <!-- minmax(0, …), а не просто 1fr: у 1fr нижняя граница — ширина
              самого длинного содержимого, и строка с заголовком в абзац
              раздвигала колонку за край экрана, не давая сработать truncate -->
-        <div
-            class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"
-        >
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
             <div
                 class="border-border bg-card min-w-0 space-y-3 rounded-xl border p-4 sm:p-5"
             >
@@ -424,9 +422,9 @@ function when(iso: string | null): string {
             </div>
 
             <p class="text-muted-foreground mt-3 text-xs">
-                Считаем людей: показ и клик засчитываются один раз на
-                человека. Пока в каждой группе меньше ~100 показов, разница
-                в CTR может быть случайной.
+                Считаем людей: показ и клик засчитываются один раз на человека.
+                Пока в каждой группе меньше ~100 показов, разница в CTR может
+                быть случайной.
             </p>
         </div>
 

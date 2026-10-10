@@ -238,7 +238,7 @@ function destroy() {
                          удаление — кнопки. Они лежат поверх (z-10) -->
                     <Link
                         :href="item.url"
-                        class="block truncate text-[16px] font-semibold tracking-[-0.01em] outline-none after:absolute after:inset-0 after:rounded-[13px] focus-visible:after:ring-2 focus-visible:after:ring-ring sm:text-[18px]"
+                        class="focus-visible:after:ring-ring block truncate text-[16px] font-semibold tracking-[-0.01em] outline-none after:absolute after:inset-0 after:rounded-[13px] focus-visible:after:ring-2 sm:text-[18px]"
                     >
                         {{ item.title }}
                     </Link>

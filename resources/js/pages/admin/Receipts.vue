@@ -185,7 +185,9 @@ function toggleAll(all: boolean) {
                     class="mt-4 flex flex-wrap items-start gap-3"
                     @submit.prevent="submit(item.id)"
                 >
-                    <div class="w-full min-w-0 sm:w-auto sm:min-w-[280px] sm:flex-1">
+                    <div
+                        class="w-full min-w-0 sm:w-auto sm:min-w-[280px] sm:flex-1"
+                    >
                         <Input
                             v-model="form.url"
                             type="url"
@@ -199,7 +201,9 @@ function toggleAll(all: boolean) {
                         </p>
                     </div>
 
-                    <div class="w-full min-w-0 sm:w-auto sm:min-w-[280px] sm:flex-1">
+                    <div
+                        class="w-full min-w-0 sm:w-auto sm:min-w-[280px] sm:flex-1"
+                    >
                         <input
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png"
