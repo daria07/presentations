@@ -37,9 +37,8 @@ class FeedbackController extends Controller
             new Feedback($request->user(), $data['body'])
         );
 
-        return back()->with('toast', [
-            'type' => 'success',
-            'message' => 'Спасибо, письмо отправлено. Мы прочитаем всё до строчки.',
-        ]);
+        // Благодарность показывает сама страница — тост поверх неё
+        // повторял бы то же самое второй раз
+        return back();
     }
 }
