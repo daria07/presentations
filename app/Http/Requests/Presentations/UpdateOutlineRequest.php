@@ -19,22 +19,46 @@ class UpdateOutlineRequest extends FormRequest
 
     public function rules(): array
     {
+        return self::outlineRules();
+    }
+
+    /**
+     * Правила структуры — общие для сохранения и для превью.
+     *
+     * Черновик из редактора ($draft) проверяется так же строго по
+     * форме и размеру, но допускает пустые заголовки: человек как раз
+     * стёр старый и печатает новый, и превью не должно на этом замирать.
+     *
+     * @return array<string, array<int, string>>
+     */
+    public static function outlineRules(bool $draft = false): array
+    {
+        // Пустой — можно, отсутствующий — нет: шаблон обращается
+        // к заголовку напрямую
+        $required = $draft ? ['present', 'nullable'] : ['required'];
+
         return [
-            'title' => ['required', 'string', 'max:200'],
+            'title' => [...$required, 'string', 'max:200'],
             'subtitle' => ['nullable', 'string', 'max:300'],
 
             'slides' => ['required', 'array', 'min:1', 'max:30'],
+            // Каждый слайд, пункт и показатель — именно массив: строка
+            // вместо него прошла бы мимо вложенных правил и уронила бы
+            // шаблон на $b['icon']
+            'slides.*' => ['required', 'array'],
             'slides.*.layout' => ['required', 'string', 'in:'.implode(',', self::LAYOUTS)],
-            'slides.*.heading' => ['required', 'string', 'max:120'],
+            'slides.*.heading' => [...$required, 'string', 'max:120'],
             'slides.*.subheading' => ['nullable', 'string', 'max:300'],
             'slides.*.notes' => ['nullable', 'string', 'max:600'],
 
             'slides.*.bullets' => ['nullable', 'array', 'max:6'],
+            'slides.*.bullets.*' => ['array'],
             'slides.*.bullets.*.title' => ['nullable', 'string', 'max:100'],
             'slides.*.bullets.*.text' => ['nullable', 'string', 'max:400'],
             'slides.*.bullets.*.icon' => ['nullable', 'string', 'in:'.implode(',', Icons::names())],
 
             'slides.*.stats' => ['nullable', 'array', 'max:4'],
+            'slides.*.stats.*' => ['array'],
             'slides.*.stats.*.value' => ['nullable', 'string', 'max:40'],
             'slides.*.stats.*.label' => ['nullable', 'string', 'max:150'],
 

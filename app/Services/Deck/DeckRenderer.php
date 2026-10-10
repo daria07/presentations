@@ -171,14 +171,7 @@ class DeckRenderer
             ->paperSize(config('deck.width'), config('deck.height'), 'mm')
             ->timeout(120);
 
-        // На сервере Chrome обычно запускается от пользователя без прав
-        if (! app()->environment('local')) {
-            $shot->noSandbox();
-        }
-
-        if ($binary = config('deck.chrome_path')) {
-            $shot->setChromePath($binary);
-        }
+        Chrome::harden($shot);
 
         return $shot;
     }

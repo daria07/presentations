@@ -88,13 +88,7 @@ class SpeechRenderer
                 ->paperSize(210, 297, 'mm')
                 ->timeout(60);
 
-            if (! app()->environment('local')) {
-                $shot->noSandbox();
-            }
-
-            if ($binary = config('deck.chrome_path')) {
-                $shot->setChromePath($binary);
-            }
+            Chrome::harden($shot);
 
             $shot->savePdf($pdf);
 

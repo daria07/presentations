@@ -20,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -366,7 +367,19 @@ class PresentationController extends Controller
 
         $draft = $request->input('slides');
 
-        if (is_array($draft) && $draft !== []) {
+        if ($draft !== null) {
+            // Черновик проверяется теми же правилами, что и сохранение:
+            // иначе в шаблон и в Chrome уходит что угодно — кривые данные
+            // роняют рендер, огромный массив грузит сервер. Ответ — 422,
+            // а не редирект назад: превью запрашивается через fetch, и
+            // редирект вернул бы вместо слайдов HTML страницы редактора.
+            $validator = Validator::make(
+                $request->only(['title', 'subtitle', 'slides']),
+                UpdateOutlineRequest::outlineRules(draft: true),
+            );
+
+            abort_if($validator->fails(), 422);
+
             // Копия в памяти: до базы эти данные не доедут
             $presentation = clone $presentation;
             $presentation->outline = [
