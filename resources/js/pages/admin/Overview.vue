@@ -26,6 +26,17 @@ const props = defineProps<{
     previous: Totals | null;
     statuses: { key: string; label: string; total: number }[];
     days: Day[];
+    promo: {
+        percent: number;
+        variants: {
+            key: string;
+            text: string;
+            shown: number;
+            clicked: number;
+            buyers: number;
+            revenue: number;
+        }[];
+    };
     reviews: {
         average: number | null;
         total: number;
@@ -106,6 +117,20 @@ function compare(key: keyof Totals, format = (n: number) => String(n)) {
 
     return `${versus.value}: ${format(before)} (${sign}${format(Math.abs(diff))})`;
 }
+
+/* Доля кликнувших среди увидевших — по ней и сравниваем тексты */
+const ctr = (clicked: number, shown: number) =>
+    shown ? ((clicked / shown) * 100).toFixed(1) : '0';
+
+const promoLeader = computed(() => {
+    const [a, b] = props.promo.variants;
+    if (!a || !b || (!a.clicked && !b.clicked)) return null;
+
+    const ra = a.shown ? a.clicked / a.shown : 0;
+    const rb = b.shown ? b.clicked / b.shown : 0;
+
+    return ra === rb ? null : ra > rb ? a.key : b.key;
+});
 
 const maxStatus = computed(() =>
     Math.max(1, ...props.statuses.map((s) => s.total)),
@@ -324,6 +349,85 @@ function when(iso: string | null): string {
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- A/B-тест кнопки скидки: люди, а не нажатия — показ и клик
+             записываются один раз на человека -->
+        <div class="border-border bg-card min-w-0 rounded-xl border p-4 sm:p-5">
+            <div
+                class="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+            >
+                <h2 class="text-sm font-medium">
+                    Кнопка скидки {{ promo.percent }}%: какой текст кликают
+                </h2>
+                <p class="text-muted-foreground text-xs">
+                    Показывается, когда генерации закончились
+                </p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[520px] text-sm">
+                    <thead>
+                        <tr
+                            class="text-muted-foreground border-border border-b text-left text-xs"
+                        >
+                            <th class="py-2 pr-4 font-medium">Текст</th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Увидели
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Кликнули
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                CTR
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Оплатили
+                            </th>
+                            <th class="py-2 text-right font-medium">Выручка</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-border divide-y">
+                        <tr v-for="v in promo.variants" :key="v.key">
+                            <td class="py-2.5 pr-4">
+                                <span
+                                    class="text-muted-foreground mr-1.5 text-xs uppercase"
+                                    >{{ v.key }}</span
+                                >{{ v.text }}
+                                <span
+                                    v-if="promoLeader === v.key"
+                                    class="ml-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800"
+                                >
+                                    лидер
+                                </span>
+                            </td>
+                            <td class="py-2.5 pr-4 text-right tabular-nums">
+                                {{ v.shown }}
+                            </td>
+                            <td class="py-2.5 pr-4 text-right tabular-nums">
+                                {{ v.clicked }}
+                            </td>
+                            <td
+                                class="py-2.5 pr-4 text-right font-medium tabular-nums"
+                            >
+                                {{ ctr(v.clicked, v.shown) }}%
+                            </td>
+                            <td class="py-2.5 pr-4 text-right tabular-nums">
+                                {{ v.buyers }}
+                            </td>
+                            <td class="py-2.5 text-right tabular-nums">
+                                {{ rubles(v.revenue) }} ₽
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="text-muted-foreground mt-3 text-xs">
+                Считаем людей: показ и клик засчитываются один раз на
+                человека. Пока в каждой группе меньше ~100 показов, разница
+                в CTR может быть случайной.
+            </p>
         </div>
 
         <!-- Отзывы: средняя за всё время и последние оценки с текстом -->

@@ -28,6 +28,11 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
+ * @property string|null $promo_variant
+ * @property Carbon|null $promo_shown_at
+ * @property Carbon|null $promo_clicked_at
+ * @property Carbon|null $discount_until
+ * @property Carbon|null $discount_used_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -50,6 +55,10 @@ class User extends Authenticatable implements PasskeyUser
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'trial_used' => 'boolean',
+            'promo_shown_at' => 'datetime',
+            'promo_clicked_at' => 'datetime',
+            'discount_until' => 'datetime',
+            'discount_used_at' => 'datetime',
         ];
     }
 

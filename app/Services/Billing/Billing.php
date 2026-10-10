@@ -36,12 +36,17 @@ class Billing
      */
     public function start(User $user, Package $package, string $returnUrl): string
     {
+        // Скидка считается здесь, на сервере, а не берётся с витрины:
+        // цену из запроса подменить можно, а условие скидки — нет
+        $discount = Discount::active($user) ? Discount::percent() : 0;
+
         $payment = $user->payments()->create([
             'provider' => config('billing.provider'),
             // Временный идентификатор: провайдер пришлёт свой, и мы его
             // перезапишем. Уникальность колонки требует чего-то заранее.
             'provider_payment_id' => 'pending_'.Str::uuid(),
-            'amount' => $package->amount,
+            'amount' => $discount ? Discount::apply($package->amount) : $package->amount,
+            'discount_percent' => $discount,
             'currency' => config('billing.currency'),
             'credits_granted' => $package->credits,
             'status' => PaymentStatus::Pending,
@@ -127,6 +132,12 @@ class Billing
             }
 
             $payment->user->increment('credits', $payment->credits_granted);
+
+            // Скидка — на одну покупку: оплатили со скидкой, значит
+            // она использована, и кнопка больше не появится
+            if ($payment->discount_percent > 0 && $payment->user->discount_used_at === null) {
+                $payment->user->forceFill(['discount_used_at' => now()])->save();
+            }
 
             Log::info('Генерации начислены', [
                 'user' => $payment->user_id,

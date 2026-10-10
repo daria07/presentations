@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property int $amount
  * @property string $currency
  * @property int $credits_granted
+ * @property int $discount_percent
  * @property PaymentStatus $status
  * @property array|null $payload
  * @property string|null $receipt_url
@@ -24,7 +25,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'user_id', 'provider', 'provider_payment_id',
-    'amount', 'currency', 'credits_granted', 'status', 'payload',
+    'amount', 'discount_percent', 'currency', 'credits_granted', 'status', 'payload',
     'receipt_url', 'receipt_path', 'receipt_added_at',
 ])]
 class Payment extends Model
@@ -35,6 +36,7 @@ class Payment extends Model
             'status' => PaymentStatus::class,
             'receipt_added_at' => 'datetime',
             'payload' => 'array',
+            'discount_percent' => 'integer',
         ];
     }
 

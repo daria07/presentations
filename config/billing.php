@@ -64,6 +64,16 @@ return [
         explode(',', (string) env('BILLING_TEST_EMAILS', '')),
     )),
 
+    /*
+    | Скидка для тех, у кого закончились генерации: кнопка над списком
+    | презентаций, клик включает скидку на одну покупку на hours часов.
+    | Подробности — App\Services\Billing\Discount.
+    */
+    'discount' => [
+        'percent' => (int) env('BILLING_DISCOUNT_PERCENT', 30),
+        'hours' => (int) env('BILLING_DISCOUNT_HOURS', 48),
+    ],
+
     'packages' => [
         // Служебный. Скрыт от всех, кроме BILLING_TEST_EMAILS
         'test' => [

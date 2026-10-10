@@ -9,6 +9,7 @@ use App\Models\ApiCall;
 use App\Models\Payment;
 use App\Models\Presentation;
 use App\Models\User;
+use App\Services\Billing\Discount;
 use App\Support\Attribution;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
@@ -54,6 +55,7 @@ class AdminController extends Controller
             'statuses' => $this->statuses($from, $to),
             'days' => $this->daily($since),
             'reviews' => $this->reviews(),
+            'promo' => $this->promo(),
             'recent' => Presentation::with('user:id,name,email')
                 ->latest('id')
                 ->limit(12)
@@ -69,6 +71,54 @@ class AdminController extends Controller
                 ])
                 ->all(),
         ]);
+    }
+
+    /**
+     * A/B-тест кнопки скидки: сколько людей увидели каждый текст,
+     * сколько кликнули и сколько в итоге оплатили со скидкой.
+     *
+     * Считаем людей, а не нажатия: показ и клик записываются один
+     * раз на человека, иначе тот, кто заходит каждый день, перевесил
+     * бы десяток тех, кто зашёл однажды.
+     *
+     * @return array{percent: int, variants: array<int, array<string, mixed>>}
+     */
+    private function promo(): array
+    {
+        $users = User::query()
+            ->whereNotNull('promo_variant')
+            ->selectRaw('promo_variant as variant')
+            ->selectRaw('count(promo_shown_at) as shown')
+            ->selectRaw('count(promo_clicked_at) as clicked')
+            ->groupBy('promo_variant')
+            ->get()
+            ->keyBy('variant');
+
+        $paid = Payment::query()
+            ->join('users', 'users.id', '=', 'payments.user_id')
+            ->where('payments.status', PaymentStatus::Paid)
+            ->where('payments.discount_percent', '>', 0)
+            ->selectRaw('users.promo_variant as variant')
+            ->selectRaw('count(distinct payments.user_id) as buyers')
+            ->selectRaw('sum(payments.amount) as revenue')
+            ->groupBy('users.promo_variant')
+            ->get()
+            ->keyBy('variant');
+
+        return [
+            'percent' => Discount::percent(),
+            'variants' => collect(Discount::VARIANTS)
+                ->map(fn (string $text, string $key) => [
+                    'key' => $key,
+                    'text' => $text,
+                    'shown' => (int) ($users[$key]->shown ?? 0),
+                    'clicked' => (int) ($users[$key]->clicked ?? 0),
+                    'buyers' => (int) ($paid[$key]->buyers ?? 0),
+                    'revenue' => (int) ($paid[$key]->revenue ?? 0),
+                ])
+                ->values()
+                ->all(),
+        ];
     }
 
     /**

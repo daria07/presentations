@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ChevronLeft, ChevronRight, Plus, Star, Trash2 } from '@lucide/vue';
+import {
+    ChevronLeft,
+    ChevronRight,
+    Percent,
+    Plus,
+    Star,
+    Trash2,
+} from '@lucide/vue';
 import { ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import ReviewForm from '@/components/ReviewForm.vue';
+import { goal } from '@/lib/metrika';
 import { slides } from '@/lib/plural';
 import StatusBadge from '@/components/StatusBadge.vue';
 import { Button } from '@/components/ui/button';
@@ -38,11 +46,45 @@ type Paginated = {
     nextUrl: string | null;
 };
 
-defineProps<{
+type Promo = {
+    variant: string;
+    text: string;
+    percent: number;
+    /* Скидка уже включена кликом — до какого момента */
+    until: string | null;
+};
+
+const props = defineProps<{
     presentations: Paginated;
     credits: number;
     trialAvailable: boolean;
+    promo: Promo | null;
 }>();
+
+/* Кнопка скидки: клик записывается на сервере (A/B-тест) и ведёт
+   на тарифы, где цены уже со скидкой */
+const claiming = ref(false);
+
+function claimDiscount() {
+    if (!props.promo || claiming.value) return;
+
+    goal('discount_click', { variant: props.promo.variant });
+    claiming.value = true;
+    router.post(
+        '/billing/discount',
+        {},
+        { onFinish: () => (claiming.value = false) },
+    );
+}
+
+function formatUntil(iso: string): string {
+    return new Date(iso).toLocaleString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
 
 defineOptions({
     layout: {
@@ -126,6 +168,44 @@ function destroy() {
                 </Button>
             </template>
         </PageHeader>
+
+        <!-- Генерации кончились — предлагаем скидку. Текст кнопки —
+             вариант A/B-теста, у каждого человека он свой и постоянный -->
+        <div
+            v-if="promo"
+            class="border-action bg-card mb-4 flex flex-col gap-3 rounded-[13px] border px-4 py-4 shadow-[0_6px_18px_rgba(43,74,203,.08)] sm:flex-row sm:items-center sm:justify-between sm:px-5"
+        >
+            <div class="flex min-w-0 items-start gap-3">
+                <span
+                    class="flex size-9 flex-none items-center justify-center rounded-full bg-[#E4F3EC] text-[#1D7A55]"
+                    aria-hidden="true"
+                >
+                    <Percent class="size-[18px]" />
+                </span>
+                <div class="min-w-0">
+                    <p class="font-semibold">Генерации закончились</p>
+                    <p class="text-muted-foreground text-sm">
+                        <template v-if="promo.until">
+                            Скидка {{ promo.percent }}% действует до
+                            {{ formatUntil(promo.until) }}
+                        </template>
+                        <template v-else>
+                            −{{ promo.percent }}% на любой пакет. Скидка
+                            действует 48 часов после нажатия
+                        </template>
+                    </p>
+                </div>
+            </div>
+            <!-- Зелёный — тот же, что у плашки «Готово»: оттенок уже есть
+                 в интерфейсе, а чёрный здесь спорил бы с «Создать» -->
+            <Button
+                class="h-11 w-full flex-none bg-[#1D7A55] px-5 whitespace-normal text-white shadow-[0_6px_16px_rgba(29,122,85,.25)] hover:bg-[#17664A] focus-visible:ring-[#1D7A55]/40 sm:w-auto"
+                :disabled="claiming"
+                @click="claimDiscount"
+            >
+                {{ promo.text }}
+            </Button>
+        </div>
 
         <!-- Плашками, а не строками с линейками: так в макете, и так
              у каждой презентации своя область нажатия -->

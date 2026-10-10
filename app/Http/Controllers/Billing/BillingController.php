@@ -6,6 +6,7 @@ use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Services\Billing\Billing;
+use App\Services\Billing\Discount;
 use App\Services\Billing\Package;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,16 +23,32 @@ class BillingController extends Controller
     {
         $user = $request->user();
 
+        // Скидка показывается на витрине, но считается при оплате
+        // заново (Billing::start) — витрина только обещает ту же цену
+        $discount = Discount::active($user);
+        $rubles = fn (int $kopecks) => number_format($kopecks / 100, 0, ',', ' ');
+
         return Inertia::render('billing/Index', [
-            'packages' => collect(Package::all($user->email))->map(fn (Package $p) => [
-                'key' => $p->key,
-                'title' => $p->title,
-                'credits' => $p->credits,
-                'amount' => $p->amountForHumans(),
-                'perCredit' => number_format($p->pricePerCredit() / 100, 0, ',', ' '),
-                'note' => $p->note,
-                'popular' => $p->popular,
-            ]),
+            'packages' => collect(Package::all($user->email))->map(function (Package $p) use ($discount, $rubles) {
+                $amount = $discount ? Discount::apply($p->amount) : $p->amount;
+
+                return [
+                    'key' => $p->key,
+                    'title' => $p->title,
+                    'credits' => $p->credits,
+                    'amount' => $rubles($amount),
+                    'oldAmount' => $discount ? $p->amountForHumans() : null,
+                    'perCredit' => $rubles((int) round($amount / $p->credits)),
+                    'note' => $p->note,
+                    'popular' => $p->popular,
+                ];
+            }),
+            'discount' => $discount
+                ? [
+                    'percent' => Discount::percent(),
+                    'until' => $user->discount_until->toIso8601String(),
+                ]
+                : null,
             'credits' => $user->credits,
             'trialAvailable' => ! $user->trial_used,
             'history' => $user->payments()
@@ -53,6 +70,17 @@ class BillingController extends Controller
                         : null,
                 ]),
         ]);
+    }
+
+    /**
+     * Клик по кнопке скидки: записываем его для A/B-теста, запускаем
+     * отсчёт скидки и ведём на тарифы, где цены уже со скидкой.
+     */
+    public function discount(Request $request): RedirectResponse
+    {
+        Discount::claim($request->user());
+
+        return to_route('billing.index');
     }
 
     /**

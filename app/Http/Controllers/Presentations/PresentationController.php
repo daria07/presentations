@@ -11,6 +11,7 @@ use App\Jobs\GeneratePresentation;
 use App\Jobs\PrepareQuestions;
 use App\Jobs\RenderPresentation;
 use App\Models\Presentation;
+use App\Services\Billing\Discount;
 use App\Services\Deck\DeckRenderer;
 use App\Services\Deck\Icons;
 use App\Services\Deck\Looks;
@@ -47,6 +48,11 @@ class PresentationController extends Controller
             ],
             'credits' => $request->user()->credits,
             'trialAvailable' => ! $request->user()->trial_used,
+            // Кнопка скидки, когда генерации кончились. Первый показ
+            // записывается — это знаменатель A/B-теста в админке
+            'promo' => Discount::offerable($request->user())
+                ? Discount::offer($request->user())
+                : null,
         ]);
     }
 

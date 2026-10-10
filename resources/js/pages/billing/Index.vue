@@ -18,6 +18,8 @@ type Package = {
     title: string;
     credits: number;
     amount: string;
+    /* Цена без скидки — показываем зачёркнутой, пока скидка идёт */
+    oldAmount: string | null;
     perCredit: string;
     note: string;
     popular: boolean;
@@ -36,6 +38,7 @@ type Payment = {
 
 const props = defineProps<{
     packages: Package[];
+    discount: { percent: number; until: string } | null;
     credits: number;
     trialAvailable: boolean;
     history: Payment[];
@@ -133,6 +136,15 @@ function buy(key: string) {
     );
 }
 
+function formatUntil(iso: string): string {
+    return new Date(iso).toLocaleString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
 function formatDate(iso: string | null): string {
     if (!iso) return '';
 
@@ -174,6 +186,14 @@ function formatDate(iso: string | null): string {
             </template>
         </PageHeader>
 
+        <div
+            v-if="discount"
+            class="border-action bg-action-soft text-action-ink mb-5 rounded-[13px] border px-[18px] py-3.5 text-[15px] font-semibold"
+        >
+            Ваша скидка {{ discount.percent }}% на одну покупку — действует
+            до {{ formatUntil(discount.until) }}
+        </div>
+
         <!-- Размеры из макета: скругление 15, поля 26/28/24, промежуток 20.
              Ходовой тариф отличается белой подложкой, синей рамкой и тенью:
              это единственное место на странице, где акцент уместен -->
@@ -200,7 +220,7 @@ function formatDate(iso: string | null): string {
                     </span>
                 </div>
 
-                <p class="mt-[18px] flex items-baseline gap-[7px]">
+                <p class="mt-[18px] flex flex-wrap items-baseline gap-[7px]">
                     <span
                         class="text-[44px] leading-none font-bold tracking-[-0.03em] tabular-nums"
                     >
@@ -209,6 +229,12 @@ function formatDate(iso: string | null): string {
                     <span class="text-muted-foreground text-xl font-semibold"
                         >₽</span
                     >
+                    <s
+                        v-if="pack.oldAmount"
+                        class="text-muted-foreground ml-1 text-lg tabular-nums"
+                    >
+                        {{ pack.oldAmount }} ₽
+                    </s>
                 </p>
 
                 <div class="bg-rule mt-5 mb-4 h-px" />

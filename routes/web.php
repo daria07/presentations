@@ -48,6 +48,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('billing')->name('billing.')->group(function () {
         Route::get('/', [BillingController::class, 'index'])->name('index');
+        // Клик по кнопке скидки над списком презентаций
+        Route::post('discount', [BillingController::class, 'discount'])
+            ->middleware('throttle:10,1')
+            ->name('discount');
+
         Route::post('checkout', [BillingController::class, 'checkout'])
             ->middleware('throttle:10,1')
             ->name('checkout');
