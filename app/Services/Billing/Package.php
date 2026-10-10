@@ -44,11 +44,15 @@ readonly class Package
     {
         $testers = config('billing.test_emails', []);
 
-        // Звёздочка — всем, кто вошёл в аккаунт. Так удобно гонять
-        // оплату с чужого аккаунта, пока трафика нет; убрать — значит
-        // стереть звёздочку из BILLING_TEST_EMAILS
-        $allowed = in_array('*', $testers, true)
-            || ($email !== null && in_array(mb_strtolower($email), $testers, true));
+        /*
+           Только поимённо. Раньше здесь понималась звёздочка —
+           «показывать всем, кто вошёл», удобная, пока нет трафика.
+           С рекламой это стало опасно: забытая звёздочка открывает
+           тариф за 10 ₽ живым людям, и заметить это можно только по
+           странным платежам.
+        */
+        $allowed = $email !== null
+            && in_array(mb_strtolower($email), $testers, true);
 
         return collect(config('billing.packages'))
             ->map(fn (array $data, string $key) => self::fromConfig($key, $data))
