@@ -150,6 +150,7 @@ class ClaudeClient
         array $tools,
         string $toolName,
         int $maxTokens,
+        bool $forceTool = true,
     ): array {
         $payload = [
             'model' => $this->model,
@@ -157,8 +158,18 @@ class ClaudeClient
             'system' => $system,
             'messages' => $messages,
             'tools' => $tools,
-            // Заставляем модель ответить именно этим инструментом
-            'tool_choice' => ['type' => 'tool', 'name' => $toolName],
+            /*
+               Заставляем модель ответить именно этим инструментом.
+
+               Не каждый шлюз это умеет: часть из них отвечает 400
+               «does not support forced tool_choice». Тогда просим
+               'auto' — модель сама решает, вызывать ли инструмент.
+               Она почти всегда вызывает, а на случай «почти» у нас
+               уже есть вторая попытка с напоминанием.
+            */
+            'tool_choice' => $forceTool
+                ? ['type' => 'tool', 'name' => $toolName]
+                : ['type' => 'auto'],
         ];
 
         try {
@@ -175,6 +186,16 @@ class ClaudeClient
                 'status' => $response->status(),
                 'error' => $error,
             ]);
+
+            // Шлюз не умеет принудительный выбор инструмента — повторяем
+            // мягко, вместо того чтобы падать на ровном месте
+            if ($forceTool && $response->status() === 400 && str_contains($error, 'tool_choice')) {
+                Log::warning('Claude: шлюз не принимает принудительный tool_choice, пробуем auto', [
+                    'model' => $this->model,
+                ]);
+
+                return $this->send($system, $messages, $tools, $toolName, $maxTokens, forceTool: false);
+            }
 
             throw new ClaudeException(
                 "API вернул {$response->status()}: {$error}",
