@@ -53,6 +53,7 @@ class AdminController extends Controller
                 : $this->totals(...$this->range($period, previous: true)),
             'statuses' => $this->statuses($from, $to),
             'days' => $this->daily($since),
+            'reviews' => $this->reviews(),
             'recent' => Presentation::with('user:id,name,email')
                 ->latest('id')
                 ->limit(12)
@@ -62,11 +63,43 @@ class AdminController extends Controller
                     'title' => $p->title ?: $p->topic,
                     'status' => $p->status->value,
                     'statusLabel' => $p->status->label(),
+                    'rating' => $p->rating,
                     'createdAt' => $p->created_at?->toIso8601String(),
                     'user' => $p->user?->only(['id', 'name', 'email']),
                 ])
                 ->all(),
         ]);
+    }
+
+    /**
+     * Оценки презентаций: средняя за всё время и последние отзывы.
+     *
+     * @return array{average: float|null, total: int, latest: array<int, array<string, mixed>>}
+     */
+    private function reviews(): array
+    {
+        $rated = Presentation::query()->whereNotNull('rating');
+
+        return [
+            'average' => (clone $rated)->count()
+                ? round((float) (clone $rated)->avg('rating'), 1)
+                : null,
+            'total' => (clone $rated)->count(),
+            'latest' => (clone $rated)
+                ->with('user:id,name,email')
+                ->latest('reviewed_at')
+                ->limit(8)
+                ->get()
+                ->map(fn (Presentation $p) => [
+                    'id' => $p->id,
+                    'title' => $p->title ?: $p->topic,
+                    'rating' => $p->rating,
+                    'review' => $p->review,
+                    'reviewedAt' => $p->reviewed_at?->toIso8601String(),
+                    'user' => $p->user?->only(['id', 'name', 'email']),
+                ])
+                ->all(),
+        ];
     }
 
     /**
@@ -252,6 +285,8 @@ class AdminController extends Controller
                     'slides' => count($p->outline['slides'] ?? []) ?: $p->slide_count,
                     'theme' => $p->theme,
                     'palette' => $p->palette,
+                    'rating' => $p->rating,
+                    'review' => $p->review,
                     'createdAt' => $p->created_at?->toIso8601String(),
                 ])
                 ->all(),

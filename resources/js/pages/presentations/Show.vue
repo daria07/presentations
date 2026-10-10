@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import DeckViewer from '@/components/DeckViewer.vue';
+import PresentationReview from '@/components/PresentationReview.vue';
 import {
     CheckCircle2,
     ChevronLeft,
@@ -75,6 +76,9 @@ type Presentation = {
     downloadUrl: string | null;
     speechUrl: string | null;
     editUrl: string | null;
+    reviewUrl: string | null;
+    rating: number | null;
+    review: string | null;
     theme: string;
     palette: string;
 };
@@ -983,6 +987,13 @@ async function copyShare() {
                     </div>
                 </aside>
             </div>
+
+            <PresentationReview
+                v-if="current.reviewUrl"
+                :url="current.reviewUrl"
+                :rating="current.rating"
+                :review="current.review"
+            />
         </div>
 
         <!-- Ошибка или неожиданное состояние -->

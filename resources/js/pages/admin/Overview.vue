@@ -26,11 +26,24 @@ const props = defineProps<{
     previous: Totals | null;
     statuses: { key: string; label: string; total: number }[];
     days: Day[];
+    reviews: {
+        average: number | null;
+        total: number;
+        latest: {
+            id: number;
+            title: string;
+            rating: number;
+            review: string | null;
+            reviewedAt: string | null;
+            user: { id: number; name: string; email: string } | null;
+        }[];
+    };
     recent: {
         id: number;
         title: string;
         status: string;
         statusLabel: string;
+        rating: number | null;
         createdAt: string | null;
         user: { id: number; name: string; email: string } | null;
     }[];
@@ -297,7 +310,13 @@ function when(iso: string | null): string {
                         <div
                             class="text-muted-foreground shrink-0 text-right text-xs"
                         >
-                            <p>{{ item.statusLabel }}</p>
+                            <p>
+                                <span
+                                    v-if="item.rating"
+                                    class="mr-1.5 text-amber-500"
+                                    >★ {{ item.rating }}</span
+                                >{{ item.statusLabel }}
+                            </p>
                             <p class="tabular-nums">
                                 {{ when(item.createdAt) }}
                             </p>
@@ -305,6 +324,67 @@ function when(iso: string | null): string {
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Отзывы: средняя за всё время и последние оценки с текстом -->
+        <div class="border-border bg-card min-w-0 rounded-xl border p-4 sm:p-5">
+            <div
+                class="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+            >
+                <h2 class="text-sm font-medium">Оценки презентаций</h2>
+                <p
+                    v-if="reviews.average !== null"
+                    class="text-muted-foreground text-xs tabular-nums"
+                >
+                    <span class="text-amber-500">★</span>
+                    {{ reviews.average.toLocaleString('ru-RU') }} в среднем ·
+                    {{ reviews.total }} оценок
+                </p>
+            </div>
+
+            <div v-if="reviews.latest.length" class="divide-border divide-y">
+                <div
+                    v-for="r in reviews.latest"
+                    :key="r.id"
+                    class="flex items-baseline justify-between gap-4 py-2 text-sm"
+                >
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate" :title="r.title">
+                            <span class="mr-1.5 text-amber-500 tabular-nums"
+                                >{{ '★'.repeat(r.rating)
+                                }}<span class="text-muted-foreground/40">{{
+                                    '★'.repeat(5 - r.rating)
+                                }}</span></span
+                            >
+                            {{ r.title }}
+                        </p>
+                        <p
+                            v-if="r.review"
+                            class="mt-0.5 text-sm break-words whitespace-pre-line"
+                        >
+                            {{ r.review }}
+                        </p>
+                        <p class="text-muted-foreground truncate text-xs">
+                            <Link
+                                v-if="r.user"
+                                :href="`/admin/users/${r.user.id}`"
+                                class="cursor-pointer hover:underline"
+                            >
+                                {{ r.user.email }}
+                            </Link>
+                            <span v-else>пользователь удалён</span>
+                        </p>
+                    </div>
+                    <p
+                        class="text-muted-foreground shrink-0 text-xs tabular-nums"
+                    >
+                        {{ when(r.reviewedAt) }}
+                    </p>
+                </div>
+            </div>
+            <p v-else class="text-muted-foreground py-4 text-sm">
+                Оценок пока нет
+            </p>
         </div>
 
         <p class="text-muted-foreground text-xs">

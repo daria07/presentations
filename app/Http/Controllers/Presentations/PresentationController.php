@@ -264,6 +264,38 @@ class PresentationController extends Controller
      * Структура уже куплена и лежит в базе, поэтому перепечатка
      * не стоит ни обращения к модели, ни генерации у человека.
      */
+    /**
+     * Оценка: звёзды от 1 до 5 и необязательный отзыв. Повторная
+     * отправка заменяет прежнюю — человек мог передумать.
+     */
+    public function review(Request $request, Presentation $presentation): RedirectResponse
+    {
+        $this->authorize('update', $presentation);
+
+        // Оценивать можно только то, что человек видел целиком
+        abort_unless($presentation->isReady(), 404);
+
+        $data = $request->validate([
+            'rating' => ['required', 'integer', 'between:1,5'],
+            'review' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'rating.required' => 'Выберите количество звёзд.',
+            'rating.between' => 'Оценка — от одной до пяти звёзд.',
+            'review.max' => 'Отзыв длиннее 1000 знаков не поместится.',
+        ]);
+
+        // Без отметки времени: updated_at — метка версии превью,
+        // и от оценки слайды в окне просмотра перегружались бы зря
+        $presentation->timestamps = false;
+        $presentation->update([
+            'rating' => (int) $data['rating'],
+            'review' => filled($data['review'] ?? null) ? trim($data['review']) : null,
+            'reviewed_at' => now(),
+        ]);
+
+        return back();
+    }
+
     public function theme(Request $request, Presentation $presentation): RedirectResponse
     {
         $this->authorize('update', $presentation);
@@ -469,6 +501,12 @@ class PresentationController extends Controller
             'slideCount' => count($presentation->outline['slides'] ?? []) ?: $presentation->slide_count,
             'createdAt' => $presentation->created_at?->toIso8601String(),
             'url' => route('presentations.show', $presentation),
+            // Оценка ставится прямо из списка, в модальном окне
+            'reviewUrl' => $presentation->isReady()
+                ? route('presentations.review', $presentation)
+                : null,
+            'rating' => $presentation->rating,
+            'review' => $presentation->review,
         ];
     }
 

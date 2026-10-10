@@ -102,6 +102,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('throttle:20,1')
             ->name('theme');
 
+        // Оценка готовой презентации: звёзды и пара слов
+        Route::post('{presentation}/review', [PresentationController::class, 'review'])
+            ->middleware('throttle:10,1')
+            ->name('review');
+
         Route::get('{presentation}', [PresentationController::class, 'show'])->name('show');
 
         // Фронт опрашивает раз в 2,5 секунды — с запасом на несколько вкладок

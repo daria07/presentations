@@ -27,12 +27,16 @@ use Illuminate\Support\Str;
  * @property string|null $theme
  * @property string $share_token
  * @property string|null $error_message
+ * @property int|null $rating
+ * @property string|null $review
+ * @property Carbon|null $reviewed_at
  * @property Carbon|null $generated_at
  */
 #[Fillable([
     'user_id', 'title', 'topic', 'source_text', 'slide_count',
     'clarifications', 'brief', 'outline', 'status',
     'file_path', 'file_format', 'theme', 'palette', 'generated_at', 'error_message',
+    'rating', 'review', 'reviewed_at',
 ])]
 class Presentation extends Model
 {
@@ -44,6 +48,7 @@ class Presentation extends Model
             'outline' => 'array',
             'status' => PresentationStatus::class,
             'generated_at' => 'datetime',
+            'reviewed_at' => 'datetime',
         ];
     }
 

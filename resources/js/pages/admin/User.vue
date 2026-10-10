@@ -33,6 +33,8 @@ const props = defineProps<{
         slides: number;
         theme: string | null;
         palette: string | null;
+        rating: number | null;
+        review: string | null;
         createdAt: string | null;
     }[];
     payments: {
@@ -230,6 +232,18 @@ function when(iso: string | null): string {
                             >
                                 {{ slides(p.slides) }} · {{ p.theme ?? '—' }} /
                                 {{ p.palette ?? '—' }}
+                                <template v-if="p.rating">
+                                    ·
+                                    <span class="text-amber-500"
+                                        >★ {{ p.rating }}</span
+                                    >
+                                </template>
+                            </p>
+                            <p
+                                v-if="p.review"
+                                class="text-muted-foreground mt-1 text-xs break-words whitespace-pre-line"
+                            >
+                                «{{ p.review }}»
                             </p>
                         </div>
                         <div
