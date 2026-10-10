@@ -87,7 +87,7 @@ function toggleAll(all: boolean) {
 <template>
     <Head title="Чеки" />
 
-    <div class="w-full px-6 py-9 lg:px-14">
+    <div class="w-full px-4 py-8 sm:px-6 sm:py-9 lg:px-14">
         <PageHeader title="Чеки" dot>
             <template #meta>
                 <template v-if="waiting > 0">
@@ -185,7 +185,7 @@ function toggleAll(all: boolean) {
                     class="mt-4 flex flex-wrap items-start gap-3"
                     @submit.prevent="submit(item.id)"
                 >
-                    <div class="min-w-[280px] flex-1">
+                    <div class="w-full min-w-0 sm:w-auto sm:min-w-[280px] sm:flex-1">
                         <Input
                             v-model="form.url"
                             type="url"
@@ -199,7 +199,7 @@ function toggleAll(all: boolean) {
                         </p>
                     </div>
 
-                    <div class="min-w-[280px] flex-1">
+                    <div class="w-full min-w-0 sm:w-auto sm:min-w-[280px] sm:flex-1">
                         <input
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png"

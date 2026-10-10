@@ -19,7 +19,7 @@ defineProps<{
                  заголовок съедает половину первого экрана и переносится
                  посреди слова, поэтому там он мельче -->
             <h1
-                class="text-[30px] leading-none font-bold tracking-[-0.02em] sm:text-[40px]"
+                class="text-[30px] leading-none font-bold tracking-[-0.02em] break-words sm:text-[40px]"
             >
                 {{ title }}
             </h1>

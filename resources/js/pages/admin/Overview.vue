@@ -7,20 +7,23 @@ import DayColumns from '@/components/admin/DayColumns.vue';
 
 type Day = { date: string; users: number; presentations: number };
 
+type Period = 'all' | 'today' | 'yesterday' | 'week';
+
+type Totals = {
+    users: number;
+    presentations: number;
+    failed: number;
+    revenue: number;
+    payments: number;
+    payingUsers: number;
+    cost: number;
+};
+
 const props = defineProps<{
-    cards: {
-        users: number;
-        usersWeek: number;
-        presentations: number;
-        presentationsWeek: number;
-        ready: number;
-        failed: number;
-        revenue: number;
-        revenueMonth: number;
-        payingUsers: number;
-        cost: number;
-        costMonth: number;
-    };
+    period: Period;
+    cards: Totals;
+    /* Тот же отрезок перед выбранным; у «всего времени» его нет */
+    previous: Totals | null;
     statuses: { key: string; label: string; total: number }[];
     days: Day[];
     recent: {
@@ -55,12 +58,41 @@ const generations = computed(() =>
     props.days.map((d) => ({ date: d.date, value: d.presentations })),
 );
 
-/* Доля тех, кто дошёл до оплаты — главная цифра для продукта */
+const PERIODS: { key: Period; label: string; versus: string }[] = [
+    { key: 'today', label: 'Сегодня', versus: 'вчера' },
+    { key: 'yesterday', label: 'Вчера', versus: 'позавчера' },
+    { key: 'week', label: '7 дней', versus: 'прошлые 7 дней' },
+    { key: 'all', label: 'Всё время', versus: '' },
+];
+
+const periodLabel = computed(
+    () => PERIODS.find((p) => p.key === props.period)?.label ?? '',
+);
+
+const versus = computed(
+    () => PERIODS.find((p) => p.key === props.period)?.versus ?? '',
+);
+
+/* Доля тех, кто дошёл до оплаты — главная цифра для продукта. Считаем
+   только за всё время: за день плательщики и регистрации — разные
+   люди, и такой процент ничего не значит */
 const conversion = computed(() =>
     props.cards.users
         ? ((props.cards.payingUsers / props.cards.users) * 100).toFixed(1)
         : '0',
 );
+
+/* Сравнение с прошлым отрезком: «вчера: 12 (+3)» */
+function compare(key: keyof Totals, format = (n: number) => String(n)) {
+    if (!props.previous) return '';
+
+    const now = props.cards[key];
+    const before = props.previous[key];
+    const diff = now - before;
+    const sign = diff > 0 ? '+' : diff < 0 ? '−' : '±';
+
+    return `${versus.value}: ${format(before)} (${sign}${format(Math.abs(diff))})`;
+}
 
 const maxStatus = computed(() =>
     Math.max(1, ...props.statuses.map((s) => s.total)),
@@ -95,16 +127,42 @@ function when(iso: string | null): string {
             </template>
         </PageHeader>
 
+        <!-- Период: ссылками, а не состоянием на фронте — его видно
+             в адресе, и сводку за вчера можно открыть по закладке -->
+        <nav
+            class="bg-muted inline-flex max-w-full flex-wrap gap-1 rounded-lg p-1"
+            aria-label="Период"
+        >
+            <Link
+                v-for="p in PERIODS"
+                :key="p.key"
+                :href="p.key === 'all' ? '/admin' : `/admin?period=${p.key}`"
+                preserve-scroll
+                preserve-state
+                class="cursor-pointer rounded-md px-3 py-1.5 text-sm transition-colors"
+                :class="
+                    p.key === period
+                        ? 'bg-card text-foreground font-medium shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                "
+                :aria-current="p.key === period ? 'page' : undefined"
+            >
+                {{ p.label }}
+            </Link>
+        </nav>
+
         <!-- Цифры плитками, а не столбиками: это отдельные величины,
              сравнивать их между собой нечем -->
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div class="border-border bg-card rounded-xl border p-4">
-                <p class="text-muted-foreground text-xs">Пользователей</p>
+                <p class="text-muted-foreground text-xs">
+                    {{ previous ? 'Регистраций' : 'Пользователей' }}
+                </p>
                 <p class="mt-1 text-3xl font-semibold tabular-nums">
                     {{ cards.users }}
                 </p>
                 <p class="text-muted-foreground mt-1 text-xs tabular-nums">
-                    +{{ cards.usersWeek }} за неделю
+                    {{ compare('users') }}
                 </p>
             </div>
 
@@ -114,8 +172,9 @@ function when(iso: string | null): string {
                     {{ cards.presentations }}
                 </p>
                 <p class="text-muted-foreground mt-1 text-xs tabular-nums">
-                    +{{ cards.presentationsWeek }} за неделю ·
-                    {{ cards.failed }} с ошибкой
+                    {{ cards.failed }} с ошибкой<template v-if="previous">
+                        · {{ compare('presentations') }}</template
+                    >
                 </p>
             </div>
 
@@ -125,8 +184,13 @@ function when(iso: string | null): string {
                     {{ rubles(cards.revenue) }} ₽
                 </p>
                 <p class="text-muted-foreground mt-1 text-xs tabular-nums">
-                    {{ rubles(cards.revenueMonth) }} ₽ за 30 дней ·
-                    {{ cards.payingUsers }} платят ({{ conversion }}%)
+                    <template v-if="previous">
+                        {{ cards.payments }} оплат ·
+                        {{ compare('revenue', (n) => rubles(n) + ' ₽') }}
+                    </template>
+                    <template v-else>
+                        {{ cards.payingUsers }} платят ({{ conversion }}%)
+                    </template>
                 </p>
             </div>
 
@@ -136,7 +200,7 @@ function when(iso: string | null): string {
                     ${{ dollars(cards.cost) }}
                 </p>
                 <p class="text-muted-foreground mt-1 text-xs tabular-nums">
-                    ${{ dollars(cards.costMonth) }} за 30 дней
+                    {{ compare('cost', (n) => '$' + dollars(n)) }}
                 </p>
             </div>
         </div>
@@ -145,7 +209,7 @@ function when(iso: string | null): string {
              порядка, и вторая шкала справа позволила бы нарисовать любую
              историю -->
         <div
-            class="border-border bg-card grid gap-8 rounded-xl border p-5 lg:grid-cols-2"
+            class="border-border bg-card grid min-w-0 gap-8 rounded-xl border p-4 sm:p-5 lg:grid-cols-2"
         >
             <DayColumns
                 title="Регистрации по дням"
@@ -159,16 +223,33 @@ function when(iso: string | null): string {
             />
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
-            <div class="border-border bg-card space-y-3 rounded-xl border p-5">
-                <h2 class="text-sm font-medium">Статусы презентаций</h2>
+        <!-- minmax(0, …), а не просто 1fr: у 1fr нижняя граница — ширина
+             самого длинного содержимого, и строка с заголовком в абзац
+             раздвигала колонку за край экрана, не давая сработать truncate -->
+        <div
+            class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"
+        >
+            <div
+                class="border-border bg-card min-w-0 space-y-3 rounded-xl border p-4 sm:p-5"
+            >
+                <h2 class="text-sm font-medium">
+                    Статусы презентаций
+                    <span
+                        v-if="period !== 'all'"
+                        class="text-muted-foreground font-normal"
+                    >
+                        · {{ periodLabel.toLowerCase() }}
+                    </span>
+                </h2>
 
                 <div
                     v-for="s in statuses"
                     :key="s.key"
                     class="flex items-center gap-3"
                 >
-                    <span class="text-muted-foreground w-32 shrink-0 text-xs">
+                    <span
+                        class="text-muted-foreground w-28 shrink-0 text-xs sm:w-32"
+                    >
                         {{ s.label }}
                     </span>
                     <div
@@ -187,7 +268,9 @@ function when(iso: string | null): string {
                 </div>
             </div>
 
-            <div class="border-border bg-card rounded-xl border p-5">
+            <div
+                class="border-border bg-card min-w-0 rounded-xl border p-4 sm:p-5"
+            >
                 <h2 class="mb-3 text-sm font-medium">Последние генерации</h2>
 
                 <div class="divide-border divide-y">
@@ -196,8 +279,10 @@ function when(iso: string | null): string {
                         :key="item.id"
                         class="flex items-baseline justify-between gap-4 py-2 text-sm"
                     >
-                        <div class="min-w-0">
-                            <p class="truncate">{{ item.title }}</p>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate" :title="item.title">
+                                {{ item.title }}
+                            </p>
                             <p class="text-muted-foreground truncate text-xs">
                                 <Link
                                     v-if="item.user"

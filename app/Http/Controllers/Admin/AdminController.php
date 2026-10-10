@@ -27,41 +27,31 @@ class AdminController extends Controller
     /** Сколько дней показываем на графике */
     private const WINDOW = 30;
 
-    public function index(): Response
+    /**
+     * Периоды для цифр сводки. Первый — по умолчанию: так страница
+     * открывается такой же, какой была до появления переключателя.
+     */
+    public const PERIODS = ['all', 'today', 'yesterday', 'week'];
+
+    public function index(Request $request): Response
     {
         $since = now()->subDays(self::WINDOW - 1)->startOfDay();
-        $week = now()->subDays(7);
 
-        $byStatus = Presentation::query()
-            ->selectRaw('status, count(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
+        $period = in_array($request->query('period'), self::PERIODS, true)
+            ? $request->query('period')
+            : self::PERIODS[0];
 
-        $paid = Payment::query()->where('status', PaymentStatus::Paid);
+        [$from, $to] = $this->range($period);
 
         return Inertia::render('admin/Overview', [
-            'cards' => [
-                'users' => User::count(),
-                'usersWeek' => User::where('created_at', '>=', $week)->count(),
-                'presentations' => Presentation::count(),
-                'presentationsWeek' => Presentation::where('created_at', '>=', $week)->count(),
-                'ready' => (int) ($byStatus[PresentationStatus::Ready->value] ?? 0),
-                'failed' => (int) ($byStatus[PresentationStatus::Failed->value] ?? 0),
-                // Суммы в копейках, делим на фронте
-                'revenue' => (int) (clone $paid)->sum('amount'),
-                'revenueMonth' => (int) (clone $paid)->where('created_at', '>=', $since)->sum('amount'),
-                'payingUsers' => (int) (clone $paid)->distinct()->count('user_id'),
-                // Себестоимость в сотых доли цента
-                'cost' => (int) ApiCall::sum('cost'),
-                'costMonth' => (int) ApiCall::where('created_at', '>=', $since)->sum('cost'),
-            ],
-            'statuses' => collect(PresentationStatus::cases())
-                ->map(fn (PresentationStatus $s) => [
-                    'key' => $s->value,
-                    'label' => $s->label(),
-                    'total' => (int) ($byStatus[$s->value] ?? 0),
-                ])
-                ->all(),
+            'period' => $period,
+            'cards' => $this->totals($from, $to),
+            // С чем сравнивать: сегодня — со вчера, вчера — с позавчера,
+            // неделю — с предыдущей неделей. У «всего времени» пары нет.
+            'previous' => $period === 'all'
+                ? null
+                : $this->totals(...$this->range($period, previous: true)),
+            'statuses' => $this->statuses($from, $to),
             'days' => $this->daily($since),
             'recent' => Presentation::with('user:id,name,email')
                 ->latest('id')
@@ -77,6 +67,94 @@ class AdminController extends Controller
                 ])
                 ->all(),
         ]);
+    }
+
+    /**
+     * Границы периода в UTC: [с, до), null — без границы.
+     *
+     * Сутки считаются по часовому поясу админки (config/admin.php),
+     * а в базу уходят уже переведёнными в UTC.
+     *
+     * $previous — такой же отрезок непосредственно перед этим. Для
+     * «сегодня» это вчера целиком: сегодняшний день ещё идёт, и к вечеру
+     * разница с полным вчерашним днём сама сойдёт на нет.
+     *
+     * @return array{0: CarbonInterface|null, 1: CarbonInterface|null}
+     */
+    private function range(string $period, bool $previous = false): array
+    {
+        $today = now(config('admin.timezone'))->startOfDay();
+
+        [$from, $to] = match ($period) {
+            'today' => [$today, null],
+            'yesterday' => [$today->copy()->subDay(), $today],
+            'week' => [$today->copy()->subDays(6), null],
+            default => [null, null],
+        };
+
+        if ($previous && $from) {
+            $length = $period === 'week' ? 7 : 1;
+            [$from, $to] = [$from->copy()->subDays($length), $from];
+        }
+
+        return [$from?->utc(), $to?->utc()];
+    }
+
+    /**
+     * Ограничение запроса периодом по created_at.
+     *
+     * @template T of \Illuminate\Database\Eloquent\Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    private function within($query, ?CarbonInterface $from, ?CarbonInterface $to)
+    {
+        return $query
+            ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
+            ->when($to, fn ($q) => $q->where('created_at', '<', $to));
+    }
+
+    /** @return array<string, int> */
+    private function totals(?CarbonInterface $from, ?CarbonInterface $to): array
+    {
+        $paid = fn () => $this->within(
+            Payment::query()->where('status', PaymentStatus::Paid),
+            $from,
+            $to,
+        );
+
+        $presentations = fn () => $this->within(Presentation::query(), $from, $to);
+
+        return [
+            'users' => $this->within(User::query(), $from, $to)->count(),
+            'presentations' => $presentations()->count(),
+            'failed' => $presentations()->where('status', PresentationStatus::Failed)->count(),
+            // Суммы в копейках, делим на фронте. Платёж относится к дню,
+            // когда его начали: между началом и оплатой обычно минуты
+            'revenue' => (int) $paid()->sum('amount'),
+            'payments' => $paid()->count(),
+            'payingUsers' => (int) $paid()->distinct()->count('user_id'),
+            // Себестоимость в сотых доли цента
+            'cost' => (int) $this->within(ApiCall::query(), $from, $to)->sum('cost'),
+        ];
+    }
+
+    /** @return array<int, array{key: string, label: string, total: int}> */
+    private function statuses(?CarbonInterface $from, ?CarbonInterface $to): array
+    {
+        $byStatus = $this->within(Presentation::query(), $from, $to)
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return collect(PresentationStatus::cases())
+            ->map(fn (PresentationStatus $s) => [
+                'key' => $s->value,
+                'label' => $s->label(),
+                'total' => (int) ($byStatus[$s->value] ?? 0),
+            ])
+            ->all();
     }
 
     public function users(Request $request): Response

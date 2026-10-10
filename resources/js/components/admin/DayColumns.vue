@@ -41,8 +41,10 @@ function label(iso: string): string {
 </script>
 
 <template>
-    <figure class="space-y-2">
-        <figcaption class="flex items-baseline justify-between gap-3">
+    <figure class="min-w-0 space-y-2">
+        <figcaption
+            class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+        >
             <span class="text-sm font-medium">{{ title }}</span>
             <span class="text-muted-foreground text-xs tabular-nums">
                 {{ total }} за 30 дней · пик {{ max }}

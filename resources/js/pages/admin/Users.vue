@@ -87,7 +87,7 @@ function day(iso: string | null): string {
                     v-model="query"
                     type="search"
                     placeholder="Имя или почта"
-                    class="w-64"
+                    class="w-64 max-w-full"
                 />
             </template>
         </PageHeader>

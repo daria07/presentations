@@ -183,7 +183,7 @@ function when(iso: string | null): string {
             >
         </div>
 
-        <div class="border-border bg-card rounded-xl border p-5">
+        <div class="border-border bg-card min-w-0 rounded-xl border p-4 sm:p-5">
             <h2 class="mb-3 text-sm font-medium">Источник регистрации</h2>
 
             <dl
@@ -209,8 +209,12 @@ function when(iso: string | null): string {
             </p>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-            <div class="border-border bg-card rounded-xl border p-5">
+        <!-- minmax(0, …): иначе длинное название презентации раздвигает
+             колонку за край экрана -->
+        <div
+            class="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]"
+        >
+            <div class="border-border bg-card min-w-0 rounded-xl border p-4 sm:p-5">
                 <h2 class="mb-3 text-sm font-medium">Презентации</h2>
 
                 <div v-if="presentations.length" class="divide-border divide-y">
@@ -219,8 +223,8 @@ function when(iso: string | null): string {
                         :key="p.id"
                         class="flex items-baseline justify-between gap-4 py-2 text-sm"
                     >
-                        <div class="min-w-0">
-                            <p class="truncate">{{ p.title }}</p>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate" :title="p.title">{{ p.title }}</p>
                             <p
                                 class="text-muted-foreground text-xs tabular-nums"
                             >
@@ -241,8 +245,8 @@ function when(iso: string | null): string {
                 </p>
             </div>
 
-            <div class="space-y-6">
-                <div class="border-border bg-card rounded-xl border p-5">
+            <div class="min-w-0 space-y-6">
+                <div class="border-border bg-card rounded-xl border p-4 sm:p-5">
                     <h2 class="mb-3 text-sm font-medium">Оплаты</h2>
 
                     <div v-if="payments.length" class="divide-border divide-y">
@@ -274,7 +278,7 @@ function when(iso: string | null): string {
                     </p>
                 </div>
 
-                <div class="border-border bg-card rounded-xl border p-5">
+                <div class="border-border bg-card rounded-xl border p-4 sm:p-5">
                     <h2 class="mb-3 text-sm font-medium">Обращения к модели</h2>
 
                     <div v-if="calls.length" class="divide-border divide-y">
@@ -283,9 +287,11 @@ function when(iso: string | null): string {
                             :key="c.purpose"
                             class="flex items-baseline justify-between gap-3 py-2 text-sm"
                         >
-                            <span>{{ PURPOSE[c.purpose] ?? c.purpose }}</span>
+                            <span class="min-w-0 truncate">{{
+                                PURPOSE[c.purpose] ?? c.purpose
+                            }}</span>
                             <span
-                                class="text-muted-foreground text-xs tabular-nums"
+                                class="text-muted-foreground shrink-0 text-xs tabular-nums"
                             >
                                 {{ c.total }} раз · ${{ dollars(c.cost) }}
                             </span>
