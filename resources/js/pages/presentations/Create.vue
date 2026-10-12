@@ -68,9 +68,7 @@ const canSubmit = computed(() =>
         </Link>
         <div class="border-rule border-b pb-6">
             <h1 class="text-3xl font-extrabold">Новая презентация</h1>
-            <p
-                class="text-muted-foreground mt-1.5 max-w-lg leading-relaxed"
-            >
+            <p class="text-muted-foreground mt-1.5 max-w-lg leading-relaxed">
                 Достаточно одной строки, чтобы создать презентацию. А если есть
                 особые пожелания — расскажите подробнее, и мы учтём их при
                 создании.

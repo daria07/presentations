@@ -156,6 +156,13 @@ class Schemas
                     'type' => 'string',
                     'description' => 'Подзаголовок для титульного слайда.',
                 ],
+                'image_subject' => [
+                    'type' => 'string',
+                    'description' => 'Главный герой всех картинок на английском, с узнаваемыми '
+                        .'чертами: «white standard poodle with a curly coat», «Peter the Great, '
+                        .'tall man with a small moustache, early 18th-century green coat». '
+                        .'Пустая строка, если у темы нет одного героя (например, «налоги»).',
+                ],
                 'cover_scene' => [
                     'type' => 'string',
                     'description' => 'Фон обложки: сцена для фотографии на английском, '
@@ -270,7 +277,7 @@ class Schemas
                     ],
                 ],
             ],
-            'required' => ['title', 'cover_scene', 'slides'],
+            'required' => ['title', 'image_subject', 'cover_scene', 'slides'],
         ];
     }
 }

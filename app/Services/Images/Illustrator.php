@@ -74,6 +74,7 @@ class Illustrator
         $style = config('deck.themes.'.$presentation->theme.'.image_style')
             ?? config('deck.themes.'.config('deck.default_theme').'.image_style', '');
 
+        $subject = trim((string) ($outline['image_subject'] ?? ''));
         $requests = [];
 
         foreach ($outline['slides'] ?? [] as $index => $slide) {
@@ -90,7 +91,7 @@ class Illustrator
             };
 
             $requests[(string) $index] = [
-                'prompt' => $this->prompt((string) $slide['image']['scene'], $style, $format),
+                'prompt' => $this->prompt((string) $slide['image']['scene'], $style, $format, $subject),
                 'size' => match ($format) {
                     'cover' => self::SIZE_COVER,
                     'portrait' => self::SIZE_PORTRAIT,
@@ -122,7 +123,7 @@ class Illustrator
                 $cover = ($slide['image']['side'] ?? null) === 'cover';
 
                 $retry[$key] = [
-                    'prompt' => $this->prompt($simple, $style, $cover ? 'cover' : 'square'),
+                    'prompt' => $this->prompt($simple, $style, $cover ? 'cover' : 'square', $subject),
                     'size' => $cover ? self::SIZE_COVER : self::SIZE_HALF,
                 ];
             }
@@ -167,8 +168,19 @@ class Illustrator
      * Сцену пишет модель, а стиль и композицию — мы: так все картинки
      * одной презентации выглядят одинаково, а картинка ложится в вёрстку.
      */
-    private function prompt(string $scene, string $style, string $format): string
+    private function prompt(string $scene, string $style, string $format, string $subject = ''): string
     {
+        /*
+           Картинки рисуются по одной, и художник не знает, о чём
+           презентация: «пушистый питомец у щётки» в презентации про
+           пуделя становится кошкой. Поэтому героя называем в каждом
+           запросе — не требуя рисовать его, но запрещая подменять.
+        */
+        $hero = $subject === ''
+            ? ''
+            : ' The presentation is about '.trim($subject, ' .').': any animal, person or object '
+                .'of this kind in the image must be exactly this, never a different breed, species or person.';
+
         $composition = match ($format) {
             'cover' => 'Wide landscape composition: the main subject on the right third, '
                 .'the left half calmer and darker, with room for a title.',
@@ -178,7 +190,7 @@ class Illustrator
                 .'with some breathing room around it, nothing important near the edges.',
         };
 
-        return trim($scene, ' .').'. '.$composition.' '.self::WHOLE_SUBJECT.' '.$style.' '.self::NO_TEXT;
+        return trim($scene, ' .').'.'.$hero.' '.$composition.' '.self::WHOLE_SUBJECT.' '.$style.' '.self::NO_TEXT;
     }
 
     /** @param  mixed  $slide */

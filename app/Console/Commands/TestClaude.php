@@ -116,6 +116,10 @@ class TestClaude extends Command
             $this->line('  <fg=gray>'.$outline['subtitle'].'</>');
         }
 
+        if (filled($outline['image_subject'] ?? null)) {
+            $this->line('  <fg=magenta>Герой картинок: '.$outline['image_subject'].'</>');
+        }
+
         $this->newLine();
 
         foreach ($outline['slides'] as $i => $slide) {

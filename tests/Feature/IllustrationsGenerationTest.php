@@ -188,3 +188,20 @@ test('удаление презентации забирает папку с к�
 
     expect(Storage::disk('local')->exists($path))->toBeFalse();
 });
+
+test('герой презентации называется в каждом запросе картинки', function () {
+    Http::fake(['gw.test/*' => Http::response([
+        'data' => [['b64_json' => base64_encode(tinyPng())]],
+        'usage' => ['input_tokens' => 70, 'output_tokens' => 1600],
+    ])]);
+
+    $presentation = deckWithScenes();
+    $presentation->update(['outline' => [...$presentation->outline, 'image_subject' => 'white standard poodle with a curly coat']]);
+
+    app(Illustrator::class)->illustrate($presentation);
+
+    $prompts = collect(Http::recorded())->map(fn ($pair) => $pair[0]['prompt'] ?? '')->filter();
+
+    expect($prompts)->toHaveCount(3)
+        ->and($prompts->every(fn ($p) => str_contains($p, 'The presentation is about white standard poodle with a curly coat')))->toBeTrue();
+});
