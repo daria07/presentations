@@ -144,12 +144,24 @@ function submitAnswers() {
    Ограничение по времени обязательно: если воркер не запущен или
    упал молча, без него человек будет бесконечно смотреть на
    крутящийся индикатор и не поймёт, что случилось.
+
+   Но считаем не всё время целиком, а время без движения: с поиском
+   источников и картинками генерация идёт 4–5 минут, и общий лимит
+   в 4 минуты объявлял «затянулось» живой задаче. Пока шаги меняются,
+   работа идёт. Зависла — это когда один шаг стоит дольше, чем задаче
+   вообще позволено работать (5 минут у воркера плюс запас).
 */
 const POLL_INTERVAL = 2500;
 const POLL_LIMIT_MS = 4 * 60 * 1000;
+const STEP_LIMIT_MS = 6 * 60 * 1000;
 
 let timer: number | undefined;
-let startedAt = Date.now();
+let progressAt = Date.now();
+let progressKey = '';
+
+/** Что считается движением: смена статуса или текущего шага */
+const progressOf = (p: Presentation) =>
+    p.status + '|' + (p.steps ?? []).map((step) => step.state).join(',');
 
 const stalled = ref(false);
 const offline = ref(false);
@@ -162,13 +174,14 @@ function stopPolling() {
 function startPolling() {
     if (timer) return;
 
-    startedAt = Date.now();
+    progressAt = Date.now();
+    progressKey = progressOf(current.value);
     stalled.value = false;
     timer = window.setInterval(poll, POLL_INTERVAL);
 }
 
 async function poll() {
-    if (Date.now() - startedAt > POLL_LIMIT_MS) {
+    if (Date.now() - progressAt > STEP_LIMIT_MS) {
         stopPolling();
         stalled.value = true;
 
@@ -198,6 +211,13 @@ async function poll() {
 
     const changed = fresh.status !== current.value.status;
     current.value = fresh;
+
+    const key = progressOf(fresh);
+
+    if (key !== progressKey) {
+        progressKey = key;
+        progressAt = Date.now();
+    }
 
     // Статус стал конечным — перезагружаем страницу целиком,
     // чтобы подтянуть готовые данные, и прекращаем опрос
