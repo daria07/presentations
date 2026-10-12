@@ -6,6 +6,7 @@ use App\Models\ApiCall;
 use App\Models\Presentation;
 use App\Services\Deck\Icons;
 use App\Services\Deck\Illustrations;
+use App\Services\Deck\LayoutVariety;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -223,8 +224,10 @@ class PresentationPlanner
 
         // Сколько картинок и где — решаем сами, модель только
         // подсказывает (Illustrations::plan)
+        // Две одинаковые вёрстки подряд разводим до картинок:
+        // картинку получает слайд с подходящей вёрсткой
         $slides = Illustrations::plan(
-            $this->thinIcons($this->ensureTitleSlide($slides, $title, $subtitle)),
+            $this->thinIcons(LayoutVariety::apply($this->ensureTitleSlide($slides, $title, $subtitle))),
             $presentation->slide_count,
             is_string($data['cover_scene'] ?? null) ? $data['cover_scene'] : null,
         );
@@ -634,8 +637,9 @@ class PresentationPlanner
 
         Вёрстку остальных выбирай по форме содержания.
 
-        Жёсткое ограничение: не больше двух одинаковых вёрсток подряд.
-        Если третий слайд снова просится в тот же тип — значит содержание
+        Жёсткое ограничение: два слайда одной вёрстки подряд недопустимы —
+        ни два bullets, ни две timeline. Рядом они сливаются в один слайд.
+        Если следующий слайд просится в тот же тип — значит содержание
         не проработано, а не оформление. Перестрой сам материал:
         - три причины и три следствия рядом — это comparison, а не два
           списка подряд;
