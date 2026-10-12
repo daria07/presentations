@@ -377,7 +377,7 @@ function destroy() {
 
         <div v-if="!presentations.data.length" class="py-24 text-center">
             <p
-                class="text-muted-foreground mx-auto max-w-[38ch] leading-relaxed"
+                class="text-muted-foreground mx-auto max-w-sm leading-relaxed"
             >
                 Пока пусто. Расскажите, о чём презентация, — коротко или
                 подробно, — а структуру, факты и вёрстку возьмём на себя.
