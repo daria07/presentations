@@ -78,6 +78,29 @@ class Presentation extends Model
         return false;
     }
 
+    /**
+     * Удаляет картинки, на которые больше не ссылается ни один слайд:
+     * человек убрал их в редакторе. Без этого файлы копились бы на
+     * диске до удаления всей презентации.
+     */
+    public function pruneImages(): void
+    {
+        $disk = Storage::disk(config('deck.disk'));
+        $used = [];
+
+        foreach ($this->outline['slides'] ?? [] as $slide) {
+            if (is_array($slide) && is_array($slide['image'] ?? null) && filled($slide['image']['path'] ?? null)) {
+                $used[] = $slide['image']['path'];
+            }
+        }
+
+        foreach ($disk->files(DeckRenderer::imageDir($this)) as $file) {
+            if (! in_array($file, $used, true)) {
+                $disk->delete($file);
+            }
+        }
+    }
+
     /** Убирает готовый PDF с диска, если он там есть */
     public function deleteFile(): void
     {

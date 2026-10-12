@@ -16,10 +16,12 @@ use App\Services\Deck\DeckRenderer;
 use App\Services\Deck\Icons;
 use App\Services\Deck\Looks;
 use App\Services\Deck\SpeechRenderer;
+use App\Services\Images\Illustrator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
@@ -384,6 +386,9 @@ class PresentationController extends Controller
             'status' => PresentationStatus::Generating,
         ]);
 
+        // Картинки, убранные со слайдов, больше не нужны
+        $presentation->pruneImages();
+
         RenderPresentation::dispatch($presentation);
 
         return back()->with('toast', [
@@ -399,7 +404,7 @@ class PresentationController extends Controller
      * Это позволяет показывать правки сразу, пока человек печатает,
      * и при этом не трогать то, что лежит в базе.
      */
-    public function preview(Request $request, Presentation $presentation, DeckRenderer $renderer): \Illuminate\Http\Response
+    public function preview(Request $request, Presentation $presentation, DeckRenderer $renderer): \Symfony\Component\HttpFoundation\Response
     {
         $this->authorize('view', $presentation);
 
@@ -416,7 +421,19 @@ class PresentationController extends Controller
                 UpdateOutlineRequest::outlineRules(draft: true),
             );
 
-            abort_if($validator->fails(), 422);
+            // Ошибки отдаём списком: без них редактор не может сказать,
+            // какое поле мешает, и превью просто молча не обновляется
+            if ($validator->fails()) {
+                Log::warning('Превью: черновик не прошёл проверку', [
+                    'presentation' => $presentation->id,
+                    'errors' => $validator->errors()->toArray(),
+                ]);
+
+                return response()->json([
+                    'message' => $validator->errors()->first(),
+                    'errors' => $validator->errors()->toArray(),
+                ], 422);
+            }
 
             // Копия в памяти: до базы эти данные не доедут
             $presentation = clone $presentation;
@@ -516,6 +533,65 @@ class PresentationController extends Controller
         ];
     }
 
+    /**
+     * Шаги генерации для экрана ожидания.
+     *
+     * Статус один — «Генерируем», а внутри него несколько минут разной
+     * работы. Шаг выводим из того, что уже лежит в базе: конспект,
+     * структура, ненарисованные картинки. Отдельное поле под шаг
+     * пришлось бы держать в согласии с задачами очереди.
+     *
+     * @return list<array{label: string, state: string}>|null
+     */
+    private function steps(Presentation $presentation): ?array
+    {
+        if (! $presentation->status->isPending()) {
+            return null;
+        }
+
+        // Перепечатка после правок или смены оформления: структура
+        // и файл уже есть, осталась только печать
+        if (filled($presentation->file_path)) {
+            return [['label' => 'Печатаем файл', 'state' => 'current']];
+        }
+
+        $illustrated = Illustrator::enabled();
+
+        $steps = array_filter([
+            'brief' => 'Продумываем содержание',
+            'outline' => 'Собираем слайды',
+            'images' => $illustrated ? 'Рисуем иллюстрации' : null,
+            'print' => 'Печатаем файл',
+        ]);
+
+        $outline = $presentation->outline;
+
+        $current = match (true) {
+            // Задача ещё ждёт воркера — ни один шаг не начат
+            $presentation->status === PresentationStatus::Queued => null,
+            blank($presentation->brief) => 'brief',
+            blank($outline['slides'] ?? null) => 'outline',
+            $illustrated && Illustrator::pending($outline) => 'images',
+            default => 'print',
+        };
+
+        $position = $current === null ? -1 : (int) array_search($current, array_keys($steps), true);
+        $result = [];
+
+        foreach (array_values($steps) as $i => $label) {
+            $result[] = [
+                'label' => $label,
+                'state' => match (true) {
+                    $i < $position => 'done',
+                    $i === $position => 'current',
+                    default => 'todo',
+                },
+            ];
+        }
+
+        return $result;
+    }
+
     /** Полные данные одной презентации */
     private function detail(Presentation $presentation): array
     {
@@ -532,6 +608,7 @@ class PresentationController extends Controller
             'isPending' => $presentation->status->isPending()
                 || $presentation->status === PresentationStatus::Draft,
             'isReady' => $presentation->isReady(),
+            'steps' => $this->steps($presentation),
             'error' => $presentation->error_message,
             'shareUrl' => $presentation->isReady() ? $presentation->shareUrl() : null,
             // Живая вёрстка, а не PDF: в HTML лежат все палитры,

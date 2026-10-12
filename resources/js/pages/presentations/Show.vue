@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import DeckViewer from '@/components/DeckViewer.vue';
 import PresentationReview from '@/components/PresentationReview.vue';
 import {
+    Check,
     CheckCircle2,
     ChevronLeft,
     Ellipsis,
@@ -60,6 +61,9 @@ type Palette = {
     paper: string;
 };
 
+/* Шаг генерации на экране ожидания — его считает сервер */
+type Step = { label: string; state: 'done' | 'current' | 'todo' };
+
 type Presentation = {
     id: number;
     title: string;
@@ -70,6 +74,7 @@ type Presentation = {
     questions: Question[] | null;
     isPending: boolean;
     isReady: boolean;
+    steps: Step[] | null;
     error: string | null;
     shareUrl: string | null;
     previewUrl: string | null;
@@ -149,40 +154,9 @@ let startedAt = Date.now();
 const stalled = ref(false);
 const offline = ref(false);
 
-/*
-   Пока идёт генерация, подпись меняется: одна и та же строка, висящая
-   три минуты, читается как «всё зависло». Строки идут по кругу и
-   рассказывают, что сейчас происходит на самом деле — ожидание
-   переносится легче, когда видно работу, а не спиннер.
-*/
-const HINTS = [
-    'Продумываем содержание',
-    'Собираем слайды и печатаем файл',
-    'Обычно это меньше пяти минут',
-];
-
-const HINT_DELAY = 5500;
-
-const hint = ref(0);
-let hintTimer: number | undefined;
-
-function startHints() {
-    if (hintTimer) return;
-
-    hintTimer = window.setInterval(() => {
-        hint.value = (hint.value + 1) % HINTS.length;
-    }, HINT_DELAY);
-}
-
-function stopHints() {
-    window.clearInterval(hintTimer);
-    hintTimer = undefined;
-}
-
 function stopPolling() {
     window.clearInterval(timer);
     timer = undefined;
-    stopHints();
 }
 
 function startPolling() {
@@ -191,7 +165,6 @@ function startPolling() {
     startedAt = Date.now();
     stalled.value = false;
     timer = window.setInterval(poll, POLL_INTERVAL);
-    startHints();
 }
 
 async function poll() {
@@ -528,7 +501,9 @@ async function copyShare() {
             </template>
 
             <template v-else>
-                <Spinner class="size-7" />
+                <!-- Пока есть шаги, крутится тот, что идёт сейчас:
+                     второй большой индикатор над списком лишний -->
+                <Spinner v-if="!current.steps?.length" class="size-7" />
                 <div class="space-y-1">
                     <p class="text-lg font-medium">
                         {{ current.statusLabel }}…
@@ -539,18 +514,46 @@ async function copyShare() {
                     >
                         Читаем тему и подбираем вопросы
                     </p>
-
-                    <!-- Высота задана, иначе строки разной длины дёргают
-                         всё, что под ними, на каждой смене -->
-                    <Transition v-else name="hint" mode="out-in">
-                        <p
-                            :key="hint"
-                            class="text-muted-foreground flex h-5 items-center justify-center text-sm"
-                        >
-                            {{ HINTS[hint] }}
-                        </p>
-                    </Transition>
                 </div>
+
+                <!-- Шаги вместо подписей по кругу: картинки рисуются
+                     ещё полминуты после структуры, и без списка это
+                     время выглядит как зависание -->
+                <ol
+                    v-if="current.status !== 'draft' && current.steps?.length"
+                    class="w-fit space-y-2.5 text-left text-sm"
+                    aria-live="polite"
+                >
+                    <li
+                        v-for="step in current.steps"
+                        :key="step.label"
+                        class="flex items-center gap-2.5 transition-colors"
+                        :class="{
+                            'text-muted-foreground': step.state === 'done',
+                            'font-medium': step.state === 'current',
+                            'text-muted-foreground/50': step.state === 'todo',
+                        }"
+                    >
+                        <span
+                            class="flex size-4 flex-none items-center justify-center"
+                        >
+                            <Check
+                                v-if="step.state === 'done'"
+                                class="size-4 text-emerald-600"
+                            />
+                            <Spinner
+                                v-else-if="step.state === 'current'"
+                                class="size-4"
+                            />
+                            <span
+                                v-else
+                                class="size-1.5 rounded-full bg-current"
+                            />
+                        </span>
+                        {{ step.label }}
+                    </li>
+                </ol>
+
                 <p class="text-muted-foreground max-w-md text-sm">
                     {{ current.topic }}
                 </p>
@@ -562,8 +565,8 @@ async function copyShare() {
                     v-if="current.status !== 'draft'"
                     class="text-muted-foreground max-w-sm text-sm leading-relaxed"
                 >
-                    Страницу можно закрыть — пришлём письмо, когда будет готово,
-                    и презентация появится в
+                    Обычно это меньше пяти минут. Страницу можно закрыть —
+                    пришлём письмо, когда будет готово, и презентация появится в
                     <Link
                         href="/presentations"
                         class="underline underline-offset-2"
@@ -1038,36 +1041,3 @@ async function copyShare() {
         </div>
     </div>
 </template>
-
-<style scoped>
-/* Мягкая смена подсказок: строка уходит вверх, следующая приходит
-   снизу. 180 мс — заметно, но не отвлекает от ожидания. */
-.hint-enter-active,
-.hint-leave-active {
-    transition:
-        opacity 0.18s ease,
-        transform 0.18s ease;
-}
-
-.hint-enter-from {
-    opacity: 0;
-    transform: translateY(4px);
-}
-
-.hint-leave-to {
-    opacity: 0;
-    transform: translateY(-4px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .hint-enter-active,
-    .hint-leave-active {
-        transition: opacity 0.18s ease;
-    }
-
-    .hint-enter-from,
-    .hint-leave-to {
-        transform: none;
-    }
-}
-</style>

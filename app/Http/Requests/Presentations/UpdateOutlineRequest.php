@@ -49,7 +49,7 @@ class UpdateOutlineRequest extends FormRequest
             'slides.*.layout' => ['required', 'string', 'in:'.implode(',', self::LAYOUTS)],
             'slides.*.heading' => [...$required, 'string', 'max:120'],
             'slides.*.subheading' => ['nullable', 'string', 'max:300'],
-            'slides.*.notes' => ['nullable', 'string', 'max:600'],
+            'slides.*.notes' => ['nullable', 'string', 'max:1500'],
 
             'slides.*.bullets' => ['nullable', 'array', 'max:6'],
             'slides.*.bullets.*' => ['array'],
@@ -72,7 +72,7 @@ class UpdateOutlineRequest extends FormRequest
             'slides.*.image' => ['nullable', 'array'],
             'slides.*.image.path' => ['nullable', 'string', 'max:200'],
             'slides.*.image.side' => ['nullable', 'string', 'in:left,right,cover'],
-            'slides.*.image.scene' => ['nullable', 'string', 'max:600'],
+            'slides.*.image.scene' => ['nullable', 'string', 'max:2000'],
             'slides.*.image.format' => ['nullable', 'string', 'in:square,portrait'],
         ];
     }

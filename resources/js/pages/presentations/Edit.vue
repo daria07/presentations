@@ -5,10 +5,12 @@ import { Head, router } from '@inertiajs/vue3';
 import {
     ArrowDown,
     ArrowUp,
+    ImageOff,
     Pencil,
     Plus,
     RefreshCw,
     Trash2,
+    Undo2,
 } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -29,6 +31,15 @@ type Bullet = { title: string; text: string };
 type Stat = { value: string; label: string };
 type Quote = { text: string; author: string } | null;
 
+/* Картинку рисует нейросеть при генерации; здесь её можно только убрать */
+type SlideImage = {
+    path?: string | null;
+    side?: string;
+    scene?: string;
+    format?: string;
+    failed?: boolean;
+};
+
 type Slide = {
     layout: string;
     heading: string;
@@ -37,6 +48,7 @@ type Slide = {
     stats: Stat[];
     quote: Quote;
     notes: string | null;
+    image?: SlideImage | null;
 };
 
 const props = defineProps<{
@@ -140,6 +152,18 @@ function leaveWithoutSaving() {
 */
 const previewHtml = ref('');
 const refreshing = ref(false);
+// Почему черновик не нарисовался. Без подписи превью просто
+// замирает на старом, и непонятно, что мешает
+const previewError = ref<string | null>(null);
+
+/* «slides.3.heading» → «Слайд 4: …», чтобы было видно, где искать */
+function describeError(key: string, message: string): string {
+    const index = /^slides\.(\d+)\./.exec(key)?.[1];
+
+    return index === undefined
+        ? message
+        : `Слайд ${Number(index) + 1}: ${message}`;
+}
 
 let debounce: number | undefined;
 
@@ -170,6 +194,17 @@ async function refreshPreview() {
 
         if (response.ok) {
             previewHtml.value = await response.text();
+            previewError.value = null;
+        } else if (response.status === 422) {
+            const body = await response.json().catch(() => null);
+            const [key, messages] = Object.entries(
+                (body?.errors ?? {}) as Record<string, string[]>,
+            )[0] ?? ['', []];
+
+            previewError.value = describeError(
+                key,
+                messages[0] ?? 'Не получилось обновить превью',
+            );
         }
     } catch {
         // Превью не критично: не получилось — оставляем прежнее
@@ -244,6 +279,33 @@ function addStat(slide: Slide) {
     slide.stats.push({ value: '', label: '' });
 }
 
+/* ---------- Иллюстрации ---------- */
+
+/*
+   Убранную картинку держим до сохранения, чтобы её можно было
+   вернуть: файл на сервере удаляется только при сохранении.
+   Ключ — сам слайд, а не номер: слайды двигаются и удаляются.
+*/
+const removedImages = ref(new WeakMap<Slide, SlideImage>());
+
+const hasImage = (slide: Slide) =>
+    Boolean(slide.image?.path) && !slide.image?.failed;
+
+function removeImage(slide: Slide) {
+    if (!slide.image) return;
+
+    removedImages.value.set(slide, slide.image);
+    slide.image = null;
+}
+
+function restoreImage(slide: Slide) {
+    const image = removedImages.value.get(slide);
+    if (!image) return;
+
+    slide.image = image;
+    removedImages.value.delete(slide);
+}
+
 /* ---------- Сохранение ---------- */
 
 function save(then?: () => void) {
@@ -261,6 +323,8 @@ function save(then?: () => void) {
             preserveScroll: true,
             onSuccess: () => {
                 snapshot.value = currentState();
+                // Файлы убранных картинок сервер уже удалил
+                removedImages.value = new WeakMap();
                 refreshPreview();
                 then?.();
             },
@@ -511,6 +575,56 @@ onBeforeUnmount(() => media?.removeEventListener('change', onNarrowChange));
                         />
                     </Field>
 
+                    <!-- Иллюстрация. Убрать можно, нарисовать новую — нет:
+                         это делается только при генерации -->
+                    <div
+                        v-if="
+                            hasImage(slides[active]) ||
+                            removedImages.has(slides[active])
+                        "
+                        class="border-rule flex items-center justify-between gap-3 rounded-lg border p-3"
+                    >
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium">Иллюстрация</p>
+                            <p class="text-muted-foreground mt-0.5 text-xs">
+                                <template v-if="!hasImage(slides[active])">
+                                    Убрана — пропадёт после сохранения
+                                </template>
+                                <template
+                                    v-else-if="
+                                        slides[active].image?.side === 'cover'
+                                    "
+                                >
+                                    Фото на фоне обложки
+                                </template>
+                                <template v-else>
+                                    Занимает половину слайда
+                                </template>
+                            </p>
+                        </div>
+
+                        <Button
+                            v-if="hasImage(slides[active])"
+                            variant="outline"
+                            size="sm"
+                            class="flex-none"
+                            @click="removeImage(slides[active])"
+                        >
+                            <ImageOff class="size-4" />
+                            Убрать картинку
+                        </Button>
+                        <Button
+                            v-else
+                            variant="ghost"
+                            size="sm"
+                            class="flex-none"
+                            @click="restoreImage(slides[active])"
+                        >
+                            <Undo2 class="size-4" />
+                            Вернуть
+                        </Button>
+                    </div>
+
                     <!-- Пункты -->
                     <div
                         v-if="usesBullets(slides[active].layout)"
@@ -638,7 +752,7 @@ onBeforeUnmount(() => media?.removeEventListener('change', onNarrowChange));
                          несколько предложений и счётчик под ограничение -->
                     <Field
                         label="Заметка для выступающего"
-                        :counter="`${(slides[active].notes ?? '').length} / 600`"
+                        :counter="`${(slides[active].notes ?? '').length} / 1500`"
                     >
                         <Textarea
                             v-model="slides[active].notes"
@@ -660,7 +774,16 @@ onBeforeUnmount(() => media?.removeEventListener('change', onNarrowChange));
                 <div
                     class="border-rule text-muted-foreground flex flex-none items-center justify-between border-b px-4 py-2 text-xs"
                 >
-                    <span>{{ refreshing ? 'Обновляем…' : 'Превью' }}</span>
+                    <span
+                        v-if="previewError && !refreshing"
+                        class="text-destructive min-w-0 truncate"
+                        :title="previewError"
+                    >
+                        {{ previewError }}
+                    </span>
+                    <span v-else>{{
+                        refreshing ? 'Обновляем…' : 'Превью'
+                    }}</span>
                     <Button
                         variant="ghost"
                         size="icon-sm"
