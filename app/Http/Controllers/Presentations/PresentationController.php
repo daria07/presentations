@@ -17,6 +17,7 @@ use App\Services\Deck\Icons;
 use App\Services\Deck\Looks;
 use App\Services\Deck\SpeechRenderer;
 use App\Services\Images\Illustrator;
+use App\Services\Search\YandexSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -556,8 +557,10 @@ class PresentationController extends Controller
         }
 
         $illustrated = Illustrator::enabled();
+        $searching = YandexSearch::enabled() && ! $presentation->hasSourceText();
 
         $steps = array_filter([
+            'search' => $searching ? 'Ищем источники' : null,
             'brief' => 'Продумываем содержание',
             'outline' => 'Собираем слайды',
             'images' => $illustrated ? 'Рисуем иллюстрации' : null,
@@ -569,6 +572,7 @@ class PresentationController extends Controller
         $current = match (true) {
             // Задача ещё ждёт воркера — ни один шаг не начат
             $presentation->status === PresentationStatus::Queued => null,
+            $searching && $presentation->sources === null && blank($presentation->brief) => 'search',
             blank($presentation->brief) => 'brief',
             blank($outline['slides'] ?? null) => 'outline',
             $illustrated && Illustrator::pending($outline) => 'images',
@@ -646,6 +650,7 @@ class PresentationController extends Controller
             ['key' => 'matrix', 'name' => 'Матрица'],
             ['key' => 'quote', 'name' => 'Цитата'],
             ['key' => 'closing', 'name' => 'Финальный'],
+            ['key' => 'sources', 'name' => 'Источники'],
         ];
     }
 }

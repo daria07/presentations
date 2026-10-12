@@ -606,6 +606,46 @@
         color: var(--muted);
         margin-top: 7mm;
     }
+
+    /* ---------- источники ---------- */
+
+    .sources {
+        list-style: none;
+        display: grid;
+        gap: 4.5mm;
+        max-width: 84%;
+    }
+    /* Больше пяти в один столбец не влезают по высоте */
+    .sources--two {
+        grid-template-columns: 1fr 1fr;
+        column-gap: 12mm;
+        max-width: 100%;
+    }
+    .source { display: flex; gap: 4mm; align-items: baseline; min-width: 0; }
+    .source-mark {
+        flex: none;
+        width: 6mm;
+        font-family: var(--font-display), sans-serif;
+        font-weight: 700;
+        font-size: 11pt;
+        color: var(--accent);
+        font-variant-numeric: tabular-nums;
+    }
+    .source-body { min-width: 0; }
+    .source-title {
+        font-size: 12.5pt;
+        line-height: 1.3;
+        font-weight: 600;
+        color: var(--ink);
+        text-decoration: underline;
+        text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
+        text-underline-offset: 0.6mm;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .source-host { font-size: 9.5pt; color: var(--muted); margin-top: 1mm; }
 </style>
 
 {{-- Характер шаблона: типографика, композиция, форма элементов.

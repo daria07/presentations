@@ -9,6 +9,8 @@ use App\Services\Claude\ClaudeException;
 use App\Services\Claude\PresentationPlanner;
 use App\Services\Deck\DeckRenderer;
 use App\Services\Images\Illustrator;
+use App\Services\Search\SourceCollector;
+use App\Services\Search\YandexSearch;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -63,6 +65,21 @@ class GeneratePresentation implements ShouldQueue
                    от темы оформления, ни от того, почему сорвалась
                    печать.
                 */
+                /*
+                   Для презентации по теме сначала ищем источники: по ним
+                   пишется конспект, и они же встают последним слайдом.
+                   Пустой список тоже сохраняем — значит, искали и не
+                   нашли, и на повторной попытке искать заново незачем.
+                */
+                if ($presentation->sources === null
+                    && blank($presentation->brief)
+                    && ! $presentation->hasSourceText()
+                    && YandexSearch::enabled()) {
+                    // Сборщик берём только здесь: без поиска он не нужен
+                    $presentation->update(['sources' => app(SourceCollector::class)->collect($presentation)]);
+                    $presentation->refresh();
+                }
+
                 if (blank($presentation->brief)) {
                     $presentation->update([
                         'brief' => $planner->buildBrief($presentation),

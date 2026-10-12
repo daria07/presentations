@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 type Bullet = { title: string; text: string };
 type Stat = { value: string; label: string };
 type Quote = { text: string; author: string } | null;
+type Source = { title: string; url: string };
 
 /* Картинку рисует нейросеть при генерации; здесь её можно только убрать */
 type SlideImage = {
@@ -49,6 +50,7 @@ type Slide = {
     quote: Quote;
     notes: string | null;
     image?: SlideImage | null;
+    sources?: Source[];
 };
 
 const props = defineProps<{
@@ -238,6 +240,8 @@ const usesStats = (layout: string) =>
 
 const usesQuote = (layout: string) => layout === 'quote';
 
+const usesSources = (layout: string) => layout === 'sources';
+
 /* ---------- Операции над слайдами ---------- */
 
 function addSlide() {
@@ -272,6 +276,12 @@ function move(index: number, delta: number) {
 function addBullet(slide: Slide) {
     if (slide.bullets.length >= 6) return;
     slide.bullets.push({ title: '', text: '' });
+}
+
+function addSource(slide: Slide) {
+    slide.sources ??= [];
+    if (slide.sources.length >= 12) return;
+    slide.sources.push({ title: '', url: '' });
 }
 
 function addStat(slide: Slide) {
@@ -745,6 +755,56 @@ onBeforeUnmount(() => media?.removeEventListener('change', onNarrowChange));
                                 }
                             "
                         />
+                    </div>
+
+                    <!-- Источники: на слайде название ссылкой и сайт -->
+                    <div
+                        v-if="usesSources(slides[active].layout)"
+                        class="space-y-3"
+                    >
+                        <Label>Источники</Label>
+
+                        <div
+                            v-for="(source, si) in slides[active].sources ?? []"
+                            :key="si"
+                            class="border-rule space-y-2 rounded-lg border p-3"
+                        >
+                            <div class="flex gap-2">
+                                <Input
+                                    v-model="source.title"
+                                    placeholder="Название страницы"
+                                    class="h-10 flex-1 font-medium"
+                                />
+                                <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    aria-label="Убрать источник"
+                                    @click="
+                                        slides[active].sources?.splice(si, 1)
+                                    "
+                                >
+                                    <Trash2 class="size-3.5" />
+                                </Button>
+                            </div>
+                            <Input
+                                v-model="source.url"
+                                type="url"
+                                placeholder="https://"
+                                class="h-10"
+                            />
+                        </div>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            :disabled="
+                                (slides[active].sources?.length ?? 0) >= 12
+                            "
+                            @click="addSource(slides[active])"
+                        >
+                            <Plus class="size-4" />
+                            Источник
+                        </Button>
                     </div>
 
                     <!-- Речь докладчика собирается из этого поля, поэтому

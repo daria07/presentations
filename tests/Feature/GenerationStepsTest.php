@@ -108,3 +108,15 @@ test('убранная в редакторе картинка удаляется
 
     Queue::assertPushed(RenderPresentation::class);
 });
+
+test('с поиском первый шаг — «Ищем источники»', function () {
+    config(['services.yandex_search' => ['key' => 'ya', 'folder' => 'b1g']]);
+
+    expect(stepStates(generating()))->toBe([
+        'Ищем источники' => 'current',
+        'Продумываем содержание' => 'todo',
+        'Собираем слайды' => 'todo',
+        'Рисуем иллюстрации' => 'todo',
+        'Печатаем файл' => 'todo',
+    ]);
+});

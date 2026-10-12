@@ -6,6 +6,8 @@ use App\Models\Presentation;
 use App\Models\User;
 use App\Services\Claude\ClaudeException;
 use App\Services\Claude\PresentationPlanner;
+use App\Services\Search\SourceCollector;
+use App\Services\Search\YandexSearch;
 use Illuminate\Console\Command;
 
 use function Laravel\Prompts\select;
@@ -64,6 +66,19 @@ class TestClaude extends Command
 
             $planner = PresentationPlanner::make();
 
+            if (YandexSearch::enabled()) {
+                $this->components->task('Ищем источники', function () use ($presentation) {
+                    $presentation->update(['sources' => app(SourceCollector::class)->collect($presentation)]);
+                    $presentation->refresh();
+
+                    return true;
+                });
+
+                foreach ($presentation->sources ?? [] as $source) {
+                    $this->line(sprintf('  <fg=green>[%d]</> %s <fg=gray>%s · %d знаков</>', $source['id'], $source['title'], $source['url'], mb_strlen($source['text'])));
+                }
+            }
+
             $this->components->task('Продумываем содержание', function () use ($planner, $presentation) {
                 $presentation->update(['brief' => $planner->buildBrief($presentation)]);
                 $presentation->refresh();
@@ -116,6 +131,10 @@ class TestClaude extends Command
                 $this->line("       · <options=bold>{$b['title']}</> — {$b['text']}");
             }
 
+            foreach ($slide['sources'] ?? [] as $s) {
+                $this->line("       · {$s['title']} <fg=gray>{$s['url']}</>");
+            }
+
             foreach ($slide['stats'] ?? [] as $s) {
                 $this->line("       · <fg=cyan>{$s['value']}</> {$s['label']}");
             }
@@ -131,6 +150,8 @@ class TestClaude extends Command
         $this->newLine();
         $this->components->twoColumnDetail('Слайдов', (string) count($outline['slides']));
         $this->components->twoColumnDetail('Токенов на вход', number_format($calls->sum('input_tokens'), 0, '', ' '));
+        // Шлюз может отдать часть входа из кэша — она считается отдельно
+        $this->components->twoColumnDetail('Ещё из кэша', number_format($calls->sum('cached_tokens'), 0, '', ' '));
         $this->components->twoColumnDetail('Токенов на выход', number_format($calls->sum('output_tokens'), 0, '', ' '));
         $this->components->twoColumnDetail('Стоимость', '$'.number_format($cost / 10000, 4));
 

@@ -50,6 +50,16 @@ return [
         'price_output' => env('IMAGE_PRICE_OUTPUT', 90000),
     ],
 
+    /*
+     * Яндекс Search API — поиск источников для презентации по теме.
+     * Без ключа или каталога поиск выключен, и генерация идёт как
+     * раньше: по знаниям модели, без слайда с источниками.
+     */
+    'yandex_search' => [
+        'key' => env('YANDEX_SEARCH_API_KEY'),
+        'folder' => env('YANDEX_FOLDER_ID'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

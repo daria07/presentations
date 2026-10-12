@@ -266,6 +266,9 @@ function buildThumbs() {
 
         const clone = slide.cloneNode(true) as HTMLElement;
         clone.classList.remove('is-active');
+        // Миниатюра — кнопка выбора слайда. Ссылки из слайда
+        // источников внутри неё уводили бы со страницы
+        clone.querySelectorAll('a').forEach((a) => a.removeAttribute('href'));
         clone.style.transform = `scale(${scale})`;
         box.appendChild(clone);
 

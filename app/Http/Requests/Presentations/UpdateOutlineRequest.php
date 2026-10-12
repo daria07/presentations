@@ -14,7 +14,7 @@ class UpdateOutlineRequest extends FormRequest
 {
     private const LAYOUTS = [
         'title', 'bullets', 'stats', 'timeline', 'quote',
-        'comparison', 'process', 'matrix', 'bignumber', 'closing',
+        'comparison', 'process', 'matrix', 'bignumber', 'closing', 'sources',
     ];
 
     public function rules(): array
@@ -66,6 +66,13 @@ class UpdateOutlineRequest extends FormRequest
             'slides.*.quote.text' => ['nullable', 'string', 'max:400'],
             'slides.*.quote.author' => ['nullable', 'string', 'max:120'],
 
+            // Список источников. Только http(s): ссылка станет кликабельной
+            // в PDF и в просмотре, и javascript: туда попасть не должен
+            'slides.*.sources' => ['nullable', 'array', 'max:12'],
+            'slides.*.sources.*' => ['array'],
+            'slides.*.sources.*.title' => ['nullable', 'string', 'max:200'],
+            'slides.*.sources.*.url' => ['nullable', 'string', 'max:500', 'url:http,https'],
+
             // Картинка слайда. Из редактора она возвращается как была;
             // путь к файлу DeckRenderer ещё раз сверяет с папкой этой
             // презентации, здесь только ограничиваем форму и размер
@@ -86,6 +93,7 @@ class UpdateOutlineRequest extends FormRequest
             'slides.max' => 'Больше тридцати слайдов не поместится.',
             'slides.*.heading.required' => 'У каждого слайда должен быть заголовок.',
             'slides.*.heading.max' => 'Заголовок длиннее 120 знаков не поместится на слайд.',
+            'slides.*.sources.*.url.url' => 'Ссылка на источник должна начинаться с http:// или https://.',
         ];
     }
 }

@@ -32,5 +32,7 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Поиск источников в тестах включают явно, через config() -->
+        <env name="YANDEX_SEARCH_API_KEY" value=""/>
     </php>
 </phpunit>

@@ -28,6 +28,7 @@ use Illuminate\Support\Str;
  * @property string|null $theme
  * @property string $share_token
  * @property string|null $error_message
+ * @property list<array{id: int, url: string, title: string, domain: string, text: string}>|null $sources
  * @property int|null $rating
  * @property string|null $review
  * @property Carbon|null $reviewed_at
@@ -35,7 +36,7 @@ use Illuminate\Support\Str;
  */
 #[Fillable([
     'user_id', 'title', 'topic', 'source_text', 'slide_count',
-    'clarifications', 'brief', 'outline', 'status',
+    'clarifications', 'brief', 'sources', 'outline', 'status',
     'file_path', 'file_format', 'theme', 'palette', 'generated_at', 'error_message',
     'rating', 'review', 'reviewed_at',
 ])]
@@ -46,6 +47,7 @@ class Presentation extends Model
         return [
             'clarifications' => 'array',
             'brief' => 'array',
+            'sources' => 'array',
             'outline' => 'array',
             'status' => PresentationStatus::class,
             'generated_at' => 'datetime',

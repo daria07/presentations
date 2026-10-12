@@ -94,6 +94,12 @@ class Schemas
                                 'items' => ['type' => 'string'],
                                 'description' => 'Конкретика: числа, даты, имена, названия, примеры. Только то, в чём уверен. Пустой массив, если уверенного нет.',
                             ],
+                            'sources' => [
+                                'type' => 'array',
+                                'maxItems' => 5,
+                                'items' => ['type' => 'integer'],
+                                'description' => 'Номера источников, на которые опирается блок. Пустой массив, если источников не прислали.',
+                            ],
                         ],
                         'required' => ['title', 'substance'],
                     ],
@@ -112,6 +118,28 @@ class Schemas
                 ],
             ],
             'required' => ['thesis', 'arc', 'points'],
+        ];
+    }
+
+    /**
+     * Поисковые запросы для Яндекса по теме презентации.
+     *
+     * @return array<string, mixed>
+     */
+    public static function searchQueries(): array
+    {
+        return [
+            'type' => 'object',
+            'properties' => [
+                'queries' => [
+                    'type' => 'array',
+                    'minItems' => 1,
+                    'maxItems' => 3,
+                    'items' => ['type' => 'string'],
+                    'description' => 'Три поисковых запроса на русском, по 3–8 слов: обзор всей темы и две разные, не пересекающиеся её части.',
+                ],
+            ],
+            'required' => ['queries'],
         ];
     }
 
