@@ -40,7 +40,11 @@ const props = defineProps<{
     reviews: {
         average: number | null;
         total: number;
-        latest: {
+        currentPage: number;
+        lastPage: number;
+        prevUrl: string | null;
+        nextUrl: string | null;
+        items: {
             id: number;
             title: string;
             rating: number;
@@ -428,8 +432,11 @@ function when(iso: string | null): string {
             </p>
         </div>
 
-        <!-- Отзывы: средняя за всё время и последние оценки с текстом -->
-        <div class="border-border bg-card min-w-0 rounded-xl border p-4 sm:p-5">
+        <!-- Отзывы: средняя за всё время и все оценки, постранично -->
+        <div
+            id="reviews"
+            class="border-border bg-card min-w-0 scroll-mt-4 rounded-xl border p-4 sm:p-5"
+        >
             <div
                 class="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
             >
@@ -444,9 +451,9 @@ function when(iso: string | null): string {
                 </p>
             </div>
 
-            <div v-if="reviews.latest.length" class="divide-border divide-y">
+            <div v-if="reviews.items.length" class="divide-border divide-y">
                 <div
-                    v-for="r in reviews.latest"
+                    v-for="r in reviews.items"
                     :key="r.id"
                     class="flex items-baseline justify-between gap-4 py-2 text-sm"
                 >
@@ -487,6 +494,41 @@ function when(iso: string | null): string {
             <p v-else class="text-muted-foreground py-4 text-sm">
                 Оценок пока нет
             </p>
+
+            <!-- Листаем только отзывы: остальная сводка не пересчитывается
+                 и страница не прыгает наверх -->
+            <div
+                v-if="reviews.lastPage > 1"
+                class="border-border mt-3 flex items-center justify-between border-t pt-3 text-sm"
+            >
+                <Link
+                    v-if="reviews.prevUrl"
+                    :href="reviews.prevUrl"
+                    :only="['reviews']"
+                    preserve-scroll
+                    preserve-state
+                    class="border-border hover:bg-secondary cursor-pointer rounded-lg border px-3 py-1.5 transition-colors"
+                >
+                    Назад
+                </Link>
+                <span v-else />
+
+                <span class="text-muted-foreground tabular-nums">
+                    {{ reviews.currentPage }} из {{ reviews.lastPage }}
+                </span>
+
+                <Link
+                    v-if="reviews.nextUrl"
+                    :href="reviews.nextUrl"
+                    :only="['reviews']"
+                    preserve-scroll
+                    preserve-state
+                    class="border-border hover:bg-secondary cursor-pointer rounded-lg border px-3 py-1.5 transition-colors"
+                >
+                    Вперёд
+                </Link>
+                <span v-else />
+            </div>
         </div>
 
         <p class="text-muted-foreground text-xs">

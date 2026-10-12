@@ -28,6 +28,9 @@ class AdminController extends Controller
     /** Сколько дней показываем на графике */
     private const WINDOW = 30;
 
+    /** Сколько отзывов на одной странице сводки */
+    private const REVIEWS_PER_PAGE = 10;
+
     /**
      * Периоды для цифр сводки. Первый — по умолчанию: так страница
      * открывается такой же, какой была до появления переключателя.
@@ -44,19 +47,21 @@ class AdminController extends Controller
 
         [$from, $to] = $this->range($period);
 
+        // Свойства — замыкания: при листании отзывов фронт просит
+        // только их, и остальная сводка не пересчитывается зря
         return Inertia::render('admin/Overview', [
             'period' => $period,
-            'cards' => $this->totals($from, $to),
+            'cards' => fn () => $this->totals($from, $to),
             // С чем сравнивать: сегодня — со вчера, вчера — с позавчера,
             // неделю — с предыдущей неделей. У «всего времени» пары нет.
-            'previous' => $period === 'all'
+            'previous' => fn () => $period === 'all'
                 ? null
                 : $this->totals(...$this->range($period, previous: true)),
-            'statuses' => $this->statuses($from, $to),
-            'days' => $this->daily($since),
-            'reviews' => $this->reviews(),
-            'promo' => $this->promo(),
-            'recent' => Presentation::with('user:id,name,email')
+            'statuses' => fn () => $this->statuses($from, $to),
+            'days' => fn () => $this->daily($since),
+            'reviews' => fn () => $this->reviews(),
+            'promo' => fn () => $this->promo(),
+            'recent' => fn () => Presentation::with('user:id,name,email')
                 ->latest('id')
                 ->limit(12)
                 ->get()
@@ -122,33 +127,42 @@ class AdminController extends Controller
     }
 
     /**
-     * Оценки презентаций: средняя за всё время и последние отзывы.
+     * Оценки презентаций: средняя за всё время и все отзывы, свежие
+     * сверху, постранично.
      *
-     * @return array{average: float|null, total: int, latest: array<int, array<string, mixed>>}
+     * Своя страница в адресе (reviews_page), чтобы листание отзывов
+     * не сбрасывало период сводки и не путалось с другими списками.
+     *
+     * @return array{average: float|null, total: int, items: array<int, array<string, mixed>>, currentPage: int, lastPage: int, prevUrl: string|null, nextUrl: string|null}
      */
     private function reviews(): array
     {
         $rated = Presentation::query()->whereNotNull('rating');
+        $total = (clone $rated)->count();
+
+        $page = (clone $rated)
+            ->with('user:id,name,email')
+            ->latest('reviewed_at')
+            ->latest('id')
+            ->paginate(self::REVIEWS_PER_PAGE, pageName: 'reviews_page')
+            ->withQueryString()
+            ->through(fn (Presentation $p) => [
+                'id' => $p->id,
+                'title' => $p->title ?: $p->topic,
+                'rating' => $p->rating,
+                'review' => $p->review,
+                'reviewedAt' => $p->reviewed_at?->toIso8601String(),
+                'user' => $p->user?->only(['id', 'name', 'email']),
+            ]);
 
         return [
-            'average' => (clone $rated)->count()
-                ? round((float) (clone $rated)->avg('rating'), 1)
-                : null,
-            'total' => (clone $rated)->count(),
-            'latest' => (clone $rated)
-                ->with('user:id,name,email')
-                ->latest('reviewed_at')
-                ->limit(8)
-                ->get()
-                ->map(fn (Presentation $p) => [
-                    'id' => $p->id,
-                    'title' => $p->title ?: $p->topic,
-                    'rating' => $p->rating,
-                    'review' => $p->review,
-                    'reviewedAt' => $p->reviewed_at?->toIso8601String(),
-                    'user' => $p->user?->only(['id', 'name', 'email']),
-                ])
-                ->all(),
+            'average' => $total ? round((float) (clone $rated)->avg('rating'), 1) : null,
+            'total' => $total,
+            'items' => $page->items(),
+            'currentPage' => $page->currentPage(),
+            'lastPage' => $page->lastPage(),
+            'prevUrl' => $page->previousPageUrl(),
+            'nextUrl' => $page->nextPageUrl(),
         ];
     }
 
