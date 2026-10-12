@@ -71,8 +71,7 @@ const canSubmit = computed(() =>
             <p
                 class="text-muted-foreground mt-1.5 max-w-[48ch] leading-relaxed"
             >
-                Опишите тему одной строкой — или вставьте готовый текст, и мы
-                разложим его по слайдам.
+                Достаточно одной строки, чтобы создать презентацию. А если есть особые пожелания — расскажите подробнее, и мы учтём их при создании.
             </p>
         </div>
 
@@ -112,17 +111,26 @@ const canSubmit = computed(() =>
         >
             <!-- Сценарий «по теме» -->
             <div v-if="mode === 'topic'" class="space-y-2">
-                <Label for="topic" class="sr-only">Тема</Label>
-                <Textarea
-                    id="topic"
-                    name="topic"
-                    v-model="topic"
-                    rows="3"
-                    autofocus
-                    placeholder="Например: Пётр I и его реформы государственного управления"
-                    class="resize-none"
-                />
-                <InputError :message="errors.topic" />
+                <!-- Поле подсказывает, что писать можно много: короткая
+                     тема тоже сработает, но пожелания модель угадать
+                     не может — их стоит назвать -->
+                <Field
+                    for="topic"
+                    label="О чём презентация"
+                    :counter="`${topic.length} из 1000`"
+                    :error="errors.topic"
+                    hint="Для конкретики добавьте: для кого выступление, сколько минут, что обязательно показать, какие факты или цифры не забыть, чего не нужно."
+                >
+                    <Textarea
+                        id="topic"
+                        name="topic"
+                        v-model="topic"
+                        rows="5"
+                        autofocus
+                        maxlength="1000"
+                        placeholder="Можно коротко: «Пётр I и его реформы».&#10;&#10;А можно подробно: «Пётр I и его реформы. Доклад для 9 класса на 7 минут. Главное — флот, Петербург и табель о рангах, в конце — что изменилось для простых людей»."
+                    />
+                </Field>
 
                 <div class="flex flex-wrap gap-2 pt-1">
                     <button

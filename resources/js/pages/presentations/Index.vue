@@ -379,8 +379,8 @@ function destroy() {
             <p
                 class="text-muted-foreground mx-auto max-w-[38ch] leading-relaxed"
             >
-                Пока пусто. Опишите тему одной строкой — структуру, факты и
-                вёрстку возьмём на себя.
+                Пока пусто. Расскажите, о чём презентация, — коротко или
+                подробно, — а структуру, факты и вёрстку возьмём на себя.
             </p>
             <Button as-child variant="outline" class="mt-6">
                 <Link href="/presentations/new">Создать первую</Link>
