@@ -107,6 +107,11 @@ class TestClaude extends Command
             $n = str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT);
             $this->line("  <fg=yellow>{$n}</>  <options=bold>{$slide['heading']}</>  <fg=gray>[{$slide['layout']}]</>");
 
+            // Картинка: где стоит и что на ней будет нарисовано
+            if (isset($slide['image']['scene'])) {
+                $this->line("       <fg=magenta>🖼 {$slide['image']['side']}: {$slide['image']['scene']}</>");
+            }
+
             foreach ($slide['bullets'] ?? [] as $b) {
                 $this->line("       · <options=bold>{$b['title']}</> — {$b['text']}");
             }

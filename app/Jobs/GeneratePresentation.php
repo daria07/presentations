@@ -3,14 +3,14 @@
 namespace App\Jobs;
 
 use App\Enums\PresentationStatus;
+use App\Jobs\Concerns\FinishesGeneration;
 use App\Models\Presentation;
-use App\Notifications\PresentationReady;
 use App\Services\Claude\ClaudeException;
 use App\Services\Claude\PresentationPlanner;
 use App\Services\Deck\DeckRenderer;
+use App\Services\Images\Illustrator;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -22,7 +22,7 @@ use Throwable;
  */
 class GeneratePresentation implements ShouldQueue
 {
-    use Queueable;
+    use FinishesGeneration, Queueable;
 
     public int $tries = 2;
 
@@ -86,19 +86,15 @@ class GeneratePresentation implements ShouldQueue
             $presentation->refresh();
         }
 
-        $path = $renderer->pdf($presentation, $presentation->theme, $presentation->palette);
+        // Картинки рисует отдельная задача — она же и допечатает PDF.
+        // Здесь на них уже не хватило бы времени воркера.
+        if (Illustrator::enabled() && Illustrator::pending($presentation->outline)) {
+            IllustratePresentation::dispatch($presentation, $this->spent);
 
-        $presentation->update([
-            'file_path' => $path,
-            'file_format' => 'pdf',
-            'status' => PresentationStatus::Ready,
-            'generated_at' => now(),
-            'error_message' => null,
-        ]);
+            return;
+        }
 
-        // Письмо уходит отдельной задачей: сбой почты не должен
-        // отменять успешную генерацию.
-        $presentation->user->notify(new PresentationReady($presentation->refresh()));
+        $this->finish($presentation, $renderer);
     }
 
     /** Есть ли в структуре хотя бы один пригодный слайд */
@@ -124,25 +120,6 @@ class GeneratePresentation implements ShouldQueue
 
     public function failed(Throwable $e): void
     {
-        Log::error('Генерация упала', [
-            'presentation' => $this->presentation->id,
-            'error' => $e->getMessage(),
-        ]);
-
-        // Человек не виноват, что у нас не получилось — возвращаем
-        // ровно то, что списали
-        $this->presentation->user->refundCredit($this->spent);
-
-        $returned = $this->spent === null
-            ? ''
-            : ' '.($this->spent === 'trial'
-                ? 'Пробную генерацию вернули.'
-                : 'Кредит вернули на счёт.');
-
-        $this->presentation->markFailed(match (true) {
-            $e instanceof ClaudeException => $e->forUser(),
-            config('app.debug') => class_basename($e).': '.$e->getMessage(),
-            default => 'Не получилось собрать презентацию.'.$returned,
-        });
+        $this->failGeneration($this->presentation, $this->spent, $e);
     }
 }

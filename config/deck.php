@@ -187,6 +187,9 @@ return [
             'style' => 'precise',
             'font_display' => 'IBM Plex Sans',
             'font_body' => 'IBM Plex Sans',
+            // Стиль картинок к теме: все картинки презентации в одном ключе
+            'image_style' => 'Realistic editorial photograph, natural light, '
+                .'restrained muted colors, calm documentary feel.',
         ],
 
         'bold' => [
@@ -195,6 +198,8 @@ return [
             'style' => 'bold',
             'font_display' => 'Unbounded',
             'font_body' => 'Manrope',
+            'image_style' => 'Bold contemporary digital illustration, vivid saturated colors, '
+                .'clean confident shapes, subtle grain.',
         ],
 
         'soft' => [
@@ -203,6 +208,8 @@ return [
             'style' => 'soft',
             'font_display' => 'Nunito',
             'font_body' => 'Onest',
+            'image_style' => 'Soft watercolor illustration, gentle pastel palette, '
+                .'light paper texture, airy and calm.',
         ],
 
     ],

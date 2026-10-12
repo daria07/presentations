@@ -5,6 +5,7 @@ namespace App\Services\Claude;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -33,7 +34,7 @@ class ClaudeClient
         $config = config('services.anthropic');
 
         if (blank($config['key'])) {
-            throw new ClaudeException('В .env не задан ANTHROPIC_API_KEY.');
+            throw new ClaudeException('В .env не задан LLM_API_KEY.');
         }
 
         return new self(
@@ -118,6 +119,9 @@ class ClaudeClient
             // stop_reason рядом: при нашем tool_choice он обязан быть
             // tool_use, и end_turn выдаёт переводную прослойку
             'ответила' => $body['model'] ?? null,
+            // Куда ушёл запрос: по этой строке видно, если процесс взял
+            // адрес шлюза не из .env, а из своего окружения
+            'шлюз' => parse_url($this->baseUrl, PHP_URL_HOST),
             'stop_reason' => $body['stop_reason'] ?? null,
             'seconds' => $seconds,
             'input' => $inputTokens,
@@ -170,6 +174,9 @@ class ClaudeClient
             'tool_choice' => $forceTool
                 ? ['type' => 'tool', 'name' => $toolName]
                 : ['type' => 'auto'],
+            // Поток: иначе шлюз рвёт соединение через минуту тишины,
+            // а структура пишется две-три (подробности — StreamReader)
+            'stream' => true,
         ];
 
         try {
@@ -203,7 +210,7 @@ class ClaudeClient
             );
         }
 
-        $body = $response->json();
+        $body = $this->readBody($response);
 
         // Если модель упёрлась в лимит, JSON инструмента приходит
         // оборванным на середине — молча пропускать это нельзя.
@@ -225,6 +232,32 @@ class ClaudeClient
         }
 
         return $body;
+    }
+
+    /**
+     * Тело ответа: собираем поток или, если шлюз поток не поддержал
+     * и ответил обычным JSON, берём JSON как есть.
+     *
+     * @return array<string, mixed>
+     */
+    private function readBody(Response $response): array
+    {
+        $type = (string) $response->header('Content-Type');
+
+        if (! str_contains($type, 'text/event-stream')) {
+            return (array) $response->json();
+        }
+
+        try {
+            return StreamReader::read($response->toPsrResponse()->getBody());
+        } catch (ClaudeException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            // Поток оборвался посреди ответа — это тот же обрыв связи
+            Log::error('Claude: поток оборвался', ['error' => $e->getMessage()]);
+
+            throw new ClaudeException('Сеть недоступна: '.$e->getMessage(), code: 503, previous: $e);
+        }
     }
 
     /**
@@ -294,7 +327,9 @@ class ClaudeClient
             'anthropic-version' => self::VERSION,
             'content-type' => 'application/json',
         ])
-            ->timeout(240)
+            // Поток читаем по мере прихода, а не ждём ответ целиком
+            ->withOptions(['stream' => true])
+            ->timeout(280)
             ->connectTimeout(20)
             // Шлюз регулярно рвёт соединение на середине. Обрыв — вещь
             // случайная, поэтому попыток три и пауза растёт: 1с, 3с.

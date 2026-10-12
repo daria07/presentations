@@ -62,3 +62,7 @@
 
     .bignum-value { font-size: 120pt; font-weight: 800; letter-spacing: -0.03em; }
     .quote-text { font-size: 22pt; font-weight: 600; line-height: 1.4; }
+
+    /* Картинка на половину слайда: скругление в характере темы */
+    .slide.slide--image-right .slide-image,
+    .slide.slide--image-left .slide-image { border-radius: 6mm; }

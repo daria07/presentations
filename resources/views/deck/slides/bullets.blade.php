@@ -1,6 +1,12 @@
 @use(App\Services\Deck\Icons)
 
-<div class="slide">
+@php($image = filled($slide['image']['src'] ?? null) ? $slide['image'] : null)
+@php($side = ($slide['image']['side'] ?? 'right') === 'left' ? 'left' : 'right')
+
+<div @class(['slide', "slide--image-{$side}" => $image])>
+    @if ($image)
+        @include('deck.partials.image', ['image' => $image])
+    @endif
     <div class="head">
         <h2>{{ $slide['heading'] }}</h2>
         @if (filled($slide['subheading'] ?? null))

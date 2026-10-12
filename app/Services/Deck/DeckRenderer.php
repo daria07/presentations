@@ -36,7 +36,7 @@ class DeckRenderer
 
         return View::make('deck.deck', [
             'title' => $outline['title'] ?? $presentation->topic,
-            'slides' => $outline['slides'],
+            'slides' => $this->images($presentation, $outline['slides']),
             'theme' => $theme,
             'themeKey' => $themeKey,
             'paletteKey' => $paletteKey,
@@ -129,6 +129,100 @@ class DeckRenderer
         }
 
         return implode("\n", $blocks);
+    }
+
+    /**
+     * Где лежат иллюстрации презентации на диске deck.disk.
+     */
+    public static function imageDir(Presentation $presentation): string
+    {
+        return config('deck.path')."/{$presentation->id}/images";
+    }
+
+    /**
+     * Подставляет в слайды картинки как data URI.
+     *
+     * В структуре у слайда лежит только путь к файлу. Структура
+     * приходит и из редактора, то есть от пользователя, поэтому путь
+     * принимаем, только если он ведёт в папку картинок этой самой
+     * презентации — иначе через него можно было бы вытащить в HTML
+     * любой файл с диска. Нет файла или чужой путь — слайд просто
+     * рисуется без картинки.
+     *
+     * @param  array<int, mixed>  $slides
+     * @return array<int, mixed>
+     */
+    private function images(Presentation $presentation, array $slides): array
+    {
+        $disk = Storage::disk(config('deck.disk'));
+        $dir = self::imageDir($presentation).'/';
+
+        return array_map(function ($slide) use ($disk, $dir) {
+            if (! is_array($slide) || ! is_array($slide['image'] ?? null)) {
+                return $slide;
+            }
+
+            $path = (string) ($slide['image']['path'] ?? '');
+            $file = substr($path, strlen($dir));
+
+            $valid = str_starts_with($path, $dir)
+                && preg_match('/^[a-z0-9-]+\.jpg$/', $file) === 1;
+
+            if (! $valid || ! $disk->exists($path)) {
+                unset($slide['image']);
+
+                return $slide;
+            }
+
+            $bytes = (string) $disk->get($path);
+            $slide['image']['src'] = 'data:image/jpeg;base64,'.base64_encode($bytes);
+            $slide['image']['box'] = self::imageBox($bytes, ($slide['image']['side'] ?? 'right') === 'left');
+
+            return $slide;
+        }, $slides);
+    }
+
+    /** Поля вокруг картинки на половине слайда, мм */
+    private const IMAGE_MARGIN = 12;
+
+    /**
+     * Рамка картинки на половине слайда — по пропорциям самой картинки.
+     *
+     * Картинка не обрезается: рамка повторяет её форму и вписывается
+     * в отведённую половину (минус поля). Квадратная займёт половину
+     * почти целиком, вытянутая — станет уже или ниже, по центру своей
+     * половины. Иначе object-fit: cover срезал бы верх и низ, и у
+     * растения пропадала крона, а у человека — голова.
+     *
+     * @return array{width: float, height: float, top: float, left: float}
+     */
+    private static function imageBox(string $bytes, bool $left): array
+    {
+        $slideW = (float) config('deck.width');
+        $slideH = (float) config('deck.height');
+        $m = self::IMAGE_MARGIN;
+
+        $maxW = $slideW / 2 - $m;
+        $maxH = $slideH - 2 * $m;
+
+        $size = @getimagesizefromstring($bytes);
+        $ratio = $size !== false && $size[1] > 0 ? $size[0] / $size[1] : 1.0;
+
+        if ($ratio >= $maxW / $maxH) {
+            [$w, $h] = [$maxW, $maxW / $ratio];
+        } else {
+            [$w, $h] = [$maxH * $ratio, $maxH];
+        }
+
+        // По центру своей половины: от середины слайда до внешнего поля
+        $areaLeft = $left ? $m : $slideW / 2;
+
+        return [
+            'width' => round($w, 2),
+            'height' => round($h, 2),
+            'top' => round(($slideH - $h) / 2, 2),
+            'left' => round($areaLeft + ($maxW - $w) / 2, 2),
+        ];
     }
 
     /**

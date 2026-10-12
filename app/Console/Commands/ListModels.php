@@ -21,7 +21,7 @@ class ListModels extends Command
         $config = config('services.anthropic');
 
         if (blank($config['key'])) {
-            $this->error('В .env не задан ANTHROPIC_API_KEY.');
+            $this->error('В .env не задан LLM_API_KEY.');
 
             return self::FAILURE;
         }

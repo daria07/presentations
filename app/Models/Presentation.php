@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\PresentationStatus;
+use App\Services\Deck\DeckRenderer;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -80,13 +81,19 @@ class Presentation extends Model
     /** Убирает готовый PDF с диска, если он там есть */
     public function deleteFile(): void
     {
+        $disk = Storage::disk(config('deck.disk'));
+
+        // Картинки слайдов лежат отдельной папкой — уходят вместе с файлом
+        $disk->deleteDirectory(DeckRenderer::imageDir($this));
+
         if (blank($this->file_path)) {
             return;
         }
 
-        Storage::disk(config('deck.disk'))->delete($this->file_path);
+        $disk->delete($this->file_path);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

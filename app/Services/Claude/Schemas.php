@@ -128,6 +128,12 @@ class Schemas
                     'type' => 'string',
                     'description' => 'Подзаголовок для титульного слайда.',
                 ],
+                'cover_scene' => [
+                    'type' => 'string',
+                    'description' => 'Фон обложки: сцена для фотографии на английском, '
+                        .'до 300 знаков. Широкий план, без людей крупным планом, '
+                        .'без текста и надписей.',
+                ],
                 'slides' => [
                     'type' => 'array',
                     'items' => [
@@ -211,12 +217,32 @@ class Schemas
                                 'type' => 'string',
                                 'description' => 'Заметки докладчика, два-три предложения.',
                             ],
+                            'illustrate' => [
+                                'type' => 'boolean',
+                                'description' => 'true — этому слайду больше всего пойдёт картинка. '
+                                    .'Только bullets (до трёх пунктов), quote, bignumber.',
+                            ],
+                            'scene' => [
+                                'type' => 'string',
+                                'description' => 'Сцена для картинки на английском, до 300 знаков, '
+                                    .'для слайдов bullets, quote и bignumber; для остальных — пустая строка. '
+                                    .'Конкретный предмет, место или действие, а не абстракция. '
+                                    .'Без текста, надписей и логотипов.',
+                            ],
+                            'image_format' => [
+                                'type' => 'string',
+                                'enum' => ['square', 'portrait'],
+                                'description' => 'Формат картинки: portrait — только если главный объект '
+                                    .'явно высокий (дерево, человек в полный рост, башня); иначе square.',
+                            ],
                         ],
-                        'required' => ['layout', 'heading', 'notes'],
+                        // illustrate, scene и image_format обязательны:
+                        // необязательные поля модель систематически пропускает
+                        'required' => ['layout', 'heading', 'notes', 'illustrate', 'scene', 'image_format'],
                     ],
                 ],
             ],
-            'required' => ['title', 'slides'],
+            'required' => ['title', 'cover_scene', 'slides'],
         ];
     }
 }

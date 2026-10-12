@@ -119,8 +119,8 @@ QUEUE_CONNECTION=database
 SESSION_DRIVER=database
 SESSION_SECURE_COOKIE=true
 
-ANTHROPIC_API_KEY=<ключ>
-ANTHROPIC_BASE_URL=https://cheapai.io
+LLM_API_KEY=<ключ>
+LLM_BASE_URL=https://cheapai.io
 
 BILLING_PROVIDER=fake     # пока ЮKassa не подключена
 ```

@@ -5,6 +5,7 @@ namespace App\Services\Claude;
 use App\Models\ApiCall;
 use App\Models\Presentation;
 use App\Services\Deck\Icons;
+use App\Services\Deck\Illustrations;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -172,8 +173,12 @@ class PresentationPlanner
         return [
             'title' => $title,
             'subtitle' => $subtitle,
-            'slides' => $this->thinIcons(
-                $this->ensureTitleSlide($slides, $title, $subtitle)
+            // Сколько картинок и где — решаем сами, модель только
+            // подсказывает (Illustrations::plan)
+            'slides' => Illustrations::plan(
+                $this->thinIcons($this->ensureTitleSlide($slides, $title, $subtitle)),
+                $presentation->slide_count,
+                is_string($data['cover_scene'] ?? null) ? $data['cover_scene'] : null,
             ),
         ];
     }
@@ -335,6 +340,11 @@ class PresentationPlanner
                 'author' => (string) ($quote['author'] ?? ''),
             ] : null,
             'notes' => $slide['notes'] ?? null,
+            // Подсказки для картинок; Illustrations::plan превратит их
+            // в поле image и уберёт
+            'illustrate' => filter_var($slide['illustrate'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            'scene' => is_string($slide['scene'] ?? null) ? $slide['scene'] : '',
+            'image_format' => ($slide['image_format'] ?? null) === 'portrait' ? 'portrait' : 'square',
         ];
     }
 
@@ -457,6 +467,8 @@ class PresentationPlanner
 
     private function outlineSystemPrompt(int $slideCount, bool $fromText): string
     {
+        $illustrations = Illustrations::target($slideCount);
+
         $source = $fromText
             ? <<<'TXT'
 
@@ -507,7 +519,8 @@ class PresentationPlanner
         В презентации из восьми и более слайдов должно встретиться
         минимум четыре разных типа вёрстки.
 
-        - bullets — перечисление равноправных пунктов, от трёх до четырёх.
+        - bullets — перечисление равноправных пунктов, от трёх до четырёх
+          (на слайде с картинкой — не больше трёх).
         - stats — от двух до четырёх чисел, которые стоит поставить рядом.
         - bignumber — одно число, ради которого существует весь слайд.
           Ровно один элемент в stats, в subheading — что оно означает.
@@ -557,7 +570,28 @@ class PresentationPlanner
           search. Если в слайде хотя бы один пункт остался без точного
           значка — ставь none у всех пунктов этого слайда.
 
-        Отвечай на русском языке.
+        Иллюстрации. У презентации будут картинки: фон обложки и ещё
+        {$illustrations} в теле. Картинка займёт половину слайда, поэтому
+        годится только для bullets (не больше трёх пунктов), quote и
+        bignumber.
+        - cover_scene — фон обложки по теме всей презентации: широкий
+          план места, предмета или среды. Слева на него ляжет название,
+          поэтому главное в кадре — справа.
+        - illustrate: true — на {$illustrations} слайдах, которым картинка
+          добавит больше всего: где есть конкретное место, предмет,
+          событие, человек или эпоха. Не ставь на соседние слайды.
+        - scene — для каждого слайда bullets, quote и bignumber, даже без
+          illustrate: короткое описание сцены на английском. Конкретика,
+          а не метафора: «18th-century shipyard on a river bank, wooden
+          sailing ship on the slipway, carpenters at work», а не «growth
+          and progress». Для реальных мест и людей описывай их узнаваемые
+          черты. Никакого текста, надписей, цифр и логотипов на картинке.
+          Для остальных вёрсток scene — пустая строка.
+        - image_format — portrait, только если главный объект сцены явно
+          высокий и в квадрат не поместится целиком: дерево, человек
+          в полный рост, башня, колонна. Во всех остальных случаях square.
+
+        Отвечай на русском языке (кроме cover_scene и scene).
         TXT;
     }
 

@@ -65,6 +65,15 @@ class UpdateOutlineRequest extends FormRequest
             'slides.*.quote' => ['nullable', 'array'],
             'slides.*.quote.text' => ['nullable', 'string', 'max:400'],
             'slides.*.quote.author' => ['nullable', 'string', 'max:120'],
+
+            // Картинка слайда. Из редактора она возвращается как была;
+            // путь к файлу DeckRenderer ещё раз сверяет с папкой этой
+            // презентации, здесь только ограничиваем форму и размер
+            'slides.*.image' => ['nullable', 'array'],
+            'slides.*.image.path' => ['nullable', 'string', 'max:200'],
+            'slides.*.image.side' => ['nullable', 'string', 'in:left,right,cover'],
+            'slides.*.image.scene' => ['nullable', 'string', 'max:600'],
+            'slides.*.image.format' => ['nullable', 'string', 'in:square,portrait'],
         ];
     }
 

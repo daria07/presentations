@@ -457,6 +457,99 @@
 
     /* ---------- фоновый мотив ---------- */
 
+    /* ---------- иллюстрации ---------- */
+
+    /* Селекторы с .slide.slide--…: темы задают .slide свои поля, и при
+       равной специфичности они, подключённые позже, перебивали бы
+       отступ под картинку.
+
+       Все размеры здесь — в миллиметрах от ширины слайда, а не в
+       процентах: процент у padding считается от ширины родителя, а
+       на сайте родитель слайда — окно просмотра или крошечная
+       миниатюра. Из-за этого текст на экране заезжал под картинку,
+       а миниатюра выглядела не так, как слайд. */
+
+    /*
+       Картинка на половину слайда, но не в край: с полями сверху,
+       снизу и снаружи, со скруглением — как фотография, положенная
+       на слайд. Текст на другой половине, с просветом до картинки.
+    */
+    .slide-image {
+        position: absolute;
+        margin: 0;
+        overflow: hidden;
+    }
+    .slide-image img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .slide-image-note {
+        position: absolute;
+        right: 3mm;
+        bottom: 3mm;
+        padding: 0.8mm 2.2mm;
+        border-radius: 1mm;
+        background: rgba(0, 0, 0, .45);
+        color: rgba(255, 255, 255, .85);
+        font-size: 6.5pt;
+        letter-spacing: .02em;
+    }
+
+    /* Положение и размер рамки задаются на самой картинке — по её
+       пропорциям, чтобы ничего не обрезать (DeckRenderer::imageBox).
+       Здесь — запасной вариант, если пропорции неизвестны */
+    .slide.slide--image-right .slide-image,
+    .slide.slide--image-left .slide-image {
+        top: 12mm;
+        bottom: 12mm;
+        width: {{ $width / 2 - 12 }}mm;
+        border-radius: 4mm;
+    }
+    .slide.slide--image-right .slide-image { left: {{ $width / 2 }}mm; }
+    .slide.slide--image-left .slide-image { left: 12mm; }
+
+    /* Текстовая колонка: от края слайда до картинки с просветом 14 мм */
+    .slide.slide--image-right { padding-right: {{ $width / 2 + 14 }}mm; }
+    .slide.slide--image-left { padding-left: {{ $width / 2 + 14 }}mm; }
+
+    /* В половине слайда заголовку и подзаголовку нужна вся ширина колонки */
+    .slide.slide--image-right h2, .slide.slide--image-left h2,
+    .slide.slide--image-right .subheading, .slide.slide--image-left .subheading { max-width: 100%; }
+    .slide.slide--image-right h2, .slide.slide--image-left h2 { font-size: 22pt; overflow-wrap: break-word; }
+
+    /* Номер страницы — в текстовой колонке, а не поверх картинки */
+    .slide.slide--image-right .pageno { right: {{ $width / 2 + 14 }}mm; }
+
+    /* Фоновый мотив и украшения не спорят с картинкой */
+    .slide.slide--image-right::before, .slide.slide--image-right::after,
+    .slide.slide--image-left::before, .slide.slide--image-left::after { display: none; }
+
+    /* Пункты в узкой колонке: плотнее и мельче */
+    .slide.slide--image-right .bullets, .slide.slide--image-left .bullets { gap: 5mm; }
+    .slide.slide--image-right .bullet, .slide.slide--image-left .bullet { min-width: 0; }
+    .slide.slide--image-right .bignum-value, .slide.slide--image-left .bignum-value { font-size: 64pt; }
+    .slide.slide--image-right .quote-text, .slide.slide--image-left .quote-text { font-size: 17pt; max-width: 100%; }
+
+    /*
+       Обложка с фото: картинка во весь слайд, затемнение слева, где
+       название. Белый текст поверх тёмного градиента читается при любой
+       картинке и любой гамме.
+    */
+    .slide.slide--cover-photo { color: #fff; }
+    .slide.slide--cover-photo .slide-image { inset: 0; width: 100%; border-radius: 0; }
+    .slide.slide--cover-photo .slide-image::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, rgba(10, 12, 16, .82) 0%, rgba(10, 12, 16, .62) 40%, rgba(10, 12, 16, .08) 78%);
+    }
+    .slide.slide--cover-photo .slide-image-note { z-index: 1; }
+    .slide.slide--cover-photo > :not(.slide-image) { position: relative; z-index: 1; }
+    .slide.slide--cover-photo h1 { max-width: 62%; color: #fff; }
+    .slide.slide--cover-photo .subheading { max-width: 55%; color: rgba(255, 255, 255, .82); }
+
     /* ---------- декоративная геометрия обложки ---------- */
 
     /* Дуга в углу: намёк на объём, который не спорит с текстом */

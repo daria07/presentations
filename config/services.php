@@ -14,16 +14,40 @@ return [
     |
     */
 
+    /*
+     * Языковая модель. Переменные называются LLM_*, а не ANTHROPIC_*:
+     * ANTHROPIC_BASE_URL, ANTHROPIC_MODEL и ANTHROPIC_API_KEY читает
+     * Claude Code и передаёт всем процессам, которые из него запущены.
+     * Запущенный оттуда воркер очереди брал адрес и модель из окружения
+     * Claude Code, а не из .env, — и генерация уходила в чужой шлюз.
+     * Старые имена читаем как запасные, чтобы сервер не сломался до
+     * того, как в его .env переименуют строки.
+     */
     'anthropic' => [
-        'key' => env('ANTHROPIC_API_KEY'),
+        'key' => env('LLM_API_KEY', env('ANTHROPIC_API_KEY')),
         // Базовый URL. Прямо в Anthropic — https://api.anthropic.com,
         // через посредника — адрес шлюза. Путь /v1/messages добавляется сам.
-        'base_url' => rtrim(env('ANTHROPIC_BASE_URL', 'https://api.anthropic.com'), '/'),
-        'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-5-5'),
+        'base_url' => rtrim((string) env('LLM_BASE_URL', env('ANTHROPIC_BASE_URL', 'https://api.anthropic.com')), '/'),
+        'model' => env('LLM_MODEL', env('ANTHROPIC_MODEL', 'claude-sonnet-5-5')),
         // Цены за миллион токенов, в сотых доли цента: 10000 = $1.
         // Задаются по тарифу шлюза, а не по прайсу Anthropic.
-        'price_input' => env('ANTHROPIC_PRICE_INPUT', 2700),
-        'price_output' => env('ANTHROPIC_PRICE_OUTPUT', 13300),
+        'price_input' => env('LLM_PRICE_INPUT', env('ANTHROPIC_PRICE_INPUT', 2700)),
+        'price_output' => env('LLM_PRICE_OUTPUT', env('ANTHROPIC_PRICE_OUTPUT', 13300)),
+    ],
+
+    /*
+     * Картинки для слайдов (App\Services\Images). Пустая IMAGE_MODEL —
+     * картинок нет вовсе: так их можно выключить одной строкой, если
+     * шлюз начнёт сбоить. Адрес и ключ по умолчанию те же, что у текста.
+     * Цены — в тех же единицах: сотые доли цента за 1M токенов.
+     */
+    'images' => [
+        'model' => env('IMAGE_MODEL'),
+        'base_url' => rtrim((string) env('IMAGE_BASE_URL', env('LLM_BASE_URL', env('ANTHROPIC_BASE_URL', ''))), '/'),
+        'key' => env('IMAGE_API_KEY', env('LLM_API_KEY', env('ANTHROPIC_API_KEY'))),
+        'quality' => env('IMAGE_QUALITY', 'medium'),
+        'price_input' => env('IMAGE_PRICE_INPUT', 15000),
+        'price_output' => env('IMAGE_PRICE_OUTPUT', 90000),
     ],
 
     'postmark' => [
