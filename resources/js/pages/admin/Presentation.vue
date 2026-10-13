@@ -64,7 +64,9 @@ function when(iso: string | null): string {
             </template>
         </PageHeader>
 
-        <div class="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <div
+            class="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+        >
             <AccessBadge :access="presentation.access" />
             <span>{{ presentation.statusLabel }}</span>
             <span>· {{ slides(presentation.slides) }}</span>

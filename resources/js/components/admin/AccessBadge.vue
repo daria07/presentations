@@ -12,18 +12,18 @@ const props = defineProps<{
 }>();
 
 const BADGES: Record<Access, { label: string; class: string }> = {
-            trial: {
-                label: 'пробная',
-                class: 'bg-muted text-muted-foreground',
-            },
-            unlocked: {
-                label: 'пробная → оплачена',
-                class: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
-            },
-            paid: {
-                label: 'оплаченная',
-                class: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-            },
+    trial: {
+        label: 'пробная',
+        class: 'bg-muted text-muted-foreground',
+    },
+    unlocked: {
+        label: 'пробная → оплачена',
+        class: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
+    },
+    paid: {
+        label: 'оплаченная',
+        class: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+    },
 };
 
 const badge = computed(() => (props.access ? BADGES[props.access] : null));
