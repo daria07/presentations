@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { ChevronLeft } from '@lucide/vue';
+import { ChevronLeft, Lock } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import Field from '@/components/Field.vue';
 import InputError from '@/components/InputError.vue';
@@ -8,6 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const props = defineProps<{
     credits: number;
@@ -34,6 +40,14 @@ const focus = ref('');
 
 const slideCount = ref(8);
 const counts = [6, 8, 10, 12, 15];
+
+/* Пробная версия — до 8 слайдов (как FREE_MAX_SLIDES на сервере).
+   Большие варианты видны, но закрыты замком, пока нет купленных генераций */
+const FREE_MAX_SLIDES = 8;
+const isClosed = (n: number) => props.credits < 1 && n > FREE_MAX_SLIDES;
+
+/* Блок с примерами тем под полем. Выключен, пока не решили, как его подать */
+const SHOW_EXAMPLES = false;
 
 const examples = [
     'Пётр I и его реформы государственного управления',
@@ -132,7 +146,9 @@ const canSubmit = computed(() =>
                     />
                 </Field>
 
-                <div class="flex flex-wrap gap-2 pt-1">
+                <!-- Примеры тем пока скрыты: придумаем, как их подать.
+                     Включить — SHOW_EXAMPLES = true -->
+                <div v-if="SHOW_EXAMPLES" class="flex flex-wrap gap-2 pt-1">
                     <button
                         v-for="example in examples"
                         :key="example"
@@ -200,29 +216,55 @@ const canSubmit = computed(() =>
             <div class="space-y-3">
                 <Label>Сколько слайдов</Label>
                 <input type="hidden" name="slide_count" :value="slideCount" />
-                <div class="flex gap-2">
-                    <button
-                        v-for="n in counts"
-                        :key="n"
-                        type="button"
-                        class="border-border h-11 flex-1 cursor-pointer rounded-lg border text-sm font-medium transition-colors"
-                        :class="
-                            slideCount === n
-                                ? 'border-action bg-action text-white'
-                                : 'hover:border-foreground/40'
-                        "
-                        @click="slideCount = n"
-                    >
-                        {{ n }}
-                    </button>
-                </div>
+                <!-- Закрытые варианты видны, но выбрать их нельзя:
+                     вместо выбора — подсказка и переход к тарифам -->
+                <TooltipProvider :delay-duration="150">
+                    <div class="flex gap-2">
+                        <template v-for="n in counts" :key="n">
+                            <Tooltip v-if="isClosed(n)">
+                                <TooltipTrigger as-child>
+                                    <!-- Закрытый вариант ведёт к тарифам -->
+                                    <Link
+                                        href="/billing"
+                                        class="border-border text-muted-foreground/60 hover:border-foreground/40 relative flex h-11 flex-1 items-center justify-center rounded-lg border text-sm font-medium transition-colors"
+                                        :aria-label="`${n} слайдов — доступно в платной версии, перейти к тарифам`"
+                                    >
+                                        {{ n }}
+                                        <span
+                                            class="bg-foreground text-background pointer-events-none absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full"
+                                        >
+                                            <Lock class="size-2.5" />
+                                        </span>
+                                    </Link>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    Доступно в платной версии
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <button
+                                v-else
+                                type="button"
+                                class="border-border h-11 flex-1 cursor-pointer rounded-lg border text-sm font-medium transition-colors"
+                                :class="
+                                    slideCount === n
+                                        ? 'border-action bg-action text-white'
+                                        : 'hover:border-foreground/40'
+                                "
+                                @click="slideCount = n"
+                            >
+                                {{ n }}
+                            </button>
+                        </template>
+                    </div>
+                </TooltipProvider>
                 <InputError :message="errors.slide_count" />
             </div>
 
             <div class="flex items-center justify-between gap-4 border-t pt-6">
                 <p class="text-muted-foreground text-sm">
-                    <template v-if="trialAvailable">
-                        Первая презентация — бесплатно.
+                    <template v-if="trialAvailable && credits < 1">
+                        Пробную презентацию соберём бесплатно — до 8 слайдов, с водяным знаком.
                     </template>
                     <template v-else-if="credits > 0">
                         Осталось генераций:

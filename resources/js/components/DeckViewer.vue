@@ -26,11 +26,19 @@ const props = withDefaults(
         active?: number;
         /** Разрешать перестроение под узкий экран */
         feed?: boolean;
+        /** Пробная версия: текст нельзя скопировать */
+        locked?: boolean;
     }>(),
-    { rail: true, controls: true, framed: true, feed: true },
+    { rail: true, controls: true, framed: true, feed: true, locked: false },
 );
 
 const emit = defineEmits<{ 'update:active': [number] }>();
+
+/* Выделение гасит CSS в самой вёрстке; здесь закрываем остальные
+   пути: копирование, контекстное меню и перетаскивание картинок */
+function guard(event: Event): void {
+    if (props.locked) event.preventDefault();
+}
 
 /*
    На узком экране деление «лента миниатюр слева + сцена» не работает:
@@ -398,7 +406,15 @@ onBeforeUnmount(() => {
 <template>
     <div
         class="bg-muted/40 flex overflow-hidden"
-        :class="framed && 'border-border rounded-xl border'"
+        :class="[
+            framed && 'border-border rounded-xl border',
+            locked && 'select-none',
+        ]"
+        @copy="guard"
+        @cut="guard"
+        @contextmenu="guard"
+        @dragstart="guard"
+        @selectstart="guard"
     >
         <!--
             Лента миниатюр: свой изолированный корень со стилями слайдов.

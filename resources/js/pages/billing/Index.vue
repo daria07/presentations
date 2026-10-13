@@ -12,6 +12,11 @@ import {
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { goal } from '@/lib/metrika';
+import { plural } from '@/lib/plural';
+
+/* «1 генерация», «3 генерации», «10 генераций» */
+const generationsWord = (n: number) =>
+    plural(n, ['генерация', 'генерации', 'генераций']);
 
 type Package = {
     key: string;
@@ -42,6 +47,13 @@ const props = defineProps<{
     credits: number;
     trialAvailable: boolean;
     history: Payment[];
+    /** Пробная презентация, ради которой пришли: откроется после оплаты */
+    unlockFor: {
+        id: number;
+        title: string;
+        url: string;
+        unlocked: boolean;
+    } | null;
 }>();
 
 defineOptions({
@@ -90,7 +102,11 @@ function checkPayment() {
         const key = `ym-goal-payment-${last.id}`;
 
         try {
-            if (localStorage.getItem(key)) return;
+            if (localStorage.getItem(key)) {
+                backToPresentation();
+
+                return;
+            }
             localStorage.setItem(key, '1');
         } catch {
             // Приватный режим — цель засчитаем, защиты от повтора не будет
@@ -102,6 +118,8 @@ function checkPayment() {
             credits: last.credits,
         });
 
+        backToPresentation();
+
         return;
     }
 
@@ -112,7 +130,18 @@ function checkPayment() {
     }
 
     paidTries += 1;
-    router.reload({ only: ['history', 'credits'] });
+    router.reload({ only: ['history', 'credits', 'unlockFor'] });
+}
+
+/*
+   Оплатили, чтобы открыть пробную презентацию: сервер открыл её сам
+   вместе с зачислением генераций, осталось вернуть человека к ней.
+   Цель Метрики к этому моменту уже засчитана.
+*/
+function backToPresentation() {
+    if (props.unlockFor?.unlocked) {
+        router.visit(props.unlockFor.url);
+    }
 }
 
 onMounted(() => {
@@ -129,7 +158,7 @@ function buy(key: string) {
     sending.value = key;
     router.post(
         '/billing/checkout',
-        { package: key },
+        { package: key, presentation: props.unlockFor?.id ?? null },
         {
             onFinish: () => (sending.value = null),
         },
@@ -164,8 +193,8 @@ function formatDate(iso: string | null): string {
     <div class="w-full px-6 py-9 lg:px-14">
         <PageHeader title="Тарифы" dot>
             <template #meta>
-                <template v-if="trialAvailable">
-                    У вас есть бесплатная пробная генерация.
+                <template v-if="trialAvailable && credits < 1">
+                    У вас есть пробная презентация: до 8 слайдов, с водяным знаком. В тарифах — полная версия с PDF и ссылкой.
                 </template>
                 <template v-else>
                     Осталось генераций:
@@ -185,6 +214,14 @@ function formatDate(iso: string | null): string {
                 </a>
             </template>
         </PageHeader>
+
+        <div
+            v-if="unlockFor && !unlockFor.unlocked"
+            class="border-rule bg-panel mb-5 rounded-[13px] border px-[18px] py-3.5 text-[15px]"
+        >
+            После оплаты полная версия «{{ unlockFor.title }}» откроется сама —
+            без водяного знака, с PDF и ссылкой. На это уйдёт одна генерация.
+        </div>
 
         <div
             v-if="discount"
@@ -248,7 +285,7 @@ function formatDate(iso: string | null): string {
                             <strong class="font-semibold">{{
                                 pack.credits
                             }}</strong>
-                            генераций
+                            {{ generationsWord(pack.credits) }}
                         </span>
                     </li>
                     <li class="flex items-center gap-[9px]">
@@ -333,7 +370,7 @@ function formatDate(iso: string | null): string {
                     class="flex items-baseline gap-4 py-4 text-sm"
                 >
                     <span class="flex-1">
-                        {{ item.credits }} генераций
+                        {{ item.credits }} {{ generationsWord(item.credits) }}
                         <span class="text-muted-foreground">
                             · {{ formatDate(item.date) }}
                         </span>

@@ -63,6 +63,8 @@ const props = defineProps<{
         slides: Slide[];
         previewUrl: string;
         showUrl: string;
+        /** Пробная версия: водяной знак и запрет копирования */
+        locked: boolean;
     };
     layouts: { key: string; name: string }[];
 }>();
@@ -872,6 +874,7 @@ onBeforeUnmount(() => media?.removeEventListener('change', onNarrowChange));
                     :html="previewHtml"
                     :rail="narrow"
                     :framed="false"
+                    :locked="presentation.locked"
                     class="min-h-0 w-full flex-1"
                 />
             </aside>

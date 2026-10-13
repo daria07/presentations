@@ -145,8 +145,8 @@ function destroy() {
     <div class="w-full px-4 py-6 sm:px-6 sm:py-9 lg:px-14">
         <PageHeader title="Презентации" dot>
             <template #meta>
-                <template v-if="trialAvailable">
-                    Первая — бесплатно, карта не нужна.
+                <template v-if="trialAvailable && credits < 1">
+                    Пробная презентация — бесплатно: до 8 слайдов, с водяным знаком.
                 </template>
                 <template v-else>
                     Осталось генераций:

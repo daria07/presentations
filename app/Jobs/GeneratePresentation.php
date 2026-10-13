@@ -92,6 +92,16 @@ class GeneratePresentation implements ShouldQueue
                        Новая задача начинает отсчёт заново, а конспект уже
                        в базе: повторно за него не платим.
                     */
+                    // Обложку рисуем сразу, параллельно со структурой: ей
+                    // хватает темы из конспекта. Ставим первой — если воркер
+                    // один, она хотя бы не будет ждать конца структуры
+                    $presentation->refresh();
+
+                    if (Illustrator::enabled() && filled($presentation->brief['cover_scene'] ?? null)) {
+                        $presentation->update(['cover_image' => ['pending' => true]]);
+                        IllustrateCover::dispatch($presentation);
+                    }
+
                     self::dispatch($presentation, $this->theme, $this->palette, $this->spent);
 
                     return;

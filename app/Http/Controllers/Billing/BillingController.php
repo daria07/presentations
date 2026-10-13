@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Billing;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\Presentation;
 use App\Services\Billing\Billing;
 use App\Services\Billing\Discount;
 use App\Services\Billing\Package;
@@ -27,6 +28,10 @@ class BillingController extends Controller
         // заново (Billing::start) — витрина только обещает ту же цену
         $discount = Discount::active($user);
         $rubles = fn (int $kopecks) => number_format($kopecks / 100, 0, ',', ' ');
+
+        // Пришли с закрытой пробной презентации: после оплаты откроем её
+        // сами и вернём человека к ней
+        $for = $this->presentationFor($request, $request->integer('for'));
 
         return Inertia::render('billing/Index', [
             'packages' => collect(Package::all($user->email))->map(function (Package $p) use ($discount, $rubles) {
@@ -51,6 +56,14 @@ class BillingController extends Controller
                 : null,
             'credits' => $user->credits,
             'trialAvailable' => ! $user->trial_used,
+            'unlockFor' => $for
+                ? [
+                    'id' => $for->id,
+                    'title' => $for->outline['title'] ?? $for->topic,
+                    'url' => route('presentations.show', $for),
+                    'unlocked' => ! $for->isLocked(),
+                ]
+                : null,
             'history' => $user->payments()
                 ->latest()
                 ->limit(10)
@@ -103,13 +116,17 @@ class BillingController extends Controller
 
         $request->validate([
             'package' => ['required', 'string', 'in:'.implode(',', $available)],
+            'presentation' => ['nullable', 'integer'],
         ]);
+
+        $for = $this->presentationFor($request, $request->integer('presentation'));
 
         try {
             $url = Billing::make()->start(
                 $request->user(),
                 Package::find($request->string('package')),
-                route('billing.index'),
+                route('billing.index', $for ? ['for' => $for->id] : []),
+                $for,
             );
         } catch (Throwable $e) {
             report($e);
@@ -190,12 +207,27 @@ class BillingController extends Controller
 
         Billing::make()->settle($payment->provider_payment_id, $paid);
 
-        return to_route('billing.index')->with('toast', [
+        $unlock = $payment->payload['unlock'] ?? null;
+
+        return to_route('billing.index', is_int($unlock) ? ['for' => $unlock] : [])->with('toast', [
             'type' => $paid ? 'success' : 'info',
             'message' => $paid
                 ? "Начислено генераций: {$payment->credits_granted}"
                 : 'Оплата отменена.',
         ]);
+    }
+
+    /**
+     * Своя презентация, ради которой человек пришёл к тарифам.
+     * Чужую или несуществующую молча не замечаем.
+     */
+    private function presentationFor(Request $request, int $id): ?Presentation
+    {
+        if ($id < 1) {
+            return null;
+        }
+
+        return $request->user()->presentations()->find($id);
     }
 
     private function authorizeOwnership(Payment $payment): void

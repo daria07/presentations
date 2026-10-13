@@ -107,6 +107,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('throttle:20,1')
             ->name('theme');
 
+        // Открыть полную версию бесплатной презентации
+        Route::post('{presentation}/unlock', [PresentationController::class, 'unlock'])
+            ->middleware('throttle:10,1')
+            ->name('unlock');
+
         // Скрыть или вернуть слайд с источниками — тоже перепечатка
         Route::post('{presentation}/sources', [PresentationController::class, 'sources'])
             ->middleware('throttle:20,1')

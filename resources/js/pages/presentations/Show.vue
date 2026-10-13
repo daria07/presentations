@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import DeckViewer from '@/components/DeckViewer.vue';
 import PresentationReview from '@/components/PresentationReview.vue';
 import {
@@ -10,6 +10,7 @@ import {
     Download,
     ExternalLink,
     Link2,
+    Lock,
     Mic,
     Pencil,
     RotateCcw,
@@ -36,6 +37,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { slides } from '@/lib/plural';
 
 type Question = {
@@ -89,6 +96,8 @@ type Presentation = {
     review: string | null;
     theme: string;
     palette: string;
+    /** Пробная версия: водяной знак, действия закрыты до оплаты */
+    locked: boolean;
 };
 
 const props = defineProps<{
@@ -428,6 +437,36 @@ function toggleSources(visible: boolean) {
         .catch(() => router.reload());
 }
 
+/* ---------- Пробная версия ---------- */
+
+/*
+   В пробной версии действия видны там же, где обычно, но закрыты
+   замком: человек должен видеть, что именно он получит после оплаты.
+   Порядок и подписи — как в открытом ряду.
+*/
+const lockedActions = [
+    { label: 'Ссылка', icon: Link2, primary: false },
+    { label: 'Открыть', icon: ExternalLink, primary: false },
+    { label: 'Речь докладчика', icon: Mic, primary: false },
+    { label: 'Скачать PDF', icon: Download, primary: true },
+];
+
+const unlocking = ref(false);
+
+/* Купленные генерации есть — закрытые действия открывают полную
+   версию сразу, а не отправляют к тарифам */
+const page = usePage();
+const hasCredits = computed(() => Number(page.props.auth?.credits ?? 0) > 0);
+
+function unlock() {
+    unlocking.value = true;
+    router.post(
+        `/presentations/${current.value.id}/unlock`,
+        {},
+        { onFinish: () => (unlocking.value = false) },
+    );
+}
+
 /* ---------- Удаление ---------- */
 
 const deleting = ref(false);
@@ -747,7 +786,96 @@ async function copyShare() {
                  («Скачать PDF» → «Обновляем файл…»), и в одной строке
                  с заголовком они отбирали бы у него ширину -->
             <div class="space-y-3">
-                <div class="hidden flex-wrap justify-end gap-2 sm:flex">
+                <div
+                    v-if="current.locked"
+                    class="hidden flex-wrap justify-end gap-2 sm:flex"
+                >
+                    <Button
+                        v-if="current.editUrl"
+                        variant="outline"
+                        size="sm"
+                        as-child
+                    >
+                        <Link :href="current.editUrl">
+                            <Pencil class="size-4" />
+                            Редактировать
+                        </Link>
+                    </Button>
+
+                    <!-- Закрытые действия: видны, но ведут к тарифам -->
+                    <TooltipProvider :delay-duration="150">
+                        <Tooltip
+                            v-for="action in lockedActions"
+                            :key="action.label"
+                        >
+                            <TooltipTrigger as-child>
+                                <!-- Есть купленные генерации — открываем
+                                     полную версию сразу, без тарифов -->
+                                <Button
+                                    v-if="hasCredits"
+                                    :variant="
+                                        action.primary ? 'default' : 'outline'
+                                    "
+                                    size="sm"
+                                    class="relative opacity-50 transition-opacity hover:opacity-80"
+                                    :disabled="unlocking"
+                                    @click="unlock"
+                                >
+                                    <component
+                                        :is="action.icon"
+                                        class="size-4"
+                                    />
+                                    {{ action.label }}
+                                    <span
+                                        class="bg-foreground text-background pointer-events-none absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full"
+                                    >
+                                        <Lock class="size-2.5" />
+                                    </span>
+                                </Button>
+                                <Button
+                                    v-else
+                                    :variant="
+                                        action.primary ? 'default' : 'outline'
+                                    "
+                                    size="sm"
+                                    class="relative opacity-50 transition-opacity hover:opacity-80"
+                                    as-child
+                                >
+                                    <Link :href="`/billing?for=${current.id}`">
+                                        <component
+                                            :is="action.icon"
+                                            class="size-4"
+                                        />
+                                        {{ action.label }}
+                                        <span
+                                            class="bg-foreground text-background pointer-events-none absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full"
+                                        >
+                                            <Lock class="size-2.5" />
+                                        </span>
+                                    </Link>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {{
+                                    hasCredits
+                                        ? 'Открыть полную версию за 1 генерацию'
+                                        : 'Доступно в платной версии'
+                                }}
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Удалить презентацию"
+                        @click="removing = true"
+                    >
+                        <Trash2 class="size-4" />
+                    </Button>
+                </div>
+
+                <div v-else class="hidden flex-wrap justify-end gap-2 sm:flex">
                     <Button
                         v-if="current.editUrl"
                         variant="outline"
@@ -848,53 +976,102 @@ async function copyShare() {
                         align="end"
                         class="w-[calc(100vw-2rem)] max-w-xs sm:hidden"
                     >
-                        <DropdownMenuItem v-if="current.editUrl" as-child>
-                            <Link :href="current.editUrl">
-                                <Pencil class="size-4" />
-                                Редактировать
-                            </Link>
-                        </DropdownMenuItem>
+                        <template v-if="current.locked">
+                            <DropdownMenuItem v-if="current.editUrl" as-child>
+                                <Link :href="current.editUrl">
+                                    <Pencil class="size-4" />
+                                    Редактировать
+                                </Link>
+                            </DropdownMenuItem>
 
-                        <DropdownMenuItem
-                            :disabled="reprinting"
-                            @select="copyShare"
-                        >
-                            <Link2 class="size-4" />
-                            {{ copied ? 'Скопировано' : 'Скопировать ссылку' }}
-                        </DropdownMenuItem>
+                            <template v-if="hasCredits">
+                                <DropdownMenuItem
+                                    v-for="action in lockedActions"
+                                    :key="action.label"
+                                    class="text-muted-foreground"
+                                    :disabled="unlocking"
+                                    @select="unlock"
+                                >
+                                    <component
+                                        :is="action.icon"
+                                        class="size-4"
+                                    />
+                                    {{ action.label }}
+                                    <Lock class="ml-auto size-3.5" />
+                                </DropdownMenuItem>
+                            </template>
+                            <template v-else>
+                                <DropdownMenuItem
+                                    v-for="action in lockedActions"
+                                    :key="action.label"
+                                    class="text-muted-foreground"
+                                    as-child
+                                >
+                                    <Link :href="`/billing?for=${current.id}`">
+                                        <component
+                                            :is="action.icon"
+                                            class="size-4"
+                                        />
+                                        {{ action.label }}
+                                        <Lock class="ml-auto size-3.5" />
+                                    </Link>
+                                </DropdownMenuItem>
+                            </template>
+                        </template>
 
-                        <DropdownMenuItem :disabled="reprinting" as-child>
-                            <a
-                                :href="current.shareUrl!"
-                                target="_blank"
-                                rel="noopener"
+                        <template v-else>
+                            <DropdownMenuItem v-if="current.editUrl" as-child>
+                                <Link :href="current.editUrl">
+                                    <Pencil class="size-4" />
+                                    Редактировать
+                                </Link>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                                :disabled="reprinting"
+                                @select="copyShare"
                             >
-                                <ExternalLink class="size-4" />
-                                Открыть
-                            </a>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem v-if="current.speechUrl" as-child>
-                            <a
-                                :href="current.speechUrl"
-                                target="_blank"
-                                rel="noopener"
-                            >
-                                <Mic class="size-4" />
-                                Речь докладчика
-                            </a>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem :disabled="reprinting" as-child>
-                            <a :href="current.downloadUrl!">
-                                <Download class="size-4" />
+                                <Link2 class="size-4" />
                                 {{
-                                    reprinting
-                                        ? 'Обновляем файл…'
-                                        : 'Скачать PDF'
+                                    copied
+                                        ? 'Скопировано'
+                                        : 'Скопировать ссылку'
                                 }}
-                            </a>
-                        </DropdownMenuItem>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem :disabled="reprinting" as-child>
+                                <a
+                                    :href="current.shareUrl!"
+                                    target="_blank"
+                                    rel="noopener"
+                                >
+                                    <ExternalLink class="size-4" />
+                                    Открыть
+                                </a>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem v-if="current.speechUrl" as-child>
+                                <a
+                                    :href="current.speechUrl"
+                                    target="_blank"
+                                    rel="noopener"
+                                >
+                                    <Mic class="size-4" />
+                                    Речь докладчика
+                                </a>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem :disabled="reprinting" as-child>
+                                <a :href="current.downloadUrl!">
+                                    <Download class="size-4" />
+                                    {{
+                                        reprinting
+                                            ? 'Обновляем файл…'
+                                            : 'Скачать PDF'
+                                    }}
+                                </a>
+                            </DropdownMenuItem>
+                        </template>
 
                         <DropdownMenuSeparator />
 
@@ -950,6 +1127,29 @@ async function copyShare() {
                 </div>
             </div>
 
+            <!-- Пробная версия: что закрыто и как открыть -->
+            <div
+                v-if="current.locked"
+                class="border-rule bg-secondary flex flex-col gap-3 rounded-lg border px-4 py-3 sm:flex-row sm:items-center"
+            >
+                <Lock
+                    class="text-muted-foreground hidden size-4 flex-none sm:block"
+                />
+                <p class="text-muted-foreground flex-1 text-sm leading-relaxed">
+                    Это пробная версия: слайды с водяным знаком, а скачивание,
+                    ссылка и речь докладчика закрыты. Полная версия
+                    стоит одну генерацию.
+                </p>
+                <Button
+                    size="sm"
+                    class="flex-none"
+                    :disabled="unlocking"
+                    @click="unlock"
+                >
+                    Открыть полную версию
+                </Button>
+            </div>
+
             <div
                 v-if="copyFailed"
                 class="border-rule bg-secondary flex items-center gap-3 rounded-lg border px-4 py-3"
@@ -971,6 +1171,7 @@ async function copyShare() {
                     :theme="current.theme"
                     :palette="current.palette"
                     :deck-style="styleOf(current.theme)"
+                    :locked="current.locked"
                     class="h-[300px] w-full min-w-0 sm:h-[440px] lg:h-[560px] lg:flex-1"
                 />
 

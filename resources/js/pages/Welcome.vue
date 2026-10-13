@@ -211,7 +211,7 @@ const audiences = [
                 </div>
 
                 <p class="text-muted-foreground mt-3 text-sm">
-                    Первая презентация — бесплатно, карта не нужна.
+                    Попробуйте бесплатно: пробная версия — до 8 слайдов, с водяным знаком.
                 </p>
             </div>
         </section>
@@ -538,13 +538,13 @@ const audiences = [
                 <h2
                     class="mx-auto max-w-[18ch] text-3xl font-extrabold md:text-5xl"
                 >
-                    Первая презентация — бесплатно
+                    Попробуйте на своей теме
                 </h2>
                 <p
                     class="text-muted-foreground mx-auto mt-5 max-w-[46ch] text-lg"
                 >
-                    Проверьте на своей теме. Если результат не понравится — вы
-                    ничего не потеряли.
+                    Пробная версия бесплатна: до 8 слайдов, с водяным знаком.
+                    Понравится — откроете полную за одну генерацию.
                 </p>
                 <Link
                     :href="register()"

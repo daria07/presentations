@@ -68,17 +68,24 @@ class Illustrator
         return false;
     }
 
-    public function illustrate(Presentation $presentation): void
+    /**
+     * @param  bool  $skipCover  обложку рисует отдельная задача
+     *                           (IllustrateCover), второй раз не платим
+     */
+    public function illustrate(Presentation $presentation, bool $skipCover = false): void
     {
         $outline = $presentation->outline ?? [];
-        $style = config('deck.themes.'.$presentation->theme.'.image_style')
-            ?? config('deck.themes.'.config('deck.default_theme').'.image_style', '');
+        $style = $this->style($presentation);
 
         $subject = trim((string) ($outline['image_subject'] ?? ''));
         $requests = [];
 
         foreach ($outline['slides'] ?? [] as $index => $slide) {
             if (! self::needsDrawing($slide)) {
+                continue;
+            }
+
+            if ($skipCover && ($slide['image']['side'] ?? null) === 'cover') {
                 continue;
             }
 
@@ -134,9 +141,6 @@ class Illustrator
                 $results[$key] = $result;
             }
         }
-        $disk = Storage::disk(config('deck.disk'));
-        $dir = DeckRenderer::imageDir($presentation);
-
         foreach ($results as $index => $result) {
             if ($result === null) {
                 // Второй раз за эту картинку не возьмёмся: повтор задачи
@@ -146,12 +150,7 @@ class Illustrator
                 continue;
             }
 
-            $path = $dir.'/'.$index.'-'.Str::lower(Str::random(8)).'.jpg';
-            $disk->put($path, Jpeg::compress($result['bytes']));
-
-            $outline['slides'][$index]['image']['path'] = $path;
-
-            $this->record($presentation, $result['input'], $result['output']);
+            $outline['slides'][$index]['image']['path'] = $this->store($presentation, (int) $index, $result);
         }
 
         $presentation->update(['outline' => $outline]);
@@ -162,6 +161,69 @@ class Illustrator
             'получили' => count(array_filter($results)),
             'seconds' => round(microtime(true) - $started, 1),
         ]);
+    }
+
+    /**
+     * Обложка по конспекту, до того как готовы слайды.
+     *
+     * Обложке нужна только тема: сцена и герой лежат в конспекте.
+     * Поэтому её рисуют параллельно со сборкой структуры, и к моменту
+     * картинок для слайдов она обычно уже готова — а это самая долгая
+     * картинка из всех.
+     *
+     * @return string|null путь к файлу или null, если не вышло
+     */
+    public function drawCover(Presentation $presentation): ?string
+    {
+        $brief = $presentation->brief ?? [];
+        $scene = trim((string) ($brief['cover_scene'] ?? ''));
+
+        if ($scene === '') {
+            return null;
+        }
+
+        $style = $this->style($presentation);
+        $subject = trim((string) ($brief['image_subject'] ?? ''));
+
+        // Ключ строкой, а не «0»: PHP превратил бы «0» в число
+        $results = $this->client->generateMany([
+            'cover' => ['prompt' => $this->prompt($scene, $style, 'cover', $subject), 'size' => self::SIZE_COVER],
+        ]);
+
+        // Ложный отказ по контент-политике — пробуем по теме, без деталей
+        if (($results['cover'] ?? null) === null && $this->client->refused !== []) {
+            $results = $this->client->generateMany([
+                'cover' => ['prompt' => $this->prompt($presentation->topic, $style, 'cover', $subject), 'size' => self::SIZE_COVER],
+            ]);
+        }
+
+        $result = $results['cover'] ?? null;
+
+        return $result === null ? null : $this->store($presentation, 0, $result);
+    }
+
+    /** Стиль картинок по теме оформления */
+    private function style(Presentation $presentation): string
+    {
+        return (string) (config('deck.themes.'.$presentation->theme.'.image_style')
+            ?? config('deck.themes.'.config('deck.default_theme').'.image_style', ''));
+    }
+
+    /**
+     * Пережимает картинку в JPEG, кладёт в папку презентации и
+     * записывает расход.
+     *
+     * @param  array{bytes: string, input: int, output: int}  $result
+     */
+    private function store(Presentation $presentation, int $index, array $result): string
+    {
+        $path = DeckRenderer::imageDir($presentation).'/'.$index.'-'.Str::lower(Str::random(8)).'.jpg';
+
+        Storage::disk(config('deck.disk'))->put($path, Jpeg::compress($result['bytes']));
+
+        $this->record($presentation, $result['input'], $result['output']);
+
+        return $path;
     }
 
     /**

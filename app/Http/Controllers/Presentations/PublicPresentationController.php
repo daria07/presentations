@@ -17,7 +17,8 @@ class PublicPresentationController extends Controller
     {
         $presentation = Presentation::where('share_token', $token)->firstOrFail();
 
-        abort_unless($presentation->isReady(), 404);
+        // Публичной ссылки у бесплатной версии нет
+        abort_unless($presentation->isReady() && ! $presentation->isLocked(), 404);
 
         $disk = Storage::disk(config('deck.disk'));
         $name = ($presentation->title ?: 'presentation').'.pdf';

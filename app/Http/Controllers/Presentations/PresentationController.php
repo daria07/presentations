@@ -12,6 +12,7 @@ use App\Jobs\PrepareQuestions;
 use App\Jobs\RenderPresentation;
 use App\Models\Presentation;
 use App\Services\Billing\Discount;
+use App\Services\Billing\UnlockPresentation;
 use App\Services\Deck\DeckRenderer;
 use App\Services\Deck\Icons;
 use App\Services\Deck\Looks;
@@ -31,6 +32,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PresentationController extends Controller
 {
+    /** Сколько слайдов можно в бесплатной версии */
+    public const FREE_MAX_SLIDES = 8;
+
     /** Список презентаций в кабинете */
     public function index(Request $request): Response
     {
@@ -81,6 +85,13 @@ class PresentationController extends Controller
                 'type' => 'warning',
                 'message' => 'Генерации закончились — выберите пакет, чтобы продолжить.',
             ]);
+        }
+
+        // Платить будет пробная — в бесплатной версии до 8 слайдов
+        if ($request->user()->credits < 1 && $request->integer('slide_count') > self::FREE_MAX_SLIDES) {
+            return back()->withErrors([
+                'slide_count' => 'В бесплатной версии — до '.self::FREE_MAX_SLIDES.' слайдов. Больше — в платных тарифах.',
+            ])->withInput();
         }
 
         $source = $request->string('source_text')->trim();
@@ -165,6 +176,12 @@ class PresentationController extends Controller
                 'clarifications' => $clarifications,
                 'status' => PresentationStatus::Queued,
                 'error_message' => null,
+                // За купленную генерацию — сразу полная версия. По пробной —
+                // бесплатная, и в ней не больше 8 слайдов
+                'unlocked_at' => $spent === 'credit' ? now() : null,
+                'slide_count' => $spent === 'trial'
+                    ? min($locked->slide_count, self::FREE_MAX_SLIDES)
+                    : $locked->slide_count,
             ]);
 
             return 'queued';
@@ -341,6 +358,35 @@ class PresentationController extends Controller
     }
 
     /**
+     * Открыть полную версию бесплатной презентации за одну генерацию.
+     *
+     * Генераций нет — ведём к тарифам. Есть — списываем, снимаем
+     * ограничения и перепечатываем PDF уже без водяного знака.
+     */
+    public function unlock(Request $request, Presentation $presentation): RedirectResponse
+    {
+        $this->authorize('update', $presentation);
+
+        if (! $presentation->isLocked()) {
+            return back();
+        }
+
+        $unlocked = UnlockPresentation::handle($presentation);
+
+        if (! $unlocked) {
+            return to_route('billing.index', ['for' => $presentation->id])->with('toast', [
+                'type' => 'info',
+                'message' => 'Выберите тариф — после оплаты полная версия откроется сама.',
+            ]);
+        }
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Полная версия открыта. Обновляем файл без водяного знака.',
+        ]);
+    }
+
+    /**
      * Скрыть или вернуть слайд с источниками.
      *
      * Слайд не удаляется, а помечается: передумали — источники вернутся
@@ -403,6 +449,8 @@ class PresentationController extends Controller
                 'slides' => $presentation->outline['slides'],
                 'previewUrl' => route('presentations.preview', $presentation),
                 'showUrl' => route('presentations.show', $presentation),
+                // Пробная версия правится, но остаётся с водяным знаком
+                'locked' => $presentation->isLocked(),
             ],
             'layouts' => $this->layouts(),
             'icons' => Icons::names(),
@@ -419,6 +467,17 @@ class PresentationController extends Controller
     public function updateOutline(UpdateOutlineRequest $request, Presentation $presentation): RedirectResponse
     {
         $this->authorize('update', $presentation);
+
+        // Пробная версия правится, но не разрастается: добавить слайдов
+        // сверх бесплатных 8 нельзя (служебный слайд с источниками,
+        // если он уже был, не отбираем)
+        $limit = max(self::FREE_MAX_SLIDES, count($presentation->outline['slides'] ?? []));
+
+        if ($presentation->isLocked() && count((array) $request->input('slides', [])) > $limit) {
+            return back()->withErrors([
+                'slides' => 'В бесплатной версии — до '.self::FREE_MAX_SLIDES.' слайдов. Больше — в полной версии.',
+            ]);
+        }
 
         $title = $request->string('title')->trim()->value();
 
@@ -513,6 +572,9 @@ class PresentationController extends Controller
     {
         $this->authorize('view', $presentation);
 
+        // Бесплатная версия: только просмотр на сайте
+        abort_if($presentation->isLocked(), 403);
+
         abort_unless($presentation->isReady(), 404);
 
         $name = str($presentation->title ?: $presentation->topic)
@@ -531,6 +593,9 @@ class PresentationController extends Controller
     public function speech(Presentation $presentation, SpeechRenderer $renderer): \Illuminate\Http\Response
     {
         $this->authorize('view', $presentation);
+
+        // Бесплатная версия: только просмотр на сайте
+        abort_if($presentation->isLocked(), 403);
 
         abort_unless(filled($presentation->outline['slides'] ?? null), 404);
 
@@ -677,12 +742,15 @@ class PresentationController extends Controller
             'isPending' => $presentation->status->isPending()
                 || $presentation->status === PresentationStatus::Draft,
             'isReady' => $presentation->isReady(),
+            // Бесплатная версия: просмотр с водяным знаком, без
+            // скачивания, ссылки, речи и редактора
+            'locked' => $presentation->isLocked(),
             // Есть ли слайд с источниками и показан ли он: от этого
             // зависит переключатель на странице презентации
             'sourcesSlide' => $this->sourcesState($presentation),
             'steps' => $this->steps($presentation),
             'error' => $presentation->error_message,
-            'shareUrl' => $presentation->isReady() ? $presentation->shareUrl() : null,
+            'shareUrl' => $presentation->isReady() && ! $presentation->isLocked() ? $presentation->shareUrl() : null,
             // Живая вёрстка, а не PDF: в HTML лежат все палитры,
             // поэтому шаблон переключается прямо в превью, без запроса.
             // Метка версии — чтобы браузер не показал слайды до правок.
@@ -690,12 +758,12 @@ class PresentationController extends Controller
                 ? route('presentations.preview', $presentation)
                     .'?v='.($presentation->updated_at?->timestamp ?? 0)
                 : null,
-            'downloadUrl' => $presentation->isReady()
+            'downloadUrl' => $presentation->isReady() && ! $presentation->isLocked()
                 ? route('presentations.download', $presentation)
                 : null,
             // Речь собирается из заметок: если модель их не заполнила,
             // кнопку показывать нечем
-            'speechUrl' => $presentation->isReady() && $presentation->hasSpeakerNotes()
+            'speechUrl' => $presentation->isReady() && ! $presentation->isLocked() && $presentation->hasSpeakerNotes()
                 ? route('presentations.speech', $presentation)
                 : null,
             'editUrl' => filled($presentation->outline['slides'] ?? null)

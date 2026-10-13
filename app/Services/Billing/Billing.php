@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
+use App\Models\Presentation;
 
 /**
  * Всё, что касается денег: создание платежа, начисление генераций,
@@ -34,7 +35,10 @@ class Billing
     /**
      * Заводит платёж и возвращает адрес, куда отправить человека.
      */
-    public function start(User $user, Package $package, string $returnUrl): string
+    /**
+     * $unlock — пробная презентация, которую открыть сразу после оплаты.
+     */
+    public function start(User $user, Package $package, string $returnUrl, ?Presentation $unlock = null): string
     {
         // Скидка считается здесь, на сервере, а не берётся с витрины:
         // цену из запроса подменить можно, а условие скидки — нет
@@ -50,7 +54,10 @@ class Billing
             'currency' => config('billing.currency'),
             'credits_granted' => $package->credits,
             'status' => PaymentStatus::Pending,
-            'payload' => ['package' => $package->key],
+            'payload' => array_filter([
+                'package' => $package->key,
+                'unlock' => $unlock?->id,
+            ]),
         ]);
 
         return $this->gateway->checkout($payment, $returnUrl);
@@ -143,6 +150,17 @@ class Billing
                 'user' => $payment->user_id,
                 'credits' => $payment->credits_granted,
             ]);
+
+            // Платили, чтобы открыть пробную презентацию, — открываем
+            // сразу, без второго нажатия. Только свою и только закрытую
+            $unlock = $payment->payload['unlock'] ?? null;
+            $presentation = is_int($unlock)
+                ? Presentation::query()->where('user_id', $payment->user_id)->find($unlock)
+                : null;
+
+            if ($presentation !== null) {
+                UnlockPresentation::handle($presentation);
+            }
 
             return true;
         });

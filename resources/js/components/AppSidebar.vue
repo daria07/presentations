@@ -139,7 +139,7 @@ const mainNavItems = computed<NavItem[]>(() => [
                 </template>
                 <template v-else-if="!trialUsed">
                     <span class="text-[13px] font-medium">
-                        Первая генерация бесплатно
+                        Доступна пробная презентация
                     </span>
                 </template>
                 <template v-else>

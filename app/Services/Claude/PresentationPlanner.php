@@ -262,7 +262,10 @@ class PresentationPlanner
         $slides = Illustrations::plan(
             $this->thinIcons(LayoutVariety::apply($this->ensureTitleSlide($slides, $title, $subtitle))),
             $presentation->slide_count,
-            is_string($data['cover_scene'] ?? null) ? $data['cover_scene'] : null,
+            // Сцену обложки берём из конспекта: по ней обложку уже рисуют
+            // параллельно, и подпись в структуре должна совпадать
+            $this->briefField($presentation, 'cover_scene')
+                ?? (is_string($data['cover_scene'] ?? null) ? $data['cover_scene'] : null),
         );
 
         $sources = $this->sourcesSlide($presentation);
@@ -276,8 +279,17 @@ class PresentationPlanner
             'subtitle' => $subtitle,
             'slides' => $slides,
             // Герой картинок: Illustrator напомнит о нём в каждом запросе
-            'image_subject' => is_string($data['image_subject'] ?? null) ? trim($data['image_subject']) : '',
+            'image_subject' => $this->briefField($presentation, 'image_subject')
+                ?? (is_string($data['image_subject'] ?? null) ? trim($data['image_subject']) : ''),
         ];
+    }
+
+    /** Непустое строковое поле конспекта или null */
+    private function briefField(Presentation $presentation, string $key): ?string
+    {
+        $value = $presentation->brief[$key] ?? null;
+
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
     }
 
     /**
@@ -657,7 +669,15 @@ class PresentationPlanner
         Блоков делай больше, чем будет слайдов: на следующем шаге из них
         отберут лучшие, и выбор должен быть.
 
-        Пиши по-русски.
+        Ещё два поля — для картинок, их начнут рисовать сразу, не дожидаясь
+        слайдов, поэтому пиши их на английском:
+        - image_subject — главный герой презентации, если он один
+          (порода собаки, человек, здание), названный точно и с
+          узнаваемыми чертами; иначе пустая строка;
+        - cover_scene — фон обложки: широкий план места, предмета или
+          среды по теме. Конкретика, а не метафора. Главное в кадре справа.
+
+        Пиши по-русски (кроме image_subject и cover_scene).
         TXT;
     }
 

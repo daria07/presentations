@@ -29,15 +29,17 @@ use Illuminate\Support\Str;
  * @property string $share_token
  * @property string|null $error_message
  * @property list<array{id: int, url: string, title: string, domain: string, text: string, kind?: string}>|null $sources
+ * @property array{pending?: bool, path?: string, failed?: bool}|null $cover_image
  * @property int|null $rating
  * @property string|null $review
  * @property Carbon|null $reviewed_at
  * @property Carbon|null $generated_at
+ * @property Carbon|null $unlocked_at
  */
 #[Fillable([
     'user_id', 'title', 'topic', 'source_text', 'slide_count',
-    'clarifications', 'brief', 'sources', 'outline', 'status',
-    'file_path', 'file_format', 'theme', 'palette', 'generated_at', 'error_message',
+    'clarifications', 'brief', 'sources', 'cover_image', 'outline', 'status',
+    'file_path', 'file_format', 'theme', 'palette', 'generated_at', 'unlocked_at', 'error_message',
     'rating', 'review', 'reviewed_at',
 ])]
 class Presentation extends Model
@@ -48,9 +50,11 @@ class Presentation extends Model
             'clarifications' => 'array',
             'brief' => 'array',
             'sources' => 'array',
+            'cover_image' => 'array',
             'outline' => 'array',
             'status' => PresentationStatus::class,
             'generated_at' => 'datetime',
+            'unlocked_at' => 'datetime',
             'reviewed_at' => 'datetime',
         ];
     }
@@ -137,6 +141,15 @@ class Presentation extends Model
         // 16:9 не влезает в окно по высоте. view=Fit — страница целиком.
         // Сервер этот хвост не видит, его читает только смотрелка
         return url('/p/'.$this->share_token).'#view=Fit';
+    }
+
+    /**
+     * Бесплатная версия: сделана по пробной генерации и не открыта.
+     * Видна только на сайте — с водяным знаком, без скачивания.
+     */
+    public function isLocked(): bool
+    {
+        return $this->unlocked_at === null;
     }
 
     /** Собираем по готовому тексту, а не по одной теме */

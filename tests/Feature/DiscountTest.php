@@ -80,10 +80,10 @@ test('клик запускает скидку на 48 часов и ведёт 
         ->get(route('billing.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('discount.percent', 30)
-            // «Рабочий»: 599 ₽ → 419 ₽, старая цена зачёркнута
-            ->where('packages.1.key', 'work')
-            ->where('packages.1.amount', '419')
-            ->where('packages.1.oldAmount', '599'));
+            // «Профи»: 590 ₽ → 413 ₽, старая цена зачёркнута
+            ->where('packages.2.key', 'ten')
+            ->where('packages.2.amount', '413')
+            ->where('packages.2.oldAmount', '590'));
 });
 
 test('повторный клик не продлевает скидку', function () {
@@ -110,22 +110,22 @@ test('оплата со скидкой: цена считается на сер�
     $user = outOfCredits();
     $this->actingAs($user)->post(route('billing.discount'));
 
-    Billing::make()->start($user->refresh(), Package::find('work'), '/');
+    Billing::make()->start($user->refresh(), Package::find('ten'), '/');
     $payment = Payment::latest('id')->first();
 
-    expect($payment->amount)->toBe(41900)
+    expect($payment->amount)->toBe(41300)
         ->and($payment->discount_percent)->toBe(30);
 
     Billing::make()->settle($payment->provider_payment_id, true);
 
     $user->refresh();
-    expect($user->credits)->toBe(20)
+    expect($user->credits)->toBe(10)
         ->and($user->discount_used_at)->not->toBeNull()
         ->and(Discount::active($user))->toBeFalse();
 
     // Следующая покупка — по обычной цене
-    Billing::make()->start($user, Package::find('work'), '/');
-    expect(Payment::latest('id')->first()->amount)->toBe(59900);
+    Billing::make()->start($user, Package::find('ten'), '/');
+    expect(Payment::latest('id')->first()->amount)->toBe(59000);
 });
 
 test('после 48 часов скидка гаснет, и кнопка больше не предлагается', function () {
@@ -135,9 +135,9 @@ test('после 48 часов скидка гаснет, и кнопка бол
     $this->travel(49)->hours();
     $user->refresh();
 
-    Billing::make()->start($user, Package::find('work'), '/');
+    Billing::make()->start($user, Package::find('ten'), '/');
 
-    expect(Payment::latest('id')->first()->amount)->toBe(59900)
+    expect(Payment::latest('id')->first()->amount)->toBe(59000)
         ->and(promoOnList($user))->toBeNull();
 });
 
@@ -151,7 +151,7 @@ test('админка считает показы, клики и оплаты п�
     $groupA = $users->map->refresh()->where('promo_variant', 'a')->values();
     $groupA->each(fn (User $u) => $this->actingAs($u)->post(route('billing.discount')));
 
-    Billing::make()->start($groupA[0]->refresh(), Package::find('start'), '/');
+    Billing::make()->start($groupA[0]->refresh(), Package::find('three'), '/');
     Billing::make()->settle(Payment::latest('id')->first()->provider_payment_id, true);
 
     $this->actingAs($admin)
@@ -161,7 +161,7 @@ test('админка считает показы, клики и оплаты п�
             ->where('promo.variants.0.shown', 2)
             ->where('promo.variants.0.clicked', 2)
             ->where('promo.variants.0.buyers', 1)
-            ->where('promo.variants.0.revenue', 13900)
+            ->where('promo.variants.0.revenue', 17400) // «Оптимальный» 249 ₽ со скидкой 30%
             ->where('promo.variants.1.key', 'b')
             ->where('promo.variants.1.shown', 2)
             ->where('promo.variants.1.clicked', 0));

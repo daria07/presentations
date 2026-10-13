@@ -2,6 +2,7 @@
 
 use App\Enums\PresentationStatus;
 use App\Jobs\GeneratePresentation;
+use App\Jobs\IllustrateCover;
 use App\Jobs\IllustratePresentation;
 use App\Models\ApiCall;
 use App\Models\Presentation;
@@ -12,6 +13,7 @@ use App\Services\Images\Illustrator;
 use App\Services\Images\ImageClient;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
@@ -279,4 +281,52 @@ test('если шлюз прислал ссылку вместо картинк�
     $slides = $presentation->refresh()->outline['slides'];
 
     expect(Storage::disk('local')->exists($slides[0]['image']['path']))->toBeTrue();
+});
+
+test('после конспекта обложка рисуется отдельной задачей, параллельно со структурой', function () {
+    Queue::fake();
+
+    $presentation = Presentation::create([
+        'user_id' => User::factory()->create()->id,
+        'topic' => 'Пудель',
+        'source_text' => str_repeat('Текст про пуделей. ', 20),
+    ]);
+
+    $planner = Mockery::mock(PresentationPlanner::class);
+    $planner->shouldReceive('buildBrief')->once()->andReturn([
+        'thesis' => 'x', 'points' => [],
+        'image_subject' => 'white standard poodle', 'cover_scene' => 'poodle on a lawn',
+    ]);
+
+    (new GeneratePresentation($presentation))->handle($planner, app(DeckRenderer::class));
+
+    expect($presentation->refresh()->cover_image)->toBe(['pending' => true]);
+    Queue::assertPushed(IllustrateCover::class);
+    Queue::assertPushed(GeneratePresentation::class);
+});
+
+test('готовая обложка подставляется, а не рисуется второй раз', function () {
+    Notification::fake();
+
+    $requests = 0;
+    Http::fake(function () use (&$requests) {
+        $requests++;
+
+        return Http::response(['data' => [['b64_json' => base64_encode(tinyPng())]]]);
+    });
+
+    $presentation = deckWithScenes();
+    Storage::disk('local')->put('presentations/'.$presentation->id.'/images/0-ready.jpg', tinyPng());
+    $presentation->update(['cover_image' => ['path' => 'presentations/'.$presentation->id.'/images/0-ready.jpg']]);
+
+    $renderer = Mockery::mock(DeckRenderer::class);
+    $renderer->shouldReceive('pdf')->andReturn('presentations/x.pdf');
+
+    (new IllustratePresentation($presentation))->handle(app(Illustrator::class), $renderer);
+
+    $slides = $presentation->refresh()->outline['slides'];
+
+    expect($requests)->toBe(2)
+        ->and($slides[0]['image']['path'])->toBe('presentations/'.$presentation->id.'/images/0-ready.jpg')
+        ->and($presentation->status)->toBe(PresentationStatus::Ready);
 });

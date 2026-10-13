@@ -105,7 +105,7 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
-     * Списывает одну генерацию. Первая — за счёт пробного доступа.
+     * Списывает одну генерацию: сначала купленную, а когда их нет — пробную.
      *
      * Возвращает, чем именно заплатили: 'trial' — пробной генерацией,
      * 'credit' — кредитом с баланса, null — платить было нечем.
@@ -128,19 +128,22 @@ class User extends Authenticatable implements PasskeyUser
                 return null;
             }
 
+            // Сначала купленные: за них человек заплатил и ждёт полную
+            // версию. Пробная даёт бесплатную, с водяным знаком, —
+            // тратить её раньше купленной значило бы обмануть ожидания
+            if ($locked->credits > 0) {
+                $locked->decrement('credits');
+
+                return 'credit';
+            }
+
             if (! $locked->trial_used) {
                 $locked->forceFill(['trial_used' => true])->save();
 
                 return 'trial';
             }
 
-            if ($locked->credits < 1) {
-                return null;
-            }
-
-            $locked->decrement('credits');
-
-            return 'credit';
+            return null;
         });
 
         if ($spent) {

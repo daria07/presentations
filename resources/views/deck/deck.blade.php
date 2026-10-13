@@ -646,6 +646,25 @@
         overflow: hidden;
     }
     .source-host { font-size: 9.5pt; color: var(--muted); margin-top: 1mm; }
+    /* ---------- пробная версия ---------- */
+
+    /* Водяной знак — слой поверх всего слайда, клики проходят насквозь.
+       Текст повторяется по диагонали, поэтому его не закрыть кадрированием.
+       Селектор с запасом по весу: обложка с фото ставит своим детям
+       position: relative, и знак съехал бы в поток */
+    .slide.slide > .watermark.watermark {
+        position: absolute;
+        inset: 0;
+        z-index: 50;
+        pointer-events: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='200'%3E%3Ctext x='180' y='110' text-anchor='middle' transform='rotate(-24 180 100)' font-family='Arial, sans-serif' font-size='22' font-weight='700' fill='%23808080' fill-opacity='0.28'%3Eslaidusha.ru · пробная версия%3C/text%3E%3C/svg%3E");
+        background-repeat: repeat;
+        background-size: 92mm auto;
+    }
+    .slide:has(> .watermark), .slide:has(> .watermark) * {
+        -webkit-user-select: none;
+        user-select: none;
+    }
 </style>
 
 {{-- Характер шаблона: типографика, композиция, форма элементов.
@@ -670,10 +689,13 @@
 <body>
 <div class="deck" data-palette="{{ $paletteKey }}" data-theme="{{ $themeKey }}" data-style="{{ $style }}">
 @foreach ($slides as $i => $slide)
-    @includeFirst(
+    @php($slideHtml = view()->first(
         ['deck.slides.'.$slide['layout'], 'deck.slides.bullets'],
         ['slide' => $slide, 'index' => $i, 'total' => count($slides), 'deckTitle' => $title]
-    )
+    )->render())
+    {{-- Знак кладём последним ребёнком слайда, перед его закрывающим
+         тегом: так он переезжает вместе со слайдом в просмотрщик --}}
+    {!! $locked ? \Illuminate\Support\Str::replaceLast('</div>', '<div class="watermark" aria-hidden="true"></div></div>', $slideHtml) : $slideHtml !!}
 @endforeach
 </div>
 </body>
