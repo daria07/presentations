@@ -73,6 +73,7 @@ class AdminController extends Controller
                     'status' => $p->status->value,
                     'statusLabel' => $p->status->label(),
                     'rating' => $p->rating,
+                    'duration' => $p->generationSeconds(),
                     'createdAt' => $p->created_at?->toIso8601String(),
                     'user' => $p->user?->only(['id', 'name', 'email']),
                 ])
@@ -155,6 +156,7 @@ class AdminController extends Controller
                 'review' => $p->review,
                 'reviewedAt' => $p->reviewed_at?->toIso8601String(),
                 'access' => $p->access(),
+                'duration' => $p->generationSeconds(),
                 'user' => $p->user?->only(['id', 'name', 'email']),
             ]);
 
@@ -339,6 +341,7 @@ class AdminController extends Controller
                 'rating' => $presentation->rating,
                 'review' => $presentation->review,
                 'access' => $presentation->access(),
+                'duration' => $presentation->generationSeconds(),
                 'createdAt' => $presentation->created_at?->toIso8601String(),
                 'previewUrl' => route('admin.presentation.preview', $presentation),
                 'user' => $presentation->user?->only(['id', 'name', 'email']),
@@ -400,6 +403,7 @@ class AdminController extends Controller
                     'rating' => $p->rating,
                     'review' => $p->review,
                     'access' => $p->access(),
+                    'duration' => $p->generationSeconds(),
                     'createdAt' => $p->created_at?->toIso8601String(),
                 ])
                 ->all(),

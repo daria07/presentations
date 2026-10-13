@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { duration } from '@/lib/duration';
 import AccessBadge from '@/components/admin/AccessBadge.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -52,6 +53,7 @@ const props = defineProps<{
             review: string | null;
             reviewedAt: string | null;
             access: 'trial' | 'unlocked' | 'paid' | null;
+            duration: number | null;
             user: { id: number; name: string; email: string } | null;
         }[];
     };
@@ -61,6 +63,7 @@ const props = defineProps<{
         status: string;
         statusLabel: string;
         rating: number | null;
+        duration: number | null;
         createdAt: string | null;
         user: { id: number; name: string; email: string } | null;
     }[];
@@ -351,6 +354,13 @@ function when(iso: string | null): string {
                                     >★ {{ item.rating }}</span
                                 >{{ item.statusLabel }}
                             </p>
+                            <p
+                                v-if="item.duration"
+                                class="tabular-nums"
+                                title="Время генерации"
+                            >
+                                ⏱ {{ duration(item.duration) }}
+                            </p>
                             <p class="tabular-nums">
                                 {{ when(item.createdAt) }}
                             </p>
@@ -479,6 +489,12 @@ function when(iso: string | null): string {
                                 {{ r.title }}
                             </Link>
                             <AccessBadge :access="r.access" class="ml-1" />
+                            <span
+                                v-if="r.duration"
+                                class="text-muted-foreground ml-1.5 text-xs tabular-nums"
+                                title="Время генерации"
+                                >⏱ {{ duration(r.duration) }}</span
+                            >
                         </p>
                         <p
                             v-if="r.review"

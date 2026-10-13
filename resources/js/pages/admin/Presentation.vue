@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { duration } from '@/lib/duration';
 import { Head, Link } from '@inertiajs/vue3';
 import AccessBadge from '@/components/admin/AccessBadge.vue';
 import DeckViewer from '@/components/DeckViewer.vue';
@@ -17,6 +18,7 @@ defineProps<{
         rating: number | null;
         review: string | null;
         access: 'trial' | 'unlocked' | 'paid' | null;
+        duration: number | null;
         createdAt: string | null;
         previewUrl: string;
         user: { id: number; name: string; email: string } | null;
@@ -66,6 +68,9 @@ function when(iso: string | null): string {
             <AccessBadge :access="presentation.access" />
             <span>{{ presentation.statusLabel }}</span>
             <span>· {{ slides(presentation.slides) }}</span>
+            <span v-if="presentation.duration">
+                · генерация {{ duration(presentation.duration) }}
+            </span>
             <span>
                 · {{ presentation.theme ?? '—' }} /
                 {{ presentation.palette ?? '—' }}

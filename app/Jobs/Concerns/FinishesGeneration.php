@@ -26,6 +26,8 @@ trait FinishesGeneration
             'file_format' => 'pdf',
             'status' => PresentationStatus::Ready,
             'generated_at' => now(),
+            // В отличие от generated_at, перепечатки это время не трогают
+            'generation_finished_at' => now(),
             'error_message' => null,
         ]);
 

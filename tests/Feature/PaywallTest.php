@@ -168,3 +168,16 @@ test('админ смотрит чужую презентацию, осталь�
     $stranger = User::factory()->create();
     $this->actingAs($stranger)->get(route('admin.presentation.preview', $presentation))->assertNotFound();
 });
+
+test('время генерации считается от запуска до готового файла', function () {
+    $presentation = trialDeck();
+
+    expect($presentation->generationSeconds())->toBeNull();
+
+    $presentation->update([
+        'generation_started_at' => now()->subSeconds(222),
+        'generation_finished_at' => now(),
+    ]);
+
+    expect($presentation->refresh()->generationSeconds())->toBe(222);
+});

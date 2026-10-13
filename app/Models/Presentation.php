@@ -36,11 +36,13 @@ use Illuminate\Support\Str;
  * @property Carbon|null $reviewed_at
  * @property Carbon|null $generated_at
  * @property Carbon|null $unlocked_at
+ * @property Carbon|null $generation_started_at
+ * @property Carbon|null $generation_finished_at
  */
 #[Fillable([
     'user_id', 'title', 'topic', 'source_text', 'slide_count',
     'clarifications', 'brief', 'sources', 'cover_image', 'outline', 'status',
-    'file_path', 'file_format', 'theme', 'palette', 'generated_at', 'unlocked_at', 'paid_with', 'error_message',
+    'file_path', 'file_format', 'theme', 'palette', 'generated_at', 'generation_started_at', 'generation_finished_at', 'unlocked_at', 'paid_with', 'error_message',
     'rating', 'review', 'reviewed_at',
 ])]
 class Presentation extends Model
@@ -56,6 +58,8 @@ class Presentation extends Model
             'status' => PresentationStatus::class,
             'generated_at' => 'datetime',
             'unlocked_at' => 'datetime',
+            'generation_started_at' => 'datetime',
+            'generation_finished_at' => 'datetime',
             'reviewed_at' => 'datetime',
         ];
     }
@@ -161,6 +165,21 @@ class Presentation extends Model
             'trial' => 'trial',
             default => null,
         };
+    }
+
+    /**
+     * Сколько секунд шла генерация: от ответов на вопросы до готового
+     * PDF. null — ещё идёт, упала или время не известно.
+     */
+    public function generationSeconds(): ?int
+    {
+        if ($this->generation_started_at === null || $this->generation_finished_at === null) {
+            return null;
+        }
+
+        $seconds = (int) $this->generation_started_at->diffInSeconds($this->generation_finished_at, true);
+
+        return $seconds > 0 ? $seconds : null;
     }
 
     public function isLocked(): bool

@@ -176,6 +176,9 @@ class PresentationController extends Controller
                 'clarifications' => $clarifications,
                 'status' => PresentationStatus::Queued,
                 'error_message' => null,
+                // Отсюда считаем время генерации для админки
+                'generation_started_at' => now(),
+                'generation_finished_at' => null,
                 // За купленную генерацию — сразу полная версия. По пробной —
                 // бесплатная, и в ней не больше 8 слайдов
                 'unlocked_at' => $spent === 'credit' ? now() : null,
@@ -259,6 +262,8 @@ class PresentationController extends Controller
                 // Сбой вернул прошлую оплату, перезапуск списал заново —
                 // и, возможно, уже другой: пробную сменила купленная
                 ...($failed ? [
+                    'generation_started_at' => now(),
+                    'generation_finished_at' => null,
                     'paid_with' => $spent,
                     'unlocked_at' => $spent === 'credit' ? ($locked->unlocked_at ?? now()) : $locked->unlocked_at,
                 ] : []),
