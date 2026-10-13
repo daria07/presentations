@@ -6,8 +6,10 @@ use App\Services\Claude\PresentationPlanner;
 use App\Services\Deck\DeckRenderer;
 use App\Services\Search\PageReader;
 use App\Services\Search\SourceCollector;
+use App\Services\Search\YandexSearch;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 
 /*
    Источники: запросы → Яндекс → тексты страниц → конспект →
@@ -177,4 +179,88 @@ test('из длинной статьи берутся абзацы по запр
     expect(mb_strlen($text))->toBeLessThanOrEqual(PageReader::MAX_CHARS)
         ->and($text)->toStartWith('Реформы Петра I — преобразования')
         ->and($text)->toContain("## Экономика\nЧисло мануфактур выросло с 15 до 200");
+});
+
+test('названный учебник идёт первым, а под студентов выше научные сайты', function () {
+    Http::fake([
+        'gw.test/*' => toolReply([
+            'level' => 'university',
+            'queries' => ['переломы костей классификация'],
+            'textbook' => 'Егиазарян травматология и ортопедия учебник',
+        ]),
+        'searchapi.api.cloud.yandex.net/*' => Http::sequence()
+            // Сначала учебник, потом общие запросы
+            ->push(yandexReply(['https://random.test/book', 'https://www.studentlibrary.ru/book/ISBN9785970.html']))
+            ->push(yandexReply(['https://other.test/fractures', 'https://cyberleninka.ru/article/x'])),
+        'other.test/*' => Http::response(articlePage('Переломы бывают открытые и закрытые'), 200, ['Content-Type' => 'text/html']),
+        'cyberleninka.ru/*' => Http::response(articlePage('Рентгенограмма в двух проекциях'), 200, ['Content-Type' => 'text/html']),
+        '*' => Http::response('nope', 500),
+    ]);
+
+    $presentation = Presentation::create(['user_id' => User::factory()->create()->id, 'topic' => 'Переломы по Егиазаряну']);
+
+    $sources = app(SourceCollector::class)->collect($presentation);
+
+    expect($sources[0]['kind'])->toBe('textbook')
+        ->and($sources[0]['url'])->toBe('https://www.studentlibrary.ru/book/ISBN9785970.html')
+        ->and(array_column($sources, 'url'))->toBe([
+            'https://www.studentlibrary.ru/book/ISBN9785970.html',
+            'https://cyberleninka.ru/article/x',
+            'https://other.test/fractures',
+        ]);
+});
+
+test('учебник остаётся на слайде источников, даже если конспект на него не сослался', function () {
+    Http::fake(['gw.test/*' => toolReply([
+        'title' => 'Переломы',
+        'slides' => [
+            ['layout' => 'title', 'heading' => 'Переломы'],
+            ['layout' => 'closing', 'heading' => 'Итоги'],
+        ],
+    ])]);
+
+    $presentation = Presentation::create([
+        'user_id' => User::factory()->create()->id,
+        'topic' => 'Переломы',
+        'slide_count' => 2,
+        'brief' => ['thesis' => 'x', 'points' => [['title' => 'a', 'substance' => 'b', 'sources' => [3]]]],
+        'sources' => [
+            ['id' => 1, 'url' => 'https://www.studentlibrary.ru/book/1.html', 'title' => 'Травматология и ортопедия', 'domain' => 'studentlibrary.ru', 'text' => '', 'kind' => 'textbook'],
+            ['id' => 2, 'url' => 'https://a.test/2', 'title' => 'Второй', 'domain' => 'a.test', 'text' => '…'],
+            ['id' => 3, 'url' => 'https://b.test/3', 'title' => 'Третий', 'domain' => 'b.test', 'text' => '…'],
+        ],
+    ]);
+
+    $slides = PresentationPlanner::make()->buildOutline($presentation)['slides'];
+
+    expect(array_column(end($slides)['sources'], 'url'))->toBe(['https://www.studentlibrary.ru/book/1.html', 'https://b.test/3']);
+});
+
+test('если Яндекс просит подождать (429), запрос повторяется', function () {
+    Sleep::fake();
+
+    Http::fake(['searchapi.api.cloud.yandex.net/*' => Http::sequence()
+        ->push(['code' => 8, 'message' => 'web search rate limit exceeded, retry later'], 429)
+        ->push(yandexReply(['https://ru.wikipedia.org/wiki/A']))]);
+
+    $results = app(YandexSearch::class)->search('переломы');
+
+    expect(array_column($results, 'url'))->toBe(['https://ru.wikipedia.org/wiki/A']);
+    Sleep::assertSleptTimes(1);
+});
+
+test('для студентов блоги клиник уходят в конец списка', function () {
+    Http::fake([
+        'gw.test/*' => toolReply(['level' => 'university', 'queries' => ['переломы классификация'], 'textbook' => '']),
+        'searchapi.api.cloud.yandex.net/*' => Http::sequence()
+            ->push(yandexReply(['https://mc21.ru/articles/x', 'https://www.polyclinika.ru/y', 'https://ru.wikipedia.org/wiki/Z']))
+            ->push(yandexReply([])),
+        '*' => Http::response(articlePage('Классификация переломов'), 200, ['Content-Type' => 'text/html']),
+    ]);
+
+    $presentation = Presentation::create(['user_id' => User::factory()->create()->id, 'topic' => 'Переломы']);
+
+    $urls = array_column(app(SourceCollector::class)->collect($presentation), 'url');
+
+    expect($urls)->toBe(['https://ru.wikipedia.org/wiki/Z', 'https://mc21.ru/articles/x', 'https://www.polyclinika.ru/y']);
 });

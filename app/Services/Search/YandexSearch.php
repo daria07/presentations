@@ -3,6 +3,7 @@
 namespace App\Services\Search;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 use RuntimeException;
 use SimpleXMLElement;
 
@@ -17,6 +18,9 @@ class YandexSearch
 {
     private const ENDPOINT = 'https://searchapi.api.cloud.yandex.net/v2/web/search';
 
+    /** Сколько раз пробуем, если Яндекс просит подождать (429) */
+    private const ATTEMPTS = 3;
+
     public static function enabled(): bool
     {
         return filled(config('services.yandex_search.key'))
@@ -30,28 +34,43 @@ class YandexSearch
      */
     public function search(string $query, int $limit = 10): array
     {
-        $response = Http::withHeaders([
-            'Authorization' => 'Api-Key '.config('services.yandex_search.key'),
-        ])
-            ->timeout(20)
-            ->post(self::ENDPOINT, [
-                'query' => [
-                    'searchType' => 'SEARCH_TYPE_RU',
-                    // Запрос длиннее 400 знаков Яндекс не принимает
-                    'queryText' => mb_substr(trim($query), 0, 400),
-                    'familyMode' => 'FAMILY_MODE_STRICT',
-                ],
-                'groupSpec' => [
-                    'groupMode' => 'GROUP_MODE_DEEP',
-                    'groupsOnPage' => (string) $limit,
-                    'docsInGroup' => '1',
-                ],
-                'maxPassages' => '3',
-                'region' => '225',
-                'l10n' => 'LOCALIZATION_RU',
-                'folderId' => config('services.yandex_search.folder'),
-                'responseFormat' => 'FORMAT_XML',
-            ]);
+        $body = [
+            'query' => [
+                'searchType' => 'SEARCH_TYPE_RU',
+                // Запрос длиннее 400 знаков Яндекс не принимает
+                'queryText' => mb_substr(trim($query), 0, 400),
+                'familyMode' => 'FAMILY_MODE_STRICT',
+            ],
+            'groupSpec' => [
+                'groupMode' => 'GROUP_MODE_DEEP',
+                'groupsOnPage' => (string) $limit,
+                'docsInGroup' => '1',
+            ],
+            'maxPassages' => '3',
+            'region' => '225',
+            'l10n' => 'LOCALIZATION_RU',
+            'folderId' => config('services.yandex_search.folder'),
+            'responseFormat' => 'FORMAT_XML',
+        ];
+
+        /*
+           У Яндекса лимит запросов в секунду на каталог: четыре запроса
+           подряд (три темы и учебник) его уже задевают, и он отвечает
+           429 «retry later». Ждём секунду-две и пробуем снова.
+        */
+        for ($attempt = 1; ; $attempt++) {
+            $response = Http::withHeaders([
+                'Authorization' => 'Api-Key '.config('services.yandex_search.key'),
+            ])
+                ->timeout(20)
+                ->post(self::ENDPOINT, $body);
+
+            if ($response->status() !== 429 || $attempt >= self::ATTEMPTS) {
+                break;
+            }
+
+            Sleep::for($attempt)->seconds();
+        }
 
         if ($response->failed()) {
             throw new RuntimeException('Яндекс ответил '.$response->status().': '.mb_substr($response->body(), 0, 300));

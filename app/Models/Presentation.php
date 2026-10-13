@@ -28,7 +28,7 @@ use Illuminate\Support\Str;
  * @property string|null $theme
  * @property string $share_token
  * @property string|null $error_message
- * @property list<array{id: int, url: string, title: string, domain: string, text: string}>|null $sources
+ * @property list<array{id: int, url: string, title: string, domain: string, text: string, kind?: string}>|null $sources
  * @property int|null $rating
  * @property string|null $review
  * @property Carbon|null $reviewed_at

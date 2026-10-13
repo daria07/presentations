@@ -243,3 +243,22 @@ test('поток в формате OpenAI: набросок пропускаем
         ->and($result['usage']['output_tokens'])->toBe(1372)
         ->and($result['error'])->toBeNull();
 });
+
+test('после конспекта структура собирается следующей задачей', function () {
+    Queue::fake();
+
+    $presentation = Presentation::create([
+        'user_id' => User::factory()->create()->id,
+        'topic' => 'Переломы',
+        'source_text' => str_repeat('Текст про переломы. ', 20),
+    ]);
+
+    $planner = Mockery::mock(PresentationPlanner::class);
+    $planner->shouldReceive('buildBrief')->once()->andReturn(['thesis' => 'x', 'points' => []]);
+    $planner->shouldNotReceive('buildOutline');
+
+    (new GeneratePresentation($presentation, spent: 'trial'))->handle($planner, app(DeckRenderer::class));
+
+    expect($presentation->refresh()->brief)->toBe(['thesis' => 'x', 'points' => []]);
+    Queue::assertPushed(GeneratePresentation::class, fn ($job) => $job->spent === 'trial');
+});

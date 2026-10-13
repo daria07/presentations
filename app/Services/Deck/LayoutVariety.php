@@ -23,6 +23,8 @@ final class LayoutVariety
      */
     public static function apply(array $slides): array
     {
+        $slides = array_map(self::fitNumbers(...), $slides);
+
         foreach ($slides as $i => $slide) {
             $previous = $slides[$i - 1]['layout'] ?? null;
             $layout = $slide['layout'] ?? null;
@@ -43,6 +45,38 @@ final class LayoutVariety
         }
 
         return $slides;
+    }
+
+    /**
+     * «Числа» и «хронология» без чисел. Модель иногда кладёт в stats
+     * слова («Консервативное», «два средних срока»): крупным шрифтом
+     * на месте цифры такое смотрится сломанной вёрсткой. Если хотя бы
+     * у половины значений нет ни одной цифры, это пункты, а не числа.
+     *
+     * @param  array<string, mixed>  $slide
+     * @return array<string, mixed>
+     */
+    private static function fitNumbers(array $slide): array
+    {
+        $layout = $slide['layout'] ?? null;
+
+        if (! in_array($layout, ['stats', 'timeline', 'bignumber'], true)) {
+            return $slide;
+        }
+
+        $values = array_map(fn ($stat) => (string) ($stat['value'] ?? ''), $slide['stats'] ?? []);
+        $wordy = count(array_filter($values, fn (string $v) => preg_match('/\d/', $v) !== 1));
+
+        if ($values === [] || $wordy * 2 < count($values)) {
+            return $slide;
+        }
+
+        return self::statsToBullets($slide, $layout === 'timeline' ? 'process' : 'bullets')
+            ?? [...$slide, 'layout' => 'bullets', 'bullets' => array_map(fn ($stat) => [
+                'title' => (string) ($stat['value'] ?? ''),
+                'text' => (string) ($stat['label'] ?? ''),
+                'icon' => null,
+            ], array_values($slide['stats'] ?? [])), 'stats' => []];
     }
 
     /**

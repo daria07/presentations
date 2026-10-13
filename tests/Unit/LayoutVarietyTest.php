@@ -60,3 +60,22 @@ test('цитаты и служебные слайды не трогаем', func
 
     expect(array_column($slides, 'layout'))->toBe(['quote', 'quote', 'closing', 'sources']);
 });
+
+test('«числа» из слов становятся пунктами, хронология без дат — этапами', function () {
+    $words = fn (string $layout) => [
+        'layout' => $layout,
+        'heading' => $layout,
+        'bullets' => [],
+        'stats' => [
+            ['value' => 'Консервативное', 'label' => 'гипс, вытяжение'],
+            ['value' => 'Оперативное', 'label' => 'остеосинтез'],
+            ['value' => 'Контроль', 'label' => 'рентген каждые 5–7 дней'],
+        ],
+    ];
+
+    $slides = LayoutVariety::apply([layoutSlide('title'), $words('stats'), $words('timeline'), layoutSlide('closing')]);
+
+    expect($slides[1]['layout'])->toBe('bullets')
+        ->and($slides[1]['bullets'][0]['title'])->toBe('Консервативное')
+        ->and($slides[2]['layout'])->toBe('process');
+});

@@ -112,6 +112,18 @@ class ClaudeClient
 
         $seconds = round(microtime(true) - $startedAt, 1);
 
+        /*
+           cheapai в потоке сообщает вход как попало: то 9 388 из кэша,
+           то 8 токенов вместо двадцати тысяч. Платим мы при этом за
+           весь вход. Если шлюз назвал явно меньше, чем мы отправили,
+           считаем сами: в русском тексте токен — примерно три знака.
+        */
+        $estimate = self::estimateTokens($system, $messages, $tools);
+
+        if ($inputTokens + $cachedTokens < $estimate / 2) {
+            $inputTokens = max(0, $estimate - $cachedTokens);
+        }
+
         Log::info('Claude: ответ получен', [
             'tool' => $toolName,
             // Чем представилась модель на самом деле: у шлюза имя в
@@ -309,6 +321,21 @@ class ClaudeClient
     }
 
     /**
+     * Грубая оценка входа в токенах по длине запроса.
+     *
+     * @param  array<int, mixed>  $messages
+     * @param  array<int, mixed>  $tools
+     */
+    private static function estimateTokens(string $system, array $messages, array $tools): int
+    {
+        $chars = mb_strlen($system)
+            + mb_strlen((string) json_encode($messages, JSON_UNESCAPED_UNICODE))
+            + mb_strlen((string) json_encode($tools, JSON_UNESCAPED_UNICODE));
+
+        return (int) ceil($chars / 3);
+    }
+
+    /**
      * Себестоимость вызова в сотых доли цента.
      * Цены в конфиге заданы за миллион токенов.
      *
@@ -332,8 +359,12 @@ class ClaudeClient
             'anthropic-version' => self::VERSION,
             'content-type' => 'application/json',
         ])
-            // Поток читаем по мере прихода, а не ждём ответ целиком
-            ->withOptions(['stream' => true])
+            // Поток читаем по мере прихода, а не ждём ответ целиком.
+            // read_timeout — сколько ждать следующего куска: живой поток
+            // шлёт данные каждые несколько секунд, а полторы минуты
+            // тишины значат, что шлюз завис, и лучше повторить запрос,
+            // чем ждать до общего таймаута
+            ->withOptions(['stream' => true, 'read_timeout' => 90])
             ->timeout(280)
             ->connectTimeout(20)
             // Шлюз регулярно рвёт соединение на середине. Обрыв — вещь

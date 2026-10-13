@@ -147,6 +147,22 @@ const canSubmit = computed(() =>
                         }}
                     </button>
                 </div>
+
+                <!-- Учебники почти все платные: прочитать книгу сами мы
+                     не можем, поэтому «строго по учебнику» — только
+                     по тексту, который человек вставит сам -->
+                <p class="text-muted-foreground pt-1 text-xs leading-relaxed">
+                    Нужно строго по учебнику или методичке? Вставьте главу во
+                    вкладке
+                    <button
+                        type="button"
+                        class="cursor-pointer underline underline-offset-2"
+                        @click="mode = 'text'"
+                    >
+                        «По готовому тексту»
+                    </button>
+                    — соберём презентацию только по ней.
+                </p>
             </div>
 
             <!-- Сценарий «по готовому тексту» -->

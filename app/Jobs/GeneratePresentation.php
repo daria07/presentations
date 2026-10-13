@@ -85,7 +85,16 @@ class GeneratePresentation implements ShouldQueue
                         'brief' => $planner->buildBrief($presentation),
                     ]);
 
-                    $presentation->refresh();
+                    /*
+                       Структуру собирает следующая задача. Поиск, конспект
+                       и структура вместе идут до пяти минут — ровно лимит
+                       воркера, и подробная презентация в него не влезала.
+                       Новая задача начинает отсчёт заново, а конспект уже
+                       в базе: повторно за него не платим.
+                    */
+                    self::dispatch($presentation, $this->theme, $this->palette, $this->spent);
+
+                    return;
                 }
 
                 $outline = $planner->buildOutline($presentation);

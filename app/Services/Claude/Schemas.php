@@ -131,6 +131,12 @@ class Schemas
         return [
             'type' => 'object',
             'properties' => [
+                'level' => [
+                    'type' => 'string',
+                    'enum' => ['school', 'university', 'general'],
+                    'description' => 'Для кого презентация: school — школьники, university — студенты '
+                        .'и специалисты, general — все остальные (работа, доклад, хобби).',
+                ],
                 'queries' => [
                     'type' => 'array',
                     'minItems' => 1,
@@ -138,8 +144,14 @@ class Schemas
                     'items' => ['type' => 'string'],
                     'description' => 'Три поисковых запроса на русском, по 3–8 слов: обзор всей темы и две разные, не пересекающиеся её части.',
                 ],
+                'textbook' => [
+                    'type' => 'string',
+                    'description' => 'Поисковый запрос для учебника или автора, которого человек сам '
+                        .'назвал («по Егиазаряну», «по учебнику Торкунова»): «Егиазарян травматология '
+                        .'и ортопедия учебник». Пустая строка, если учебник не назван.',
+                ],
             ],
-            'required' => ['queries'],
+            'required' => ['level', 'queries', 'textbook'],
         ];
     }
 

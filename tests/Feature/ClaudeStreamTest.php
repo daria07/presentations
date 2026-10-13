@@ -97,3 +97,19 @@ test('шлюз без поддержки потока отвечает обыч�
 
     expect($client->structured('sys', 'p', ['type' => 'object'], 'build_outline', 'd')->data)->toBe(['title' => 'T']);
 });
+
+test('если шлюз сильно занизил вход, считаем его по длине запроса', function () {
+    Http::fake(['gw.test/*' => Http::response([
+        'model' => 'claude-x',
+        'stop_reason' => 'tool_use',
+        'usage' => ['input_tokens' => 8, 'output_tokens' => 7],
+        'content' => [['type' => 'tool_use', 'name' => 'build_outline', 'input' => ['title' => 'T']]],
+    ])]);
+
+    $client = new ClaudeClient('k', 'https://gw.test', 'claude-x', 30000, 150000);
+    $result = $client->structured('sys', str_repeat('Длинный текст источника. ', 400), ['type' => 'object'], 'build_outline', 'd');
+
+    // 10 000 знаков промпта — это больше трёх тысяч токенов, а не восемь
+    expect($result->inputTokens)->toBeGreaterThan(3000)
+        ->and($result->cost)->toBeGreaterThan(0);
+});
