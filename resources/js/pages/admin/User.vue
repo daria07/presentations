@@ -229,7 +229,12 @@ function when(iso: string | null): string {
                     >
                         <div class="min-w-0 flex-1">
                             <p class="truncate" :title="p.title">
-                                {{ p.title }}
+                                <Link
+                                    :href="`/admin/presentations/${p.id}`"
+                                    class="cursor-pointer hover:underline"
+                                >
+                                    {{ p.title }}
+                                </Link>
                             </p>
                             <p
                                 class="text-muted-foreground text-xs tabular-nums"

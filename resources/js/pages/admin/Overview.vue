@@ -323,7 +323,12 @@ function when(iso: string | null): string {
                     >
                         <div class="min-w-0 flex-1">
                             <p class="truncate" :title="item.title">
-                                {{ item.title }}
+                                <Link
+                                    :href="`/admin/presentations/${item.id}`"
+                                    class="cursor-pointer hover:underline"
+                                >
+                                    {{ item.title }}
+                                </Link>
                             </p>
                             <p class="text-muted-foreground truncate text-xs">
                                 <Link
@@ -467,7 +472,12 @@ function when(iso: string | null): string {
                                     '★'.repeat(5 - r.rating)
                                 }}</span></span
                             >
-                            {{ r.title }}
+                            <Link
+                                :href="`/admin/presentations/${r.id}`"
+                                class="cursor-pointer hover:underline"
+                            >
+                                {{ r.title }}
+                            </Link>
                             <AccessBadge :access="r.access" class="ml-1" />
                         </p>
                         <p

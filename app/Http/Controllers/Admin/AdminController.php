@@ -10,9 +10,11 @@ use App\Models\Payment;
 use App\Models\Presentation;
 use App\Models\User;
 use App\Services\Billing\Discount;
+use App\Services\Deck\DeckRenderer;
 use App\Support\Attribution;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -312,6 +314,51 @@ class AdminController extends Controller
             ],
             'search' => $search,
         ]);
+    }
+
+    /**
+     * Чужая презентация на просмотр: те же слайды, что видит владелец,
+     * включая водяной знак у пробной. Только смотреть — ни правки,
+     * ни перепечатки отсюда нет.
+     */
+    public function presentation(Presentation $presentation): Response
+    {
+        abort_unless(filled($presentation->outline['slides'] ?? null), 404);
+
+        $presentation->load('user:id,name,email');
+
+        return Inertia::render('admin/Presentation', [
+            'presentation' => [
+                'id' => $presentation->id,
+                'title' => $presentation->title ?: $presentation->topic,
+                'topic' => $presentation->topic,
+                'statusLabel' => $presentation->status->label(),
+                'slides' => count($presentation->outline['slides'] ?? []),
+                'theme' => $presentation->theme,
+                'palette' => $presentation->palette,
+                'rating' => $presentation->rating,
+                'review' => $presentation->review,
+                'access' => $presentation->access(),
+                'createdAt' => $presentation->created_at?->toIso8601String(),
+                'previewUrl' => route('admin.presentation.preview', $presentation),
+                'user' => $presentation->user?->only(['id', 'name', 'email']),
+            ],
+        ]);
+    }
+
+    /** Вёрстка слайдов для просмотрщика на странице выше */
+    public function presentationPreview(Presentation $presentation, DeckRenderer $renderer): HttpResponse
+    {
+        abort_unless(filled($presentation->outline['slides'] ?? null), 404);
+
+        return response($renderer->html(
+            $presentation,
+            $presentation->theme,
+            forScreen: true,
+            palette: $presentation->palette,
+        ))
+            ->header('Content-Type', 'text/html; charset=utf-8')
+            ->header('Cache-Control', 'no-store');
     }
 
     public function user(User $user): Response

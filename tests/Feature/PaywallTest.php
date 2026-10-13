@@ -153,3 +153,18 @@ test('в админке видно, пробная версия или опла�
 
     expect($presentation->access())->toBe('paid');
 });
+
+test('админ смотрит чужую презентацию, остальным нельзя', function () {
+    config(['admin.emails' => ['boss@example.com']]);
+    $this->withoutVite();
+    $presentation = trialDeck();
+    $admin = User::factory()->create(['email' => 'boss@example.com']);
+
+    $this->actingAs($admin)->get(route('admin.presentation', $presentation))->assertOk();
+    $this->actingAs($admin)->get(route('admin.presentation.preview', $presentation))
+        ->assertOk()
+        ->assertSee('class="watermark"', false);
+
+    $stranger = User::factory()->create();
+    $this->actingAs($stranger)->get(route('admin.presentation.preview', $presentation))->assertNotFound();
+});

@@ -71,6 +71,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('users', [AdminController::class, 'users'])->name('users');
         Route::get('users/{user}', [AdminController::class, 'user'])->name('user');
 
+        // Просмотр чужой готовой презентации — как её видит владелец
+        Route::get('presentations/{presentation}', [AdminController::class, 'presentation'])
+            ->name('presentation');
+        Route::get('presentations/{presentation}/preview', [AdminController::class, 'presentationPreview'])
+            ->middleware('throttle:240,1')
+            ->name('presentation.preview');
+
         // Единственное, что админка пишет: чеки НПД выбиваются вручную
         // в «Мой налог», сюда приносится ссылка или файл
         Route::get('receipts', [ReceiptController::class, 'index'])->name('receipts');
