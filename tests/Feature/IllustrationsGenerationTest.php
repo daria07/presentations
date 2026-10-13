@@ -10,6 +10,7 @@ use App\Models\Presentation;
 use App\Models\User;
 use App\Services\Claude\PresentationPlanner;
 use App\Services\Deck\DeckRenderer;
+use App\Services\Deck\Illustrations;
 use App\Services\Images\Illustrator;
 use App\Services\Images\ImageClient;
 use Illuminate\Http\Client\Request;
@@ -397,4 +398,22 @@ test('images:redraw дорисовывает несостоявшиеся кар
         ->and($trial->refresh()->outline['slides'][1]['image']['failed'])->toBeTrue();
 
     Bus::assertDispatchedSync(RenderPresentation::class, 1);
+});
+
+test('недостающие картинки добираются на подходящие слайды, уже назначенные остаются', function () {
+    $slides = [
+        ['layout' => 'title', 'heading' => 'Соловьёв', 'image' => ['scene' => 'ship', 'side' => 'cover']],
+        ['layout' => 'bullets', 'heading' => 'Путь', 'bullets' => [[], [], []]],
+        ['layout' => 'bignumber', 'heading' => 'АС-31', 'image' => ['scene' => 'submarine', 'side' => 'left', 'path' => 'x.jpg']],
+        ['layout' => 'bullets', 'heading' => 'Авария', 'bullets' => [[], [], []]],
+        ['layout' => 'process', 'heading' => 'Решение', 'bullets' => [[], [], []]],
+        ['layout' => 'sources', 'heading' => 'Источники'],
+    ];
+
+    $result = Illustrations::topUp($slides, 8);
+
+    expect($result[2]['image']['path'])->toBe('x.jpg')
+        ->and(isset($result[1]['image']) || isset($result[3]['image']))->toBeTrue()
+        ->and(count(array_filter($result, fn ($s) => isset($s['image']) && $s['image']['side'] !== 'cover')))->toBe(2)
+        ->and(isset($result[5]['image']))->toBeFalse();
 });

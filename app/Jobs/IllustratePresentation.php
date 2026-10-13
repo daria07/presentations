@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Jobs\Concerns\FinishesGeneration;
 use App\Models\Presentation;
 use App\Services\Deck\DeckRenderer;
+use App\Services\Deck\Illustrations;
 use App\Services\Images\Illustrator;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -41,6 +42,11 @@ class IllustratePresentation implements ShouldQueue
     public function handle(Illustrator $illustrator, DeckRenderer $renderer): void
     {
         $presentation = $this->presentation->refresh();
+
+        // Картинок в структуре меньше нормы, а места есть — добираем
+        $outline = $presentation->outline ?? [];
+        $outline['slides'] = Illustrations::topUp($outline['slides'] ?? [], $presentation->slide_count);
+        $presentation->update(['outline' => $outline]);
 
         /*
            Обложку могла уже нарисовать IllustrateCover. Готова — сразу

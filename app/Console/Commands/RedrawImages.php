@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Enums\PresentationStatus;
 use App\Jobs\RenderPresentation;
 use App\Models\Presentation;
+use App\Services\Deck\Illustrations;
 use App\Services\Images\Illustrator;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
@@ -100,10 +101,14 @@ class RedrawImages extends Command
             ->values();
     }
 
-    /** Сколько картинок в структуре помечены «не вышла» */
+    /**
+     * Сколько картинок дорисовать: помеченные «не вышла» плюс те,
+     * которых не хватает до нормы (Illustrations::topUp)
+     */
     private static function missing(Presentation $presentation): int
     {
-        $count = 0;
+        $slides = $presentation->outline['slides'] ?? [];
+        $count = self::planned(self::withTopUp($presentation, $slides)) - self::planned($slides);
 
         foreach ($presentation->outline['slides'] ?? [] as $slide) {
             if (is_array($slide) && ! empty($slide['image']['failed']) && blank($slide['image']['path'] ?? null)
@@ -113,6 +118,31 @@ class RedrawImages extends Command
         }
 
         return $count;
+    }
+
+    /**
+     * Добор до нормы — только у презентаций, сделанных уже с картинками.
+     * Старые, без единой картинки, не трогаем: это была бы не починка,
+     * а новые платные картинки к презентациям, где их не обещали.
+     *
+     * @param  array<int, mixed>  $slides
+     * @return array<int, mixed>
+     */
+    private static function withTopUp(Presentation $presentation, array $slides): array
+    {
+        return self::planned($slides) > 0
+            ? Illustrations::topUp($slides, $presentation->slide_count)
+            : $slides;
+    }
+
+    /**
+     * Сколько картинок вообще назначено в структуре
+     *
+     * @param  array<int, mixed>  $slides
+     */
+    private static function planned(array $slides): int
+    {
+        return count(array_filter($slides, fn ($s) => is_array($s) && isset($s['image'])));
     }
 
     private function redraw(Presentation $presentation, Illustrator $illustrator): void
@@ -128,6 +158,7 @@ class RedrawImages extends Command
             }
         }
 
+        $outline['slides'] = self::withTopUp($presentation, $outline['slides']);
         $presentation->update(['outline' => $outline]);
 
         try {

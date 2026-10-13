@@ -80,14 +80,13 @@ final class Illustrations
      * Индексы слайдов под картинки, в порядке следования.
      *
      * @param  array<int, array<string, mixed>>  $slides
+     * @param  array<int, int>  $chosen  уже назначенные — их не трогаем
      * @return array<int, int>
      */
-    private static function choose(array $slides, int $target): array
+    private static function choose(array $slides, int $target, array $chosen = []): array
     {
         $fits = fn (array $s, bool $strict): bool => in_array($s['layout'] ?? null, self::LAYOUTS, true)
             && (! $strict || count($s['bullets'] ?? []) <= self::MAX_BULLETS);
-
-        $chosen = [];
 
         /*
            Проходы от лучшего к запасному:
@@ -127,6 +126,55 @@ final class Illustrations
         sort($chosen);
 
         return $chosen;
+    }
+
+    /**
+     * Добирает картинки до нормы в уже собранной структуре.
+     *
+     * Бывает, что в структуре картинок меньше, чем положено, хотя места
+     * под них есть: у презентации 351 на восемь слайдов была одна
+     * картинка в теле при двух подходящих списках. Перед рисованием
+     * добираем недостающие тем же выбором, что и plan, оставляя уже
+     * назначенные на месте, и заново чередуем стороны.
+     *
+     * @param  array<int, mixed>  $slides
+     * @return array<int, mixed>
+     */
+    public static function topUp(array $slides, int $slideCount): array
+    {
+        $existing = [];
+
+        foreach ($slides as $index => $slide) {
+            if (is_array($slide) && isset($slide['image']) && ($slide['image']['side'] ?? null) !== 'cover') {
+                $existing[] = $index;
+            }
+        }
+
+        $target = self::target($slideCount);
+
+        if (count($existing) >= $target) {
+            return $slides;
+        }
+
+        // Служебные слайды (источники) и не-массивы в выбор не пускаем
+        $candidates = array_filter($slides, fn ($s) => is_array($s) && ($s['layout'] ?? null) !== 'sources');
+        $chosen = self::choose($candidates, $target, $existing);
+        $side = 'right';
+
+        foreach ($chosen as $index) {
+            /** @var array<string, mixed> $slide */
+            $slide = $slides[$index];
+            $image = is_array($slide['image'] ?? null) ? $slide['image'] : [
+                'scene' => self::fallbackScene($slide),
+                'format' => 'square',
+            ];
+            $image['side'] = $side;
+            $slide['image'] = $image;
+            $slides[$index] = $slide;
+            $side = $side === 'right' ? 'left' : 'right';
+        }
+
+        return $slides;
     }
 
     /**
