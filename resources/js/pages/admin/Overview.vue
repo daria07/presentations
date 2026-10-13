@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AccessBadge from '@/components/admin/AccessBadge.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -50,6 +51,7 @@ const props = defineProps<{
             rating: number;
             review: string | null;
             reviewedAt: string | null;
+            access: 'trial' | 'unlocked' | 'paid' | null;
             user: { id: number; name: string; email: string } | null;
         }[];
     };
@@ -466,6 +468,7 @@ function when(iso: string | null): string {
                                 }}</span></span
                             >
                             {{ r.title }}
+                            <AccessBadge :access="r.access" class="ml-1" />
                         </p>
                         <p
                             v-if="r.review"

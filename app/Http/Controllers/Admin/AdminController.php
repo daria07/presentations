@@ -152,6 +152,7 @@ class AdminController extends Controller
                 'rating' => $p->rating,
                 'review' => $p->review,
                 'reviewedAt' => $p->reviewed_at?->toIso8601String(),
+                'access' => $p->access(),
                 'user' => $p->user?->only(['id', 'name', 'email']),
             ]);
 
@@ -351,6 +352,7 @@ class AdminController extends Controller
                     'palette' => $p->palette,
                     'rating' => $p->rating,
                     'review' => $p->review,
+                    'access' => $p->access(),
                     'createdAt' => $p->created_at?->toIso8601String(),
                 ])
                 ->all(),

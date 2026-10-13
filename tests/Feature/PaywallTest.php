@@ -8,6 +8,7 @@ use App\Models\Presentation;
 use App\Models\User;
 use App\Services\Billing\Billing;
 use App\Services\Billing\Package;
+use App\Services\Billing\UnlockPresentation;
 use App\Services\Deck\DeckRenderer;
 use Illuminate\Support\Facades\Queue;
 
@@ -135,4 +136,20 @@ test('обычная покупка пробную презентацию не �
 
     expect($presentation->refresh()->isLocked())->toBeTrue()
         ->and($user->refresh()->credits)->toBe(3);
+});
+
+test('в админке видно, пробная версия или оплаченная', function () {
+    Queue::fake();
+    $presentation = trialDeck(credits: 1);
+    $presentation->update(['paid_with' => 'trial']);
+
+    expect($presentation->access())->toBe('trial');
+
+    UnlockPresentation::handle($presentation);
+
+    expect($presentation->refresh()->access())->toBe('unlocked');
+
+    $presentation->update(['paid_with' => 'credit']);
+
+    expect($presentation->access())->toBe('paid');
 });

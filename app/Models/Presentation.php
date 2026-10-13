@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
+ * @property string|null $paid_with
  * @property int $id
  * @property int $user_id
  * @property string|null $title
@@ -39,7 +40,7 @@ use Illuminate\Support\Str;
 #[Fillable([
     'user_id', 'title', 'topic', 'source_text', 'slide_count',
     'clarifications', 'brief', 'sources', 'cover_image', 'outline', 'status',
-    'file_path', 'file_format', 'theme', 'palette', 'generated_at', 'unlocked_at', 'error_message',
+    'file_path', 'file_format', 'theme', 'palette', 'generated_at', 'unlocked_at', 'paid_with', 'error_message',
     'rating', 'review', 'reviewed_at',
 ])]
 class Presentation extends Model
@@ -147,6 +148,21 @@ class Presentation extends Model
      * Бесплатная версия: сделана по пробной генерации и не открыта.
      * Видна только на сайте — с водяным знаком, без скачивания.
      */
+    /**
+     * Какая это версия — для админки:
+     * trial — пробная, unlocked — пробная, открытая потом за генерацию,
+     * paid — сделана за купленную генерацию, null — ещё не оплачена.
+     */
+    public function access(): ?string
+    {
+        return match ($this->paid_with) {
+            'credit' => 'paid',
+            'unlocked' => 'unlocked',
+            'trial' => 'trial',
+            default => null,
+        };
+    }
+
     public function isLocked(): bool
     {
         return $this->unlocked_at === null;

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AccessBadge from '@/components/admin/AccessBadge.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import PageHeader from '@/components/PageHeader.vue';
 import { slides } from '@/lib/plural';
@@ -35,6 +36,7 @@ const props = defineProps<{
         palette: string | null;
         rating: number | null;
         review: string | null;
+        access: 'trial' | 'unlocked' | 'paid' | null;
         createdAt: string | null;
     }[];
     payments: {
@@ -234,6 +236,10 @@ function when(iso: string | null): string {
                             >
                                 {{ slides(p.slides) }} · {{ p.theme ?? '—' }} /
                                 {{ p.palette ?? '—' }}
+                                <template v-if="p.access">
+                                    ·
+                                    <AccessBadge :access="p.access" />
+                                </template>
                                 <template v-if="p.rating">
                                     ·
                                     <span class="text-amber-500"

@@ -33,7 +33,8 @@ class UnlockPresentation
             }
 
             $user->decrement('credits');
-            $fresh->update(['unlocked_at' => now()]);
+            // paid_with = unlocked: была пробной, открыта за генерацию
+            $fresh->update(['unlocked_at' => now(), 'paid_with' => 'unlocked']);
 
             // Файл перепечатываем без водяного знака. После коммита:
             // иначе воркер мог бы успеть взять задачу раньше, чем

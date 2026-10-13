@@ -179,6 +179,7 @@ class PresentationController extends Controller
                 // За купленную генерацию — сразу полная версия. По пробной —
                 // бесплатная, и в ней не больше 8 слайдов
                 'unlocked_at' => $spent === 'credit' ? now() : null,
+                'paid_with' => $spent,
                 'slide_count' => $spent === 'trial'
                     ? min($locked->slide_count, self::FREE_MAX_SLIDES)
                     : $locked->slide_count,
@@ -255,6 +256,12 @@ class PresentationController extends Controller
             $locked->update([
                 'status' => PresentationStatus::Queued,
                 'error_message' => null,
+                // Сбой вернул прошлую оплату, перезапуск списал заново —
+                // и, возможно, уже другой: пробную сменила купленная
+                ...($failed ? [
+                    'paid_with' => $spent,
+                    'unlocked_at' => $spent === 'credit' ? ($locked->unlocked_at ?? now()) : $locked->unlocked_at,
+                ] : []),
             ]);
 
             return $failed ? 'restarted' : 'unstuck';
