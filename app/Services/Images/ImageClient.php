@@ -14,6 +14,12 @@ use Throwable;
  * Все картинки презентации запрашиваются одновременно: одна рисуется
  * около 30 секунд, и по очереди четыре заняли бы две минуты.
  *
+ * Картинку просим потоком (stream): шлюз рвёт соединение, если
+ * 60 секунд от модели не пришло ни байта, а горизонтальная обложка
+ * рисуется как раз около минуты. В потоке шлюз шлёт отметки о ходе
+ * работы каждые несколько секунд, и соединение не простаивает. Само
+ * изображение приходит последним событием, целиком.
+ *
  * Шлюз время от времени рвёт соединение посреди генерации. Такие
  * запросы повторяем — до трёх заходов. А вот ответ с ошибкой (отказ
  * модели по теме, неверный запрос) от повтора не изменится: его
@@ -57,6 +63,8 @@ class ImageClient
                         'size' => $pending[$key]['size'],
                         'quality' => $config['quality'],
                         'n' => 1,
+                        'stream' => true,
+                        'partial_images' => 3,
                     ]),
                 array_keys($pending),
             ));
@@ -93,7 +101,25 @@ class ImageClient
                     continue;
                 }
 
-                $b64 = $response->json('data.0.b64_json');
+                $result = self::result($response);
+
+                // Ошибка может прийти и внутри потока, уже после кода 200
+                if ($result['error'] !== null) {
+                    Log::warning('Картинка: шлюз отказал', [
+                        'key' => $key,
+                        'status' => $response->status(),
+                        'body' => mb_substr($result['error'], 0, 500),
+                        'prompt' => mb_substr($request['prompt'], 0, 300),
+                    ]);
+
+                    if (self::isPolicyText($result['error'])) {
+                        $this->refused[] = (string) $key;
+                    }
+
+                    continue;
+                }
+
+                $b64 = $result['b64'];
                 $bytes = is_string($b64) ? base64_decode($b64, true) : false;
 
                 if ($bytes === false || $bytes === '') {
@@ -107,8 +133,8 @@ class ImageClient
 
                 $results[$key] = [
                     'bytes' => $bytes,
-                    'input' => (int) ($response->json('usage.input_tokens') ?? 0),
-                    'output' => (int) ($response->json('usage.output_tokens') ?? 0),
+                    'input' => (int) ($result['usage']['input_tokens'] ?? 0),
+                    'output' => (int) ($result['usage']['output_tokens'] ?? 0),
                 ];
             }
 
@@ -116,6 +142,87 @@ class ImageClient
         }
 
         return $results;
+    }
+
+    /**
+     * Готовое изображение из ответа — потокового или обычного.
+     *
+     * Поток — строки «data: {...}»: сначала отметки о ходе работы, в конце
+     * результат. Шлюз отдаёт его в двух видах: свой (image.generation.result,
+     * картинка в data[0].b64_json) и как у OpenAI (image_generation.completed,
+     * картинка в b64_json). Наброски (partial_image) пропускаем.
+     * Если шлюз поток не включил, ответ — обычный JSON того же вида.
+     *
+     * @return array{b64: string|null, usage: array<string, mixed>, error: string|null}
+     */
+    public static function result(Response $response): array
+    {
+        $body = $response->body();
+
+        // Поток начинается с «data:» или с «event:» — шлюз шлёт оба
+        // формата: свой (image.generation.*) и OpenAI (image_generation.*)
+        $streamed = preg_match('/^(data|event):/m', substr($body, 0, 2000)) === 1;
+
+        if (! $streamed) {
+            $usage = $response->json('usage');
+
+            return [
+                'b64' => is_string($response->json('data.0.b64_json')) ? $response->json('data.0.b64_json') : null,
+                'usage' => is_array($usage) ? $usage : [],
+                'error' => null,
+            ];
+        }
+
+        $result = ['b64' => null, 'usage' => [], 'error' => null];
+
+        foreach (preg_split('/\r?\n/', $body) ?: [] as $line) {
+            if (! str_starts_with($line, 'data:')) {
+                continue;
+            }
+
+            $event = json_decode(trim(substr($line, 5)), true);
+
+            if (! is_array($event)) {
+                continue; // [DONE] и пустые строки
+            }
+
+            if (isset($event['error'])) {
+                $error = $event['error'];
+                $result['error'] = is_array($error) ? (string) json_encode($error, JSON_UNESCAPED_UNICODE) : (string) $error;
+            }
+
+            // Берём последнее изображение: промежуточные наброски, если
+            // шлюз их пришлёт, идут раньше готового
+            $b64 = $event['data'][0]['b64_json'] ?? $event['b64_json'] ?? null;
+
+            $kind = (string) ($event['object'] ?? $event['type'] ?? '');
+            $partial = in_array($kind, ['image.generation.chunk', 'image_generation.partial_image'], true);
+
+            if (is_string($b64) && ! $partial) {
+                $result['b64'] = $b64;
+            }
+
+            if (is_array($event['usage'] ?? null)) {
+                $result['usage'] = $event['usage'];
+            }
+        }
+
+        // Ошибка в начале потока, а изображение всё же пришло — это не отказ
+        if ($result['b64'] !== null) {
+            $result['error'] = null;
+        }
+
+        return $result;
+    }
+
+    private static function isPolicyText(string $text): bool
+    {
+        $text = mb_strtolower($text);
+
+        return str_contains($text, 'policy')
+            || str_contains($text, 'safety')
+            || str_contains($text, 'moderation')
+            || str_contains($text, '政策');
     }
 
     /**

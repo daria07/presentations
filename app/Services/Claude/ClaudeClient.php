@@ -137,7 +137,7 @@ class ClaudeClient
             inputTokens: $inputTokens,
             outputTokens: $outputTokens,
             cachedTokens: $cachedTokens,
-            cost: $this->cost($inputTokens, $outputTokens),
+            cost: $this->cost($inputTokens + $cachedTokens, $outputTokens),
             model: $this->model,
         );
     }
@@ -311,6 +311,11 @@ class ClaudeClient
     /**
      * Себестоимость вызова в сотых доли цента.
      * Цены в конфиге заданы за миллион токенов.
+     *
+     * Вход считаем вместе с прочитанным из кэша: cheapai почти весь
+     * вход записывает в кэш (input 2, cache 9 388) и берёт за него
+     * примерно по цене обычного входа. Без этого себестоимость в
+     * админке выходила вдвое меньше списаний.
      */
     private function cost(int $input, int $output): int
     {

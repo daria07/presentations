@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\Images\ImageClient;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -91,7 +92,19 @@ class TestImage extends Command
                 return self::FAILURE;
             }
 
-            $image = $this->extractImage($response->json() ?? []);
+            // Потоковый ответ разбирает тот же код, что и генерация
+            $streamed = $kind === 'images' ? ImageClient::result($response) : null;
+
+            if ($streamed !== null && $streamed['error'] !== null) {
+                $this->components->error("{$kind}: ошибка в потоке за {$seconds} с");
+                $this->line(Str::limit($streamed['error'], 800));
+
+                return self::FAILURE;
+            }
+
+            $image = $streamed !== null && $streamed['b64'] !== null
+                ? ['b64' => $streamed['b64']]
+                : $this->extractImage($response->json() ?? []);
 
             if ($image === null) {
                 $this->components->warn("{$kind}: ответ пришёл за {$seconds} с, но картинки в нём не нашлось. Начало ответа:");
@@ -103,7 +116,7 @@ class TestImage extends Command
             $path = $this->save($image);
 
             $this->components->twoColumnDetail('Время', "{$seconds} с");
-            $this->usage($response->json('usage') ?? []);
+            $this->usage($streamed['usage'] ?? ($response->json('usage') ?? []));
             $this->components->info("Готово: {$path}");
 
             return self::SUCCESS;
@@ -124,6 +137,10 @@ class TestImage extends Command
                 'size' => $this->option('size'),
                 'quality' => $this->option('quality'),
                 'n' => 1,
+                // Поток держит соединение живым: без него шлюз рвёт
+                // запрос на 60-й секунде тишины
+                'stream' => true,
+                'partial_images' => 3,
             ]);
     }
 

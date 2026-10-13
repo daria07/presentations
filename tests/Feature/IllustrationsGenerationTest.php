@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Claude\PresentationPlanner;
 use App\Services\Deck\DeckRenderer;
 use App\Services\Images\Illustrator;
+use App\Services\Images\ImageClient;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -204,4 +205,41 @@ test('герой презентации называется в каждом з�
 
     expect($prompts)->toHaveCount(3)
         ->and($prompts->every(fn ($p) => str_contains($p, 'The presentation is about white standard poodle with a curly coat')))->toBeTrue();
+});
+
+test('картинка из потокового ответа: отметки о ходе работы, потом результат', function () {
+    $png = base64_encode(tinyPng());
+    $stream = 'data: {"object": "image.generation.chunk", "index": 1, "progress_text": ""}'."\n\n"
+        .'data: {"object": "image.generation.chunk", "index": 1, "progress_text": ""}'."\n\n"
+        .'data: {"object": "image.generation.result", "data": [{"b64_json": "'.$png.'"}], "usage": {"input_tokens": 70, "output_tokens": 1600}}'."\n\n"
+        ."data: [DONE]\n\n";
+
+    Http::fake(['gw.test/*' => Http::response($stream, 200, ['Content-Type' => 'text/event-stream'])]);
+
+    $presentation = deckWithScenes();
+
+    app(Illustrator::class)->illustrate($presentation);
+
+    $slides = $presentation->refresh()->outline['slides'];
+
+    expect(Storage::disk('local')->exists($slides[1]['image']['path']))->toBeTrue()
+        ->and(ApiCall::where('purpose', 'image')->sum('output_tokens'))->toEqual(4800);
+
+    Http::assertSent(fn (Request $r) => ($r['stream'] ?? false) === true);
+});
+
+test('поток в формате OpenAI: набросок пропускаем, берём готовую картинку', function () {
+    $png = base64_encode(tinyPng());
+    $stream = "event: image_generation.partial_image\n"
+        .'data: {"type":"image_generation.partial_image","b64_json":"bm90IGEgcG5n","partial_image_index":0}'."\n\n"
+        ."event: image_generation.completed\n"
+        .'data: {"type":"image_generation.completed","b64_json":"'.$png.'","usage":{"input_tokens":70,"output_tokens":1372}}'."\n\n";
+
+    Http::fake(['gw.test/*' => Http::response($stream, 200, ['Content-Type' => 'text/event-stream'])]);
+
+    $result = ImageClient::result(Http::post('https://gw.test/v1/images/generations'));
+
+    expect($result['b64'])->toBe($png)
+        ->and($result['usage']['output_tokens'])->toBe(1372)
+        ->and($result['error'])->toBeNull();
 });
