@@ -59,7 +59,7 @@ class RedrawImages extends Command
             ['id', 'почта', 'оплата', 'создана', 'картинок'],
             $targets->map(fn (Presentation $p) => [
                 $p->id,
-                $p->user?->email ?? '—',
+                $p->user->email ?? '—',
                 $p->paid_with ?? '—',
                 $p->created_at?->format('d.m H:i'),
                 self::missing($p),
