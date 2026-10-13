@@ -252,7 +252,7 @@ class Schemas
                                 'type' => 'array',
                                 'maxItems' => 4,
                                 'description' => 'Для stats, timeline и bignumber: число или год '
-                                    .'плюс подпись. В bignumber ровно один.',
+                                    .'плюс подпись. В bignumber ровно один, значение — до 8 знаков.',
                                 'items' => [
                                     'type' => 'object',
                                     'properties' => [

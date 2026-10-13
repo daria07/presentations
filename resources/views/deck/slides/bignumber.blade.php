@@ -1,5 +1,16 @@
 @php($stat = ($slide['stats'] ?? [])[0] ?? null)
 
+{{-- Кегль от длины значения: «72%» держит весь слайд, а «Февраль 1920»
+     в том же кегле переносилось на две строки, и строки наезжали друг
+     на друга. Длинным значениям — ступенью мельче. --}}
+@php($length = mb_strlen(trim((string) ($stat['value'] ?? ''))))
+@php($size = match (true) {
+    $length <= 5 => null,
+    $length <= 8 => 'md',
+    $length <= 12 => 'sm',
+    default => 'xs',
+})
+
 @php($image = filled($slide['image']['src'] ?? null) ? $slide['image'] : null)
 @php($side = ($slide['image']['side'] ?? 'right') === 'left' ? 'left' : 'right')
 
@@ -12,7 +23,7 @@
     </div>
     <div class="body body--center">
         <div class="bignum">
-            <div class="bignum-value">{{ $stat['value'] ?? '—' }}</div>
+            <div @class(['bignum-value', "bignum-value--{$size}" => $size])>{{ $stat['value'] ?? '—' }}</div>
 
             @if (filled($stat['label'] ?? null))
                 <div class="bignum-label">{{ $stat['label'] }}</div>

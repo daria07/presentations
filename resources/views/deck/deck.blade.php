@@ -439,6 +439,13 @@
         font-variant-numeric: tabular-nums;
     }
 
+    /* Длинные значения — ступенью мельче (класс ставит шаблон по длине).
+       Двойной класс перебивает кегль из файла темы. При переносе строки
+       не должны наезжать друг на друга, поэтому интерлиньяж нормальный */
+    .bignum-value.bignum-value--md { font-size: 84pt; line-height: .95; }
+    .bignum-value.bignum-value--sm { font-size: 54pt; line-height: 1; letter-spacing: -.03em; }
+    .bignum-value.bignum-value--xs { font-size: 40pt; line-height: 1.05; letter-spacing: -.02em; }
+
     .bignum-label {
         font-family: var(--font-display), sans-serif;
         font-size: 19pt;
@@ -530,6 +537,9 @@
     .slide.slide--image-right .bullets, .slide.slide--image-left .bullets { gap: 5mm; }
     .slide.slide--image-right .bullet, .slide.slide--image-left .bullet { min-width: 0; }
     .slide.slide--image-right .bignum-value, .slide.slide--image-left .bignum-value { font-size: 64pt; }
+    .slide.slide--image-right .bignum-value.bignum-value--md, .slide.slide--image-left .bignum-value.bignum-value--md { font-size: 46pt; }
+    .slide.slide--image-right .bignum-value.bignum-value--sm, .slide.slide--image-left .bignum-value.bignum-value--sm { font-size: 34pt; }
+    .slide.slide--image-right .bignum-value.bignum-value--xs, .slide.slide--image-left .bignum-value.bignum-value--xs { font-size: 26pt; }
     .slide.slide--image-right .quote-text, .slide.slide--image-left .quote-text { font-size: 17pt; max-width: 100%; }
 
     /*
