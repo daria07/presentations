@@ -125,17 +125,22 @@ class ImageClient
                     : ($result['url'] !== null ? self::download($result['url']) : false);
 
                 if ($bytes === false || $bytes === '') {
+                    $body = $response->body();
+
+                    // Длина, число строк data и хвост — чтобы по логу было
+                    // видно, оборван поток или пришёл в неожиданном виде
                     Log::warning('Картинка: в ответе нет изображения', [
                         'key' => $key,
                         'round' => $round,
-                        'body' => mb_substr($response->body(), 0, 300),
+                        'length' => strlen($body),
+                        'data_lines' => substr_count($body, "\ndata:") + (str_starts_with($body, 'data:') ? 1 : 0),
+                        'body' => mb_substr($body, 0, 300),
+                        'tail' => mb_substr($body, -300),
                     ]);
 
-                    // Пустой ответ с кодом 200 — тот же обрыв, только
-                    // шлюз закрыл поток вежливо. Повторяем как обрыв
-                    if (trim($response->body()) === '') {
-                        $retry[$key] = $request;
-                    }
+                    // Пустой или оборванный ответ с кодом 200 — тот же
+                    // обрыв, только шлюз закрыл поток вежливо. Повторяем
+                    $retry[$key] = $request;
 
                     continue;
                 }
@@ -185,17 +190,7 @@ class ImageClient
 
         $result = ['b64' => null, 'url' => null, 'usage' => [], 'error' => null];
 
-        foreach (preg_split('/\r?\n/', $body) ?: [] as $line) {
-            if (! str_starts_with($line, 'data:')) {
-                continue;
-            }
-
-            $event = json_decode(trim(substr($line, 5)), true);
-
-            if (! is_array($event)) {
-                continue; // [DONE] и пустые строки
-            }
-
+        foreach (self::events($body) as $event) {
             if (isset($event['error'])) {
                 $error = $event['error'];
                 $result['error'] = is_array($error) ? (string) json_encode($error, JSON_UNESCAPED_UNICODE) : (string) $error;
@@ -230,6 +225,71 @@ class ImageClient
         }
 
         return $result;
+    }
+
+    /**
+     * События потока (SSE) как массивы.
+     *
+     * По стандарту одно событие может занимать несколько строк «data:»
+     * подряд, до пустой строки. Шлюз так и делает с готовой картинкой:
+     * мегабайты base64 режет на строки, и каждая строка по отдельности —
+     * не JSON. Раньше строки разбирались поодиночке, и готовая картинка
+     * терялась: в логе «в ответе нет изображения», а слайд без картинки.
+     *
+     * Поэтому строки события склеиваем. Если склеенное не разбирается
+     * (несколько JSON подряд без пустой строки между ними), разбираем
+     * каждую строку отдельно, как раньше.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private static function events(string $body): array
+    {
+        $groups = [];
+        $lines = [];
+
+        foreach (preg_split('/\r?\n/', $body) ?: [] as $line) {
+            // Пустая строка или начало нового события закрывают текущее
+            if ($line === '' || str_starts_with($line, 'event:')) {
+                if ($lines !== []) {
+                    $groups[] = $lines;
+                    $lines = [];
+                }
+
+                continue;
+            }
+
+            // Остальное — комментарии («: PING») и служебные поля
+            if (str_starts_with($line, 'data:')) {
+                $data = substr($line, 5);
+                $lines[] = str_starts_with($data, ' ') ? substr($data, 1) : $data;
+            }
+        }
+
+        if ($lines !== []) {
+            $groups[] = $lines;
+        }
+
+        $events = [];
+
+        foreach ($groups as $group) {
+            $whole = json_decode(trim(implode('', $group)), true);
+
+            if (is_array($whole)) {
+                $events[] = $whole;
+
+                continue;
+            }
+
+            foreach ($group as $line) {
+                $event = json_decode(trim($line), true);
+
+                if (is_array($event)) {
+                    $events[] = $event; // [DONE] и обрывки пропускаем
+                }
+            }
+        }
+
+        return $events;
     }
 
     /**

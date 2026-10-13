@@ -4,6 +4,7 @@ use App\Enums\PresentationStatus;
 use App\Jobs\GeneratePresentation;
 use App\Jobs\IllustrateCover;
 use App\Jobs\IllustratePresentation;
+use App\Jobs\RenderPresentation;
 use App\Models\ApiCall;
 use App\Models\Presentation;
 use App\Models\User;
@@ -12,6 +13,7 @@ use App\Services\Deck\DeckRenderer;
 use App\Services\Images\Illustrator;
 use App\Services\Images\ImageClient;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
@@ -246,6 +248,43 @@ test('поток в формате OpenAI: набросок пропускаем
         ->and($result['error'])->toBeNull();
 });
 
+test('готовая картинка, порезанная шлюзом на несколько строк data, не теряется', function () {
+    $png = base64_encode(tinyPng());
+    $json = '{"type":"image_generation.completed","b64_json":"'.$png.'","usage":{"input_tokens":70,"output_tokens":1372}}';
+    // Режем JSON посреди base64 — каждая строка по отдельности не JSON
+    $parts = str_split($json, 40);
+
+    $stream = ": PING\n\n"
+        ."event: image_generation.completed\n"
+        .implode('', array_map(fn ($p) => 'data: '.$p."\n", $parts))
+        ."\n";
+
+    Http::fake(['gw.test/*' => Http::response($stream, 200, ['Content-Type' => 'text/event-stream'])]);
+
+    $result = ImageClient::result(Http::post('https://gw.test/v1/images/generations'));
+
+    expect($result['b64'])->toBe($png)
+        ->and($result['usage']['output_tokens'])->toBe(1372);
+});
+
+test('поток без картинки (оборванный) повторяется', function () {
+    $calls = 0;
+    $png = base64_encode(tinyPng());
+
+    Http::fake(function () use (&$calls, $png) {
+        $calls++;
+
+        return $calls === 1
+            ? Http::response("event: image_generation.completed\ndata: {\"type\":\"image_generation.completed\",\"b64_json\":\"iVBO", 200)
+            : Http::response(['data' => [['b64_json' => $png]]]);
+    });
+
+    $results = app(ImageClient::class)->generateMany(['0' => ['prompt' => 'кот', 'size' => '1024x1024']]);
+
+    expect($calls)->toBe(2)
+        ->and($results['0'])->not->toBeNull();
+});
+
 test('после конспекта структура собирается следующей задачей', function () {
     Queue::fake();
 
@@ -329,4 +368,33 @@ test('готовая обложка подставляется, а не рису
     expect($requests)->toBe(2)
         ->and($slides[0]['image']['path'])->toBe('presentations/'.$presentation->id.'/images/0-ready.jpg')
         ->and($presentation->status)->toBe(PresentationStatus::Ready);
+});
+
+test('images:redraw дорисовывает несостоявшиеся картинки только оплаченным', function () {
+    Bus::fake([RenderPresentation::class]);
+    Http::fake(['gw.test/*' => Http::response(['data' => [['b64_json' => base64_encode(tinyPng())]]])]);
+
+    $make = function (string $paidWith): Presentation {
+        $p = deckWithScenes();
+        $outline = $p->outline;
+        $outline['slides'][1]['image']['failed'] = true;
+        $p->forceFill([
+            'outline' => $outline,
+            'paid_with' => $paidWith,
+            'status' => PresentationStatus::Ready,
+            'file_path' => 'presentations/x.pdf',
+        ])->save();
+
+        return $p;
+    };
+
+    $paid = $make('credit');
+    $trial = $make('trial');
+
+    $this->artisan('images:redraw', ['--force' => true])->assertSuccessful();
+
+    expect($paid->refresh()->outline['slides'][1]['image']['path'])->not->toBeNull()
+        ->and($trial->refresh()->outline['slides'][1]['image']['failed'])->toBeTrue();
+
+    Bus::assertDispatchedSync(RenderPresentation::class, 1);
 });
