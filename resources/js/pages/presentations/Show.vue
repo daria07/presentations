@@ -34,6 +34,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Spinner } from '@/components/ui/spinner';
 import { slides } from '@/lib/plural';
 
@@ -74,6 +75,8 @@ type Presentation = {
     questions: Question[] | null;
     isPending: boolean;
     isReady: boolean;
+    /** null — слайда с источниками нет; иначе показан ли он */
+    sourcesSlide: boolean | null;
     steps: Step[] | null;
     error: string | null;
     shareUrl: string | null;
@@ -394,6 +397,35 @@ function saveLook(themeKey: string, paletteKey: string) {
         .finally(() => {
             switching.value = null;
         });
+}
+
+/* ---------- Слайд с источниками ---------- */
+
+/*
+   Слайд не удаляется, а скрывается: передумал — вернул галочку.
+   Как и смена оформления, это перепечатка PDF, поэтому дальше тот же
+   путь: ждём файл, а потом забираем свежий просмотр уже без слайда.
+*/
+function toggleSources(visible: boolean) {
+    if (current.value.sourcesSlide === visible) return;
+
+    current.value = { ...current.value, sourcesSlide: visible };
+
+    const token = decodeURIComponent(
+        document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
+    );
+
+    fetch(`/presentations/${current.value.id}/sources`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-XSRF-TOKEN': token,
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ visible }),
+    })
+        .then(() => waitForFile())
+        .catch(() => router.reload());
 }
 
 /* ---------- Удаление ---------- */
@@ -1006,6 +1038,40 @@ async function copyShare() {
                                 </span>
                                 <span class="truncate">{{ p.name }}</span>
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Источники нужны не всем: в школьном докладе или на
+                         работе их иногда просят убрать. Скрываем, а не
+                         удаляем — вернуть можно той же галочкой -->
+                    <div v-if="current.sourcesSlide !== null" class="space-y-2">
+                        <p
+                            class="text-muted-foreground text-xs tracking-wide uppercase"
+                        >
+                            Слайды
+                        </p>
+                        <div class="flex items-start gap-2.5">
+                            <Checkbox
+                                id="sources-slide"
+                                class="mt-0.5"
+                                :model-value="current.sourcesSlide"
+                                :disabled="reprinting"
+                                @update:model-value="
+                                    toggleSources($event === true)
+                                "
+                            />
+                            <label
+                                for="sources-slide"
+                                class="cursor-pointer text-sm leading-snug"
+                            >
+                                Слайд с источниками
+                                <span
+                                    class="text-muted-foreground block text-xs"
+                                >
+                                    Без галочки его не будет ни в просмотре, ни
+                                    в PDF
+                                </span>
+                            </label>
                         </div>
                     </div>
                 </aside>

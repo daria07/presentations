@@ -51,6 +51,8 @@ type Slide = {
     notes: string | null;
     image?: SlideImage | null;
     sources?: Source[];
+    /** Скрыт со страницы презентации: в просмотр и PDF не попадает */
+    hidden?: boolean;
 };
 
 const props = defineProps<{
@@ -484,6 +486,7 @@ onBeforeUnmount(() => media?.removeEventListener('change', onNarrowChange));
                     </p>
                     <p class="text-muted-foreground mt-0.5 text-xs">
                         {{ i + 1 }} · {{ layoutName(slide.layout) }}
+                        <template v-if="slide.hidden"> · скрыт</template>
                     </p>
                 </button>
 

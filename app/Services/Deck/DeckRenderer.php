@@ -36,7 +36,11 @@ class DeckRenderer
 
         return View::make('deck.deck', [
             'title' => $outline['title'] ?? $presentation->topic,
-            'slides' => $this->images($presentation, $outline['slides']),
+            // Скрытые слайды (источники, убранные человеком) не рисуем
+            'slides' => $this->images($presentation, array_values(array_filter(
+                $outline['slides'],
+                fn ($slide) => ! is_array($slide) || empty($slide['hidden']),
+            ))),
             'theme' => $theme,
             'themeKey' => $themeKey,
             'paletteKey' => $paletteKey,

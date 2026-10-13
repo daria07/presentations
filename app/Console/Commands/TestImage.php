@@ -102,9 +102,11 @@ class TestImage extends Command
                 return self::FAILURE;
             }
 
-            $image = $streamed !== null && $streamed['b64'] !== null
-                ? ['b64' => $streamed['b64']]
-                : $this->extractImage($response->json() ?? []);
+            $image = match (true) {
+                $streamed !== null && $streamed['b64'] !== null => ['b64' => $streamed['b64']],
+                $streamed !== null && $streamed['url'] !== null => ['url' => $streamed['url']],
+                default => $this->extractImage($response->json() ?? []),
+            };
 
             if ($image === null) {
                 $this->components->warn("{$kind}: ответ пришёл за {$seconds} с, но картинки в нём не нашлось. Начало ответа:");

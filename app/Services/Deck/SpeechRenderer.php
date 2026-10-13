@@ -29,7 +29,11 @@ class SpeechRenderer
     public function html(Presentation $presentation): string
     {
         $outline = $presentation->outline ?? [];
-        $slides = $outline['slides'] ?? [];
+        // Скрытые слайды в речь не попадают: их и на экране нет
+        $slides = array_values(array_filter(
+            $outline['slides'] ?? [],
+            fn ($slide) => ! is_array($slide) || empty($slide['hidden']),
+        ));
 
         if ($slides === []) {
             throw new RuntimeException('У презентации нет слайдов — речь собирать не из чего.');

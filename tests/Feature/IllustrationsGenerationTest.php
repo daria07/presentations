@@ -262,3 +262,21 @@ test('после конспекта структура собирается сл
     expect($presentation->refresh()->brief)->toBe(['thesis' => 'x', 'points' => []]);
     Queue::assertPushed(GeneratePresentation::class, fn ($job) => $job->spent === 'trial');
 });
+
+test('если шлюз прислал ссылку вместо картинки, картинку скачиваем', function () {
+    $stream = "event: image_generation.completed\n"
+        .'data: {"type":"image_generation.completed","url":"https://images.test/x.png?sig=1"}'."\n\n";
+
+    Http::fake([
+        'gw.test/*' => Http::response($stream, 200, ['Content-Type' => 'text/event-stream']),
+        'images.test/*' => Http::response(tinyPng(), 200, ['Content-Type' => 'image/png']),
+    ]);
+
+    $presentation = deckWithScenes();
+
+    app(Illustrator::class)->illustrate($presentation);
+
+    $slides = $presentation->refresh()->outline['slides'];
+
+    expect(Storage::disk('local')->exists($slides[0]['image']['path']))->toBeTrue();
+});

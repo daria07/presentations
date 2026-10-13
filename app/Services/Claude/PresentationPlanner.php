@@ -181,7 +181,15 @@ class PresentationPlanner
 
         // Пустая структура — это всегда неожиданность, и разбираться
         // в ней без сырого ответа невозможно. Сохраняем его целиком.
-        if ($outline['slides'] === []) {
+        // Только титульный и источники — их мы добавляем сами, значит
+        // от модели не пришло ни одного слайда. Такую «презентацию»
+        // отдавать нельзя: повторяем запрос (ошибка повторяемая)
+        $content = array_filter(
+            $outline['slides'],
+            fn (array $slide) => ! in_array($slide['layout'] ?? null, ['title', 'sources'], true),
+        );
+
+        if ($content === []) {
             Log::error('Модель вернула структуру без слайдов', [
                 'presentation' => $presentation->id,
                 'stop_reason' => $result->raw['stop_reason'] ?? null,

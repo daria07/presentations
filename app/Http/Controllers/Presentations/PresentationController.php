@@ -340,6 +340,54 @@ class PresentationController extends Controller
         return back();
     }
 
+    /**
+     * Скрыть или вернуть слайд с источниками.
+     *
+     * Слайд не удаляется, а помечается: передумали — источники вернутся
+     * одним щелчком, без новой генерации. Скрытый слайд не попадает
+     * ни в просмотр, ни в PDF, ни в речь докладчика.
+     */
+    public function sources(Request $request, Presentation $presentation): RedirectResponse
+    {
+        $this->authorize('update', $presentation);
+
+        $visible = $request->validate(['visible' => ['required', 'boolean']])['visible'];
+
+        if (! $presentation->isReady()) {
+            return back()->with('toast', [
+                'type' => 'info',
+                'message' => 'Скрыть источники можно у готовой презентации.',
+            ]);
+        }
+
+        $outline = $presentation->outline ?? [];
+        $index = null;
+
+        foreach ($outline['slides'] ?? [] as $i => $slide) {
+            if (($slide['layout'] ?? null) === 'sources') {
+                $index = $i;
+            }
+        }
+
+        abort_if($index === null, 404);
+
+        // Уже так — перепечатывать нечего
+        if (empty($outline['slides'][$index]['hidden']) === (bool) $visible) {
+            return back();
+        }
+
+        $outline['slides'][$index]['hidden'] = ! $visible;
+
+        $presentation->update([
+            'outline' => $outline,
+            'status' => PresentationStatus::Generating,
+        ]);
+
+        RenderPresentation::dispatch($presentation);
+
+        return back();
+    }
+
     /** Редактор структуры */
     public function edit(Presentation $presentation): Response
     {
@@ -522,7 +570,12 @@ class PresentationController extends Controller
             'title' => $presentation->title ?: $presentation->topic,
             'status' => $presentation->status->value,
             'statusLabel' => $presentation->status->label(),
-            'slideCount' => count($presentation->outline['slides'] ?? []) ?: $presentation->slide_count,
+            // Скрытые слайды (источники) в число не входят: человек видит
+            // и скачивает презентацию без них
+            'slideCount' => count(array_filter(
+                $presentation->outline['slides'] ?? [],
+                fn ($slide) => empty($slide['hidden']),
+            )) ?: $presentation->slide_count,
             'createdAt' => $presentation->created_at?->toIso8601String(),
             'url' => route('presentations.show', $presentation),
             // Оценка ставится прямо из списка, в модальном окне
@@ -596,6 +649,18 @@ class PresentationController extends Controller
         return $result;
     }
 
+    /** null — слайда с источниками нет, иначе — показан ли он */
+    private function sourcesState(Presentation $presentation): ?bool
+    {
+        foreach ($presentation->outline['slides'] ?? [] as $slide) {
+            if (($slide['layout'] ?? null) === 'sources') {
+                return empty($slide['hidden']);
+            }
+        }
+
+        return null;
+    }
+
     /** Полные данные одной презентации */
     private function detail(Presentation $presentation): array
     {
@@ -612,6 +677,9 @@ class PresentationController extends Controller
             'isPending' => $presentation->status->isPending()
                 || $presentation->status === PresentationStatus::Draft,
             'isReady' => $presentation->isReady(),
+            // Есть ли слайд с источниками и показан ли он: от этого
+            // зависит переключатель на странице презентации
+            'sourcesSlide' => $this->sourcesState($presentation),
             'steps' => $this->steps($presentation),
             'error' => $presentation->error_message,
             'shareUrl' => $presentation->isReady() ? $presentation->shareUrl() : null,

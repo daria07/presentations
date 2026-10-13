@@ -50,6 +50,8 @@ class UpdateOutlineRequest extends FormRequest
             'slides.*.heading' => [...$required, 'string', 'max:120'],
             'slides.*.subheading' => ['nullable', 'string', 'max:300'],
             'slides.*.notes' => ['nullable', 'string', 'max:1500'],
+            // Слайд скрыт со страницы презентации (сейчас — источники)
+            'slides.*.hidden' => ['nullable', 'boolean'],
 
             'slides.*.bullets' => ['nullable', 'array', 'max:6'],
             'slides.*.bullets.*' => ['array'],

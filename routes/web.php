@@ -107,6 +107,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('throttle:20,1')
             ->name('theme');
 
+        // Скрыть или вернуть слайд с источниками — тоже перепечатка
+        Route::post('{presentation}/sources', [PresentationController::class, 'sources'])
+            ->middleware('throttle:20,1')
+            ->name('sources');
+
         // Оценка готовой презентации: звёзды и пара слов
         Route::post('{presentation}/review', [PresentationController::class, 'review'])
             ->middleware('throttle:10,1')

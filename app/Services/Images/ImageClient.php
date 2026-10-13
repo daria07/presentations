@@ -120,13 +120,22 @@ class ImageClient
                 }
 
                 $b64 = $result['b64'];
-                $bytes = is_string($b64) ? base64_decode($b64, true) : false;
+                $bytes = is_string($b64)
+                    ? base64_decode($b64, true)
+                    : ($result['url'] !== null ? self::download($result['url']) : false);
 
                 if ($bytes === false || $bytes === '') {
                     Log::warning('Картинка: в ответе нет изображения', [
                         'key' => $key,
+                        'round' => $round,
                         'body' => mb_substr($response->body(), 0, 300),
                     ]);
+
+                    // Пустой ответ с кодом 200 — тот же обрыв, только
+                    // шлюз закрыл поток вежливо. Повторяем как обрыв
+                    if (trim($response->body()) === '') {
+                        $retry[$key] = $request;
+                    }
 
                     continue;
                 }
@@ -153,7 +162,7 @@ class ImageClient
      * картинка в b64_json). Наброски (partial_image) пропускаем.
      * Если шлюз поток не включил, ответ — обычный JSON того же вида.
      *
-     * @return array{b64: string|null, usage: array<string, mixed>, error: string|null}
+     * @return array{b64: string|null, url: string|null, usage: array<string, mixed>, error: string|null}
      */
     public static function result(Response $response): array
     {
@@ -168,12 +177,13 @@ class ImageClient
 
             return [
                 'b64' => is_string($response->json('data.0.b64_json')) ? $response->json('data.0.b64_json') : null,
+                'url' => is_string($response->json('data.0.url')) ? $response->json('data.0.url') : null,
                 'usage' => is_array($usage) ? $usage : [],
                 'error' => null,
             ];
         }
 
-        $result = ['b64' => null, 'usage' => [], 'error' => null];
+        $result = ['b64' => null, 'url' => null, 'usage' => [], 'error' => null];
 
         foreach (preg_split('/\r?\n/', $body) ?: [] as $line) {
             if (! str_starts_with($line, 'data:')) {
@@ -202,17 +212,55 @@ class ImageClient
                 $result['b64'] = $b64;
             }
 
+            // Иногда шлюз отдаёт не саму картинку, а ссылку на неё
+            $url = $event['data'][0]['url'] ?? $event['url'] ?? null;
+
+            if (is_string($url) && ! $partial) {
+                $result['url'] = $url;
+            }
+
             if (is_array($event['usage'] ?? null)) {
                 $result['usage'] = $event['usage'];
             }
         }
 
         // Ошибка в начале потока, а изображение всё же пришло — это не отказ
-        if ($result['b64'] !== null) {
+        if ($result['b64'] !== null || $result['url'] !== null) {
             $result['error'] = null;
         }
 
         return $result;
+    }
+
+    /**
+     * Картинка по ссылке, которую прислал шлюз вместо самих байтов.
+     * Ссылка временная, качаем сразу. Берём только https и только
+     * то, что похоже на картинку, — и не больше 15 МБ.
+     */
+    private static function download(string $url): string|false
+    {
+        if (! str_starts_with($url, 'https://')) {
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(60)->connectTimeout(15)->retry(2, 1000, throw: false)->get($url);
+        } catch (Throwable $e) {
+            Log::warning('Картинка: не скачали по ссылке', ['url' => $url, 'error' => $e->getMessage()]);
+
+            return false;
+        }
+
+        $bytes = $response->successful() ? $response->body() : '';
+        $isImage = str_starts_with($bytes, "\x89PNG") || str_starts_with($bytes, "\xFF\xD8") || str_starts_with($bytes, 'RIFF');
+
+        if (! $isImage || strlen($bytes) > 15_000_000) {
+            Log::warning('Картинка: по ссылке не картинка', ['url' => $url, 'status' => $response->status()]);
+
+            return false;
+        }
+
+        return $bytes;
     }
 
     private static function isPolicyText(string $text): bool

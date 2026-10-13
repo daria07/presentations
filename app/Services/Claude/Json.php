@@ -20,12 +20,79 @@ class Json
         if (is_string($value) && $value !== '') {
             $decoded = json_decode($value, true);
 
+            // Модель иногда сама сериализует вложенный массив в строку и
+            // не экранирует кавычку внутри текста: «„Ёжике в тумане"».
+            // Одна такая кавычка — и пропадает вся структура
+            if (! is_array($decoded)) {
+                $decoded = json_decode(self::escapeStrayQuotes($value), true);
+            }
+
             if (is_array($decoded)) {
                 return $decoded;
             }
         }
 
         return [];
+    }
+
+    /**
+     * Экранирует кавычки внутри строковых значений, которые модель
+     * забыла экранировать.
+     *
+     * Идём по тексту и помним, внутри строки мы или нет. Кавычка внутри
+     * строки закрывает её, только если за ней (после пробелов) идёт
+     * то, что в JSON может стоять после строки: запятая, двоеточие,
+     * скобка или конец текста. Иначе это кавычка из самого текста.
+     */
+    public static function escapeStrayQuotes(string $json): string
+    {
+        $out = '';
+        $inString = false;
+        $length = strlen($json);
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $json[$i];
+
+            if ($inString && $char === '\\') {
+                // Уже экранированный символ переносим как есть
+                $out .= $char.($json[$i + 1] ?? '');
+                $i++;
+
+                continue;
+            }
+
+            if ($char !== '"') {
+                $out .= $char;
+
+                continue;
+            }
+
+            if (! $inString) {
+                $inString = true;
+                $out .= $char;
+
+                continue;
+            }
+
+            $rest = ltrim(substr($json, $i + 1));
+            $closes = match (true) {
+                $rest === '' => true,
+                in_array($rest[0], [':', '}', ']'], true) => true,
+                // Запятая бывает и в тексте: «„Ёжике", а потом». После
+                // настоящей запятой в JSON идёт новое значение
+                $rest[0] === ',' => preg_match('/^,\s*(["{\[\-\d]|true|false|null)/', $rest) === 1,
+                default => false,
+            };
+
+            if ($closes) {
+                $inString = false;
+                $out .= $char;
+            } else {
+                $out .= '\\"';
+            }
+        }
+
+        return $out;
     }
 
     /**
