@@ -4,6 +4,7 @@ namespace App\Services\Billing;
 
 use App\Enums\PaymentStatus;
 use App\Models\Payment;
+use App\Models\Presentation;
 use App\Models\User;
 use App\Services\Billing\Providers\FakeGateway;
 use App\Services\Billing\Providers\YooKassaGateway;
@@ -11,7 +12,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
-use App\Models\Presentation;
 
 /**
  * Всё, что касается денег: создание платежа, начисление генераций,

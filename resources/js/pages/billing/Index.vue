@@ -194,7 +194,8 @@ function formatDate(iso: string | null): string {
         <PageHeader title="Тарифы" dot>
             <template #meta>
                 <template v-if="trialAvailable && credits < 1">
-                    У вас есть пробная презентация: до 8 слайдов, с водяным знаком. В тарифах — полная версия с PDF и ссылкой.
+                    У вас есть пробная презентация: до 8 слайдов, с водяным
+                    знаком. В тарифах — полная версия с PDF и ссылкой.
                 </template>
                 <template v-else>
                     Осталось генераций:

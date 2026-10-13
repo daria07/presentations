@@ -264,7 +264,8 @@ const canSubmit = computed(() =>
             <div class="flex items-center justify-between gap-4 border-t pt-6">
                 <p class="text-muted-foreground text-sm">
                     <template v-if="trialAvailable && credits < 1">
-                        Пробную презентацию соберём бесплатно — до 8 слайдов, с водяным знаком.
+                        Пробную презентацию соберём бесплатно — до 8 слайдов, с
+                        водяным знаком.
                     </template>
                     <template v-else-if="credits > 0">
                         Осталось генераций:

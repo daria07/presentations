@@ -146,7 +146,8 @@ function destroy() {
         <PageHeader title="Презентации" dot>
             <template #meta>
                 <template v-if="trialAvailable && credits < 1">
-                    Пробная презентация — бесплатно: до 8 слайдов, с водяным знаком.
+                    Пробная презентация — бесплатно: до 8 слайдов, с водяным
+                    знаком.
                 </template>
                 <template v-else>
                     Осталось генераций:
