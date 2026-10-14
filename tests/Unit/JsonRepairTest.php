@@ -25,3 +25,15 @@ test('кавычка перед запятой в тексте тоже оста
 test('правильный JSON разбирается как раньше', function () {
     expect(Json::toArray('[{"a": "b, \"c\""}]'))->toBe([['a' => 'b, "c"']]);
 });
+
+test('поля, проглоченные соседним в разметке вызова, разрезаются обратно', function () {
+    $data = Json::splitLeakedParameters([
+        'arc' => "Начинаем с загадки.</arc>\n<parameter name=\"points\">[{\"title\": \"Легенда\", \"substance\": \"Слуга выбрал лимон\"}]</parameter>\n<parameter name=\"thesis\">Другой тезис</parameter>",
+        'thesis' => 'Лимон показывает химию',
+    ]);
+
+    expect($data['arc'])->toBe('Начинаем с загадки.')
+        ->and($data['points'][0]['title'])->toBe('Легенда')
+        // Поле, пришедшее нормально, не перетираем
+        ->and($data['thesis'])->toBe('Лимон показывает химию');
+});

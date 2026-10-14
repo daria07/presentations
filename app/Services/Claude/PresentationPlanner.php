@@ -156,7 +156,7 @@ class PresentationPlanner
 
         $this->record($presentation, 'brief', $result);
 
-        return $result->data;
+        return Json::splitLeakedParameters(Json::unwrap($result->data));
     }
 
     /**
@@ -177,7 +177,7 @@ class PresentationPlanner
 
         $this->lastRaw = $result->raw;
 
-        $outline = $this->normalizeOutline($result->data, $presentation);
+        $outline = $this->normalizeOutline(Json::splitLeakedParameters(Json::unwrap($result->data)), $presentation);
 
         // Пустая структура — это всегда неожиданность, и разбираться
         // в ней без сырого ответа невозможно. Сохраняем его целиком.
@@ -785,6 +785,13 @@ class PresentationPlanner
         - quote — только подлинная цитата с настоящим автором.
 
 
+
+        Упор — тоже по ответам на уточнения. Если человек выбрал, на чём
+        сосредоточиться («упор на эксперименты», «на причины войны»),
+        этой части отдай не меньше половины содержательных слайдов,
+        а остальное сожми. Пять опытов — это два-три слайда с подробностями
+        (что делали, что увидели, почему так), а не один список из пяти
+        строк, где каждый опыт назван и сразу забыт.
 
         Подробность — по ответам на уточнения и по теме:
         - просили подробно или «больше текста» — в bullets четыре пункта

@@ -130,4 +130,56 @@ class Json
 
         return $inner !== [] ? $inner : $array;
     }
+
+    /**
+     * Поля, которые модель «проглотила» внутрь соседнего.
+     *
+     * Иногда ответ инструмента приходит наполовину в разметке вызова:
+     * в строке одного поля оказываются закрывающий тег и все следующие
+     * поля целиком —
+     *   "arc": "Начинаем с загадки…</arc>\n<parameter name=\"points\">[{…}]"
+     * Так у конспекта пропали пункты (points) — главное его содержание —
+     * а слайды писались по одной общей линии и вышли бедными.
+     *
+     * Разрезаем такую строку обратно на поля. Уже заполненные поля не
+     * трогаем: если модель прислала их нормально, верим им.
+     *
+     * @param  array<array-key, mixed>  $data
+     * @return array<array-key, mixed>
+     */
+    public static function splitLeakedParameters(array $data): array
+    {
+        $marker = '<parameter name="';
+
+        foreach ($data as $key => $value) {
+            if (! is_string($value) || ! str_contains($value, $marker)) {
+                continue;
+            }
+
+            $cut = (int) strpos($value, $marker);
+            $data[$key] = trim((string) preg_replace('~</[a-z_]+>\s*$~u', '', rtrim(substr($value, 0, $cut))));
+
+            preg_match_all(
+                '~<parameter name="([a-z_]+)">(.*?)(?:</parameter>|(?=<parameter name=")|$)~su',
+                substr($value, $cut),
+                $matches,
+                PREG_SET_ORDER,
+            );
+
+            foreach ($matches as $match) {
+                $name = $match[1];
+
+                if (array_key_exists($name, $data) && ! in_array($data[$name], [null, '', []], true)) {
+                    continue;
+                }
+
+                $raw = trim((string) preg_replace('~</[a-z_]+>\s*$~u', '', trim($match[2])));
+                $decoded = json_decode($raw, true) ?? json_decode(self::escapeStrayQuotes($raw), true);
+
+                $data[$name] = $decoded ?? $raw;
+            }
+        }
+
+        return $data;
+    }
 }
