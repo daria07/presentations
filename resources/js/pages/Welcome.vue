@@ -469,7 +469,10 @@ const audiences = [
                             <li
                                 v-for="(src, n) in [
                                     ['История России. 8 класс', 'prosv.ru'],
-                                    ['Пётр I — Большая российская энциклопедия', 'bigenc.ru'],
+                                    [
+                                        'Пётр I — Большая российская энциклопедия',
+                                        'bigenc.ru',
+                                    ],
                                     ['Реформы Петра Великого', 'histrf.ru'],
                                 ]"
                                 :key="n"
@@ -723,8 +726,8 @@ const audiences = [
                     <h2 class="text-2xl font-bold md:text-3xl">Тарифы</h2>
                     <p class="text-muted-foreground mt-3 leading-relaxed">
                         Начните с бесплатной пробной презентации. Понравится —
-                        откройте её полную версию за одну генерацию или
-                        сделайте новую.
+                        откройте её полную версию за одну генерацию или сделайте
+                        новую.
                     </p>
                 </div>
 
@@ -738,7 +741,9 @@ const audiences = [
                         <p class="text-muted-foreground mt-1 text-sm">
                             одна презентация
                         </p>
-                        <ul class="text-muted-foreground mt-5 space-y-2 text-sm">
+                        <ul
+                            class="text-muted-foreground mt-5 space-y-2 text-sm"
+                        >
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 flex-none" />
                                 до {{ freeSlides }} слайдов
@@ -778,13 +783,14 @@ const audiences = [
                         </p>
                         <p class="text-muted-foreground mt-1 text-sm">
                             {{ pack.credits }}
-                            {{ presentationsWord(pack.credits) }}<template
-                                v-if="pack.credits > 1"
-                            >
+                            {{ presentationsWord(pack.credits)
+                            }}<template v-if="pack.credits > 1">
                                 · {{ pack.perCredit }} ₽ за штуку</template
                             >
                         </p>
-                        <ul class="text-muted-foreground mt-5 space-y-2 text-sm">
+                        <ul
+                            class="text-muted-foreground mt-5 space-y-2 text-sm"
+                        >
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 flex-none" />
                                 до 15 слайдов

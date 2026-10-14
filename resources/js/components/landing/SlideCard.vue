@@ -63,7 +63,9 @@ defineProps<{
                     "
                 />
             </div>
-            <div class="relative flex h-full flex-col justify-center text-white">
+            <div
+                class="relative flex h-full flex-col justify-center text-white"
+            >
                 <p
                     class="max-w-[52%] text-lg leading-tight font-extrabold tracking-tight"
                     :style="{ fontFamily: 'var(--t-display)' }"
@@ -122,20 +124,22 @@ defineProps<{
                 />
                 <SlideArt v-else scene="hills" />
             </div>
-            <div :class="image === 'left' ? 'ml-[48%]' : image ? 'mr-[48%]' : ''">
-            <p
-                class="text-[13px] leading-tight font-bold"
-                :style="{ fontFamily: 'var(--t-display)' }"
-            >
-                {{ heading }}
-            </p>
             <div
-                class="mt-2 mb-4 h-px w-full"
-                :style="{ background: 'var(--p-rule)' }"
-            />
-            <div :style="{ fontFamily: 'var(--t-body)' }">
-                <slot />
-            </div>
+                :class="image === 'left' ? 'ml-[48%]' : image ? 'mr-[48%]' : ''"
+            >
+                <p
+                    class="text-[13px] leading-tight font-bold"
+                    :style="{ fontFamily: 'var(--t-display)' }"
+                >
+                    {{ heading }}
+                </p>
+                <div
+                    class="mt-2 mb-4 h-px w-full"
+                    :style="{ background: 'var(--p-rule)' }"
+                />
+                <div :style="{ fontFamily: 'var(--t-body)' }">
+                    <slot />
+                </div>
             </div>
         </template>
     </div>
