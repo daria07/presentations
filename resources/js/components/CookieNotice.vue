@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 
 // Технические куки (сессия и CSRF) отключить нельзя — без сессии не
@@ -9,6 +9,36 @@ import { Button } from '@/components/ui/button';
 const KEY = 'cookie-notice-seen';
 
 const visible = ref(false);
+const notice = ref<HTMLElement | null>(null);
+
+/*
+   Плашка висит поверх низа страницы и на телефоне целиком закрывала
+   подвал с офертой и контактами. Пока она видна, добавляем странице
+   снизу отступ ровно в её высоту — подвал можно докрутить.
+*/
+let observer: ResizeObserver | null = null;
+
+function reserveSpace(height: number) {
+    document.body.style.paddingBottom = height ? `${height + 24}px` : '';
+}
+
+watch(notice, (el) => {
+    observer?.disconnect();
+
+    if (!el) {
+        reserveSpace(0);
+
+        return;
+    }
+
+    observer = new ResizeObserver(() => reserveSpace(el.offsetHeight));
+    observer.observe(el);
+});
+
+onBeforeUnmount(() => {
+    observer?.disconnect();
+    reserveSpace(0);
+});
 
 onMounted(() => {
     try {
@@ -40,6 +70,7 @@ function dismiss() {
     >
         <div
             v-if="visible"
+            ref="notice"
             role="status"
             class="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-xl sm:inset-x-auto sm:right-6 sm:bottom-6"
         >

@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowRight, Mic, Pencil, Wand2 } from '@lucide/vue';
+import {
+    ArrowRight,
+    BookOpen,
+    Check,
+    Image,
+    Mic,
+    Pencil,
+    Search,
+    Wand2,
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
 import CookieNotice from '@/components/CookieNotice.vue';
 import SlideCard from '@/components/landing/SlideCard.vue';
@@ -32,10 +41,35 @@ type Palette = {
     coverAccent: string;
 };
 
+type Package = {
+    key: string;
+    title: string;
+    credits: number;
+    amount: string;
+    perCredit: string;
+    note: string;
+    popular: boolean;
+};
+
 const props = defineProps<{
     themes: Theme[];
     palettes: Palette[];
+    packages: Package[];
+    /** Сколько слайдов в пробной версии */
+    freeSlides: number;
 }>();
+
+/* «1 презентация», «3 презентации», «10 презентаций» */
+function presentationsWord(n: number): string {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+
+    if (mod10 === 1 && mod100 !== 11) return 'презентация';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
+        return 'презентации';
+
+    return 'презентаций';
+}
 
 /* Гаммы и темы приходят из того же конфига, что и продукт,
    поэтому лендинг не может отстать от него по составу */
@@ -95,8 +129,8 @@ const steps = [
         text: 'Кто аудитория, какой угол важнее, насколько глубоко копать. Варианты готовы — нужен один клик.',
     },
     {
-        title: 'Заберите готовый файл',
-        text: 'PDF со сверстанными слайдами. Смотрите в браузере, скачивайте, отправляйте ссылкой.',
+        title: 'Заберите готовую презентацию',
+        text: 'Сверстанные слайды с картинками и списком источников. Смотрите в браузере, скачивайте PDF, отправляйте ссылкой.',
     },
 ];
 
@@ -111,6 +145,7 @@ const layouts = [
     'Матрица',
     'Цитата',
     'Финальный',
+    'Источники',
 ];
 
 const audiences = [
@@ -130,7 +165,8 @@ const audiences = [
 </script>
 
 <template>
-    <Head title="Презентация из одной строки" />
+    <!-- Тот же заголовок, что отдаёт сервер (HomeController::TITLE) -->
+    <Head title="Нейросеть для презентаций: тема → готовые слайды" />
 
     <div class="landing bg-paper text-foreground min-h-screen">
         <!-- ── Шапка ── -->
@@ -143,6 +179,12 @@ const audiences = [
                 </Link>
 
                 <nav class="flex items-center gap-1 text-sm">
+                    <a
+                        href="#pricing"
+                        class="hover:bg-secondary hidden rounded-md px-4 py-2 transition-colors sm:block"
+                    >
+                        Тарифы
+                    </a>
                     <template v-if="$page.props.auth.user">
                         <Link
                             href="/presentations"
@@ -162,7 +204,7 @@ const audiences = [
                             :href="register()"
                             class="bg-foreground text-background rounded-md px-4 py-2 font-medium transition-opacity hover:opacity-90"
                         >
-                            Начать
+                            Регистрация
                         </Link>
                     </template>
                 </nav>
@@ -186,9 +228,10 @@ const audiences = [
             <p
                 class="text-muted-foreground mt-7 max-w-[52ch] text-lg leading-relaxed"
             >
-                Напишите тему — получите сверстанные слайды с фактами, датами и
-                структурой. Есть готовый текст? Вставьте его, и мы разложим по
-                слайдам, ничего не дописывая от себя.
+                Напишите тему — получите сверстанные слайды с иллюстрациями,
+                фактами из настоящих источников и списком литературы в конце.
+                Есть готовый текст? Вставьте его, и мы разложим по слайдам,
+                ничего не дописывая от себя.
             </p>
 
             <!-- Поле ввода как обещание продукта -->
@@ -211,8 +254,8 @@ const audiences = [
                 </div>
 
                 <p class="text-muted-foreground mt-3 text-sm">
-                    Попробуйте бесплатно: пробная версия — до 8 слайдов, с
-                    водяным знаком.
+                    Пробная презентация бесплатно — до {{ freeSlides }} слайдов,
+                    с водяным знаком. Полная — от {{ packages[0]?.amount }} ₽.
                 </p>
             </div>
         </section>
@@ -227,9 +270,10 @@ const audiences = [
                     <p class="text-muted-foreground mt-3 leading-relaxed">
                         {{ palettes.length }} цветовых гамм и
                         {{ themes.length }} темы оформления —
-                        {{ combos }} сочетаний. Попробуйте прямо здесь: внутри
-                        сервиса переключение работает так же, без перезагрузки и
-                        без ожидания.
+                        {{ combos }} сочетаний. На обложке и на двух-трёх
+                        слайдах — иллюстрации, нарисованные под тему, в конце —
+                        список источников. Переключайте гамму и тему прямо
+                        здесь: в сервисе всё работает так же, без перезагрузки.
                     </p>
                 </div>
 
@@ -304,11 +348,43 @@ const audiences = [
                     class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
                 >
                     <SlideCard
-                        variant="cover"
-                        eyebrow="Презентация"
+                        variant="photo"
+                        src="/landing/cover.webp"
                         heading="Пётр I: реформы и их цена"
                         sub="Как модернизация изменила страну"
                     />
+
+                    <SlideCard
+                        heading="Коллегии вместо приказов"
+                        image="right"
+                        src="/landing/slide-1.webp"
+                    >
+                        <div class="space-y-2.5">
+                            <div v-for="n in 3" :key="n" class="flex gap-2">
+                                <span
+                                    class="flex size-4 flex-none items-center justify-center rounded-full text-[9px] font-bold"
+                                    :style="{
+                                        background: 'var(--p-accent-soft)',
+                                        color: 'var(--p-accent-ink)',
+                                    }"
+                                >
+                                    {{ n }}
+                                </span>
+                                <div class="flex-1 space-y-1">
+                                    <div
+                                        class="h-1.5 w-3/5 rounded-full"
+                                        :style="{
+                                            background: 'var(--p-muted)',
+                                        }"
+                                    />
+                                    <div
+                                        class="h-1.5 w-full rounded-full"
+                                        :style="{ background: 'var(--p-rule)' }"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </SlideCard>
 
                     <SlideCard heading="Ключевые даты правления">
                         <div class="flex items-start gap-3">
@@ -334,32 +410,84 @@ const audiences = [
                         </div>
                     </SlideCard>
 
-                    <SlideCard heading="Коллегии вместо приказов">
-                        <div class="space-y-2.5">
-                            <div v-for="n in 3" :key="n" class="flex gap-2.5">
-                                <span
-                                    class="flex size-4 flex-none items-center justify-center rounded-full text-[9px] font-bold"
+                    <SlideCard
+                        heading="Заводы Урала"
+                        image="left"
+                        src="/landing/slide-2.webp"
+                    >
+                        <p
+                            class="text-3xl leading-none font-extrabold tabular-nums"
+                            :style="{
+                                fontFamily: 'var(--t-display)',
+                                color: 'var(--p-accent)',
+                            }"
+                        >
+                            200+
+                        </p>
+                        <p class="mt-1.5 text-[10px] opacity-70">
+                            мануфактур к концу правления
+                        </p>
+                    </SlideCard>
+
+                    <SlideCard heading="Армия: старая и новая">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div
+                                v-for="n in 2"
+                                :key="n"
+                                class="rounded p-2"
+                                :style="{
+                                    background:
+                                        n === 1
+                                            ? 'var(--p-accent-soft)'
+                                            : 'var(--p-cover)',
+                                }"
+                            >
+                                <div
+                                    class="mb-1.5 h-1.5 w-1/2 rounded-full"
                                     :style="{
-                                        background: 'var(--p-accent-soft)',
-                                        color: 'var(--p-accent-ink)',
+                                        background:
+                                            n === 1
+                                                ? 'var(--p-accent-ink)'
+                                                : 'var(--p-cover-title)',
                                     }"
-                                >
-                                    {{ n }}
-                                </span>
-                                <div class="flex-1 space-y-1">
-                                    <div
-                                        class="h-1.5 w-2/5 rounded-full"
-                                        :style="{
-                                            background: 'var(--p-muted)',
-                                        }"
-                                    />
-                                    <div
-                                        class="h-1.5 w-full rounded-full"
-                                        :style="{ background: 'var(--p-rule)' }"
-                                    />
-                                </div>
+                                />
+                                <div
+                                    class="h-1 w-full rounded-full opacity-40"
+                                    :style="{
+                                        background:
+                                            n === 1
+                                                ? 'var(--p-muted)'
+                                                : 'var(--p-cover-ink)',
+                                    }"
+                                />
                             </div>
                         </div>
+                    </SlideCard>
+
+                    <SlideCard heading="Источники">
+                        <ol class="space-y-1.5 text-[9px] leading-snug">
+                            <li
+                                v-for="(src, n) in [
+                                    ['История России. 8 класс', 'prosv.ru'],
+                                    ['Пётр I — Большая российская энциклопедия', 'bigenc.ru'],
+                                    ['Реформы Петра Великого', 'histrf.ru'],
+                                ]"
+                                :key="n"
+                                class="flex gap-1.5"
+                            >
+                                <span
+                                    class="font-bold"
+                                    :style="{ color: 'var(--p-accent)' }"
+                                    >{{ n + 1 }}</span
+                                >
+                                <span>
+                                    <span class="underline">{{ src[0] }}</span>
+                                    <span class="block opacity-60">{{
+                                        src[1]
+                                    }}</span>
+                                </span>
+                            </li>
+                        </ol>
                     </SlideCard>
                 </div>
 
@@ -405,6 +533,61 @@ const audiences = [
             </div>
         </section>
 
+        <!-- ── Источники и картинки ── -->
+        <section id="sources" class="border-rule border-t">
+            <div class="mx-auto max-w-5xl px-6 py-16">
+                <div class="mb-10 max-w-[60ch]">
+                    <h2 class="text-2xl font-bold md:text-3xl">
+                        Факты из источников, картинки под тему
+                    </h2>
+                    <p class="text-muted-foreground mt-3 leading-relaxed">
+                        Нейросеть в чате пишет по памяти и легко придумывает
+                        даты. Здесь перед тем как писать, мы ищем материал по
+                        теме и опираемся на него.
+                    </p>
+                </div>
+
+                <div class="grid gap-10 md:grid-cols-3">
+                    <div>
+                        <Search class="text-brand mb-4 size-5" />
+                        <h3 class="mb-2 text-lg font-bold">
+                            Поиск под вашу аудиторию
+                        </h3>
+                        <p class="text-muted-foreground leading-relaxed">
+                            Для школьного доклада — материалы школьного уровня,
+                            для семинара — вузовские. Назвали учебник или автора
+                            — опираемся на него. Пиратские сайты и рекламные
+                            блоги в выдачу не попадают.
+                        </p>
+                    </div>
+                    <div>
+                        <BookOpen class="text-brand mb-4 size-5" />
+                        <h3 class="mb-2 text-lg font-bold">
+                            Список литературы в конце
+                        </h3>
+                        <p class="text-muted-foreground leading-relaxed">
+                            Последний слайд — источники с настоящими ссылками:
+                            их можно открыть и проверить, а преподаватель видит,
+                            откуда взяты факты. Не нужен — снимите галочку, и
+                            слайд исчезнет из просмотра и из файла.
+                        </p>
+                    </div>
+                    <div>
+                        <Image class="text-brand mb-4 size-5" />
+                        <h3 class="mb-2 text-lg font-bold">
+                            Иллюстрации к каждой презентации
+                        </h3>
+                        <p class="text-muted-foreground leading-relaxed">
+                            Обложка во весь слайд и ещё две-три картинки внутри
+                            — нарисованы под тему и в стиле выбранного
+                            оформления. Не стоковые фото, которые уже видели в
+                            чужих презентациях.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- ── Как это работает ── -->
         <section id="how" class="border-rule border-t">
             <div class="mx-auto max-w-5xl px-6 py-16">
@@ -444,9 +627,9 @@ const audiences = [
                         <p class="text-muted-foreground leading-relaxed">
                             Слайды листаются прямо на странице, миниатюры слева.
                             Меняете гамму или тему — оформление перекрашивается
-                            мгновенно, а файл тем временем перепечатывается сам.
-                            Перевыбор оформления бесплатный: генерация уже
-                            оплачена.
+                            мгновенно, а PDF тем временем перепечатывается сам.
+                            Смена оформления бесплатна, а готовой презентацией
+                            можно поделиться ссылкой.
                         </p>
                     </div>
                     <div>
@@ -533,6 +716,99 @@ const audiences = [
             </div>
         </section>
 
+        <!-- ── Тарифы ── -->
+        <section id="pricing" class="border-rule scroll-mt-4 border-t">
+            <div class="mx-auto max-w-5xl px-6 py-16">
+                <div class="mb-10 max-w-[56ch]">
+                    <h2 class="text-2xl font-bold md:text-3xl">Тарифы</h2>
+                    <p class="text-muted-foreground mt-3 leading-relaxed">
+                        Начните с бесплатной пробной презентации. Понравится —
+                        откройте её полную версию за одну генерацию или
+                        сделайте новую.
+                    </p>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <!-- Пробная — первой: с неё начинает каждый -->
+                    <div
+                        class="border-rule flex flex-col rounded-xl border p-6"
+                    >
+                        <p class="font-bold">Пробная</p>
+                        <p class="mt-3 text-3xl font-extrabold">0 ₽</p>
+                        <p class="text-muted-foreground mt-1 text-sm">
+                            одна презентация
+                        </p>
+                        <ul class="text-muted-foreground mt-5 space-y-2 text-sm">
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 flex-none" />
+                                до {{ freeSlides }} слайдов
+                            </li>
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 flex-none" />
+                                просмотр на сайте с водяным знаком
+                            </li>
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 flex-none" />
+                                правка структуры
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div
+                        v-for="pack in packages"
+                        :key="pack.key"
+                        class="flex flex-col rounded-xl border p-6"
+                        :class="
+                            pack.popular
+                                ? 'border-brand bg-white/70 shadow-[0_10px_30px_rgba(43,74,203,.1)]'
+                                : 'border-rule'
+                        "
+                    >
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="font-bold">{{ pack.title }}</p>
+                            <span
+                                v-if="pack.popular"
+                                class="bg-brand rounded-full px-2 py-0.5 text-[11px] font-medium text-white"
+                            >
+                                Выгодно
+                            </span>
+                        </div>
+                        <p class="mt-3 text-3xl font-extrabold tabular-nums">
+                            {{ pack.amount }} ₽
+                        </p>
+                        <p class="text-muted-foreground mt-1 text-sm">
+                            {{ pack.credits }}
+                            {{ presentationsWord(pack.credits) }}<template
+                                v-if="pack.credits > 1"
+                            >
+                                · {{ pack.perCredit }} ₽ за штуку</template
+                            >
+                        </p>
+                        <ul class="text-muted-foreground mt-5 space-y-2 text-sm">
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 flex-none" />
+                                до 15 слайдов
+                            </li>
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 flex-none" />
+                                без водяного знака, PDF и ссылка
+                            </li>
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 flex-none" />
+                                речь докладчика
+                            </li>
+                        </ul>
+                        <p
+                            v-if="pack.note"
+                            class="text-muted-foreground mt-auto pt-5 text-xs"
+                        >
+                            {{ pack.note }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- ── Призыв ── -->
         <section id="start" class="border-rule border-t">
             <div class="mx-auto max-w-5xl px-6 py-24 text-center">
@@ -544,8 +820,9 @@ const audiences = [
                 <p
                     class="text-muted-foreground mx-auto mt-5 max-w-[46ch] text-lg"
                 >
-                    Пробная версия бесплатна: до 8 слайдов, с водяным знаком.
-                    Понравится — откроете полную за одну генерацию.
+                    Пробная версия бесплатна: до {{ freeSlides }} слайдов, с
+                    водяным знаком. Понравится — откроете полную за одну
+                    генерацию.
                 </p>
                 <Link
                     :href="register()"
@@ -563,7 +840,9 @@ const audiences = [
             >
                 <p class="text-foreground"><Wordmark /></p>
                 <p class="flex flex-wrap gap-4">
-                    <Link href="/pricing" class="hover:underline">Тарифы</Link>
+                    <Link href="/pricing" class="hover:underline"
+                        >Условия оплаты</Link
+                    >
                     <Link href="/offer" class="hover:underline">Оферта</Link>
                     <Link href="/privacy" class="hover:underline"
                         >Конфиденциальность</Link

@@ -30,13 +30,18 @@
             }
         </style>
 
-        {{-- Как ссылка выглядит в мессенджерах и соцсетях. Заголовок
-             и описание перебиваются на страницах, где это уместно. --}}
-        <meta name="description" content="Сервис собирает презентацию по теме или по готовому тексту: структура, вёрстка, оформление — на выходе PDF.">
+        {{-- Как ссылка выглядит в поиске, мессенджерах и соцсетях.
+             Страница может передать свои title и description через
+             withViewData — у лендинга они развёрнутые, под поисковую выдачу.
+             Сервер отдаёт их сразу в HTML: робот не всегда исполняет JS,
+             и без этого в выдаче было одно слово «Слайдуша». --}}
+        @php($seoTitle = $seoTitle ?? config('app.name'))
+        @php($seoDescription = $seoDescription ?? 'Нейросеть собирает презентацию по теме или по готовому тексту: факты из источников, иллюстрации, сверстанные слайды и PDF.')
+        <meta name="description" content="{{ $seoDescription }}">
         <meta property="og:type" content="website">
         <meta property="og:site_name" content="{{ config('app.name') }}">
-        <meta property="og:title" content="{{ config('app.name') }} — презентации из одной строки">
-        <meta property="og:description" content="Тема или готовый текст на входе, аккуратная презентация в PDF на выходе.">
+        <meta property="og:title" content="{{ $seoTitle }}">
+        <meta property="og:description" content="{{ $seoDescription }}">
         <meta property="og:image" content="{{ url('/og.png') }}">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
@@ -51,8 +56,12 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
         <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
+            <title>{{ $seoTitle }}</title>
         </x-inertia::head>
+
+        @isset($seoJsonLd)
+            <script type="application/ld+json">{!! json_encode($seoJsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
+        @endisset
     </head>
     <body class="font-sans antialiased">
         <x-inertia::app />
