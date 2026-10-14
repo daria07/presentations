@@ -29,7 +29,10 @@
                 <div class="bignum-label">{{ $stat['label'] }}</div>
             @endif
 
-            @if (filled($slide['subheading'] ?? null))
+            {{-- Подзаголовок, повторяющий подпись к числу, не выводим:
+                 у уже готовых презентаций модель иногда писала одно и то же --}}
+            @if (filled($slide['subheading'] ?? null)
+                && mb_strtolower(trim($slide['subheading'], ' .')) !== mb_strtolower(trim((string) ($stat['label'] ?? ''), ' .')))
                 <div class="bignum-note">{{ $slide['subheading'] }}</div>
             @endif
         </div>

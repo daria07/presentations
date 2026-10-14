@@ -258,6 +258,19 @@ function buildThumbs() {
 
     const rail = document.createElement('div');
     rail.className = 'rail deck';
+
+    /*
+       Оформление ленте достаётся от вёрстки сервера, как и сцене.
+       Раньше бралось только из пропсов: где их не передают (просмотр
+       в админке), у миниатюр не было гаммы — обложка и итог выходили
+       белыми, а у матрицы пропадала заливка.
+    */
+    for (const key of ['theme', 'palette', 'style'] as const) {
+        const value = deck?.dataset[key];
+
+        if (value) rail.dataset[key] = value;
+    }
+
     applyLook(rail);
 
     const width = thumbWidth();
