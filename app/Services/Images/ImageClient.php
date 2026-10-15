@@ -63,8 +63,10 @@ class ImageClient
                         'size' => $pending[$key]['size'],
                         'quality' => $config['quality'],
                         'n' => 1,
-                        'stream' => true,
-                        'partial_images' => 3,
+                        // Поток держит соединение живым на долгой картинке,
+                        // но не все шлюзы его умеют: codex-api отвечает
+                        // «Streaming is not available». Там IMAGE_STREAM=false
+                        ...(self::streams() ? ['stream' => true, 'partial_images' => 3] : []),
                     ]),
                 array_keys($pending),
             ));
@@ -225,6 +227,12 @@ class ImageClient
         }
 
         return $result;
+    }
+
+    /** Просить ли картинку потоком (IMAGE_STREAM, по умолчанию да) */
+    private static function streams(): bool
+    {
+        return filter_var(config('services.images.stream', true), FILTER_VALIDATE_BOOLEAN);
     }
 
     /**

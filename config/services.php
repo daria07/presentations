@@ -49,6 +49,8 @@ return [
         // Короткие запросы без служебных фраз: для моделей, которые рисуют
         // текст запроса буквами (grok). Не задано — включается для grok сам
         'compact_prompt' => env('IMAGE_COMPACT_PROMPT'),
+        // Потоковый ответ. Выключить для шлюзов, которые его не умеют
+        'stream' => env('IMAGE_STREAM', true),
         'price_input' => env('IMAGE_PRICE_INPUT', 15000),
         'price_output' => env('IMAGE_PRICE_OUTPUT', 90000),
     ],

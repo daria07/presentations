@@ -459,3 +459,20 @@ test('images:redraw --fresh перерисовывает и удачные ка�
 
     expect($p->refresh()->outline['slides'][1]['image']['path'])->not->toBe('presentations/old.jpg');
 });
+
+test('IMAGE_STREAM=false — картинка без потока', function () {
+    config(['services.images.stream' => false]);
+    $bodies = [];
+
+    Http::fake(function (Request $r) use (&$bodies) {
+        $bodies[] = $r->data();
+
+        return Http::response(['data' => [['b64_json' => base64_encode(tinyPng())]]]);
+    });
+
+    $results = app(ImageClient::class)->generateMany(['0' => ['prompt' => 'кот', 'size' => '1024x1024']]);
+
+    expect($results['0'])->not->toBeNull()
+        ->and($bodies[0])->not->toHaveKey('stream')
+        ->and($bodies[0])->not->toHaveKey('partial_images');
+});
