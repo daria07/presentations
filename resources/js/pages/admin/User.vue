@@ -136,6 +136,14 @@ function when(iso: string | null): string {
     <div class="w-full space-y-6 px-4 py-8 lg:px-8">
         <PageHeader :title="user.name">
             <template #meta>{{ user.email }}</template>
+            <template #actions>
+                <Link
+                    :href="`/admin/support/${user.id}`"
+                    class="border-border hover:bg-secondary cursor-pointer rounded-lg border px-3 py-1.5 text-sm transition-colors"
+                >
+                    Написать в чат
+                </Link>
+            </template>
         </PageHeader>
 
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

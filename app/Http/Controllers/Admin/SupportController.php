@@ -30,6 +30,24 @@ class SupportController extends Controller
         return $this->page(null);
     }
 
+    /**
+     * Открыть диалог по почте — чтобы написать первым тому, кто ещё
+     * ни разу не писал в чат.
+     */
+    public function find(Request $request): RedirectResponse
+    {
+        $email = mb_strtolower(trim((string) $request->query('email', '')));
+
+        $user = $email === '' ? null : User::query()->whereRaw('lower(email) = ?', [$email])->first();
+
+        if (! $user) {
+            return to_route('admin.support')
+                ->withErrors(['email' => 'Нет пользователя с такой почтой.']);
+        }
+
+        return to_route('admin.support.show', $user);
+    }
+
     public function show(User $user): Response
     {
         // Открыли диалог — сообщения человека прочитаны

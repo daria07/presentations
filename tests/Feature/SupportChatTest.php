@@ -127,3 +127,31 @@ test('без входа чат закрыт', function () {
     $this->getJson('/support')->assertUnauthorized();
     $this->postJson('/support', ['body' => 'x'])->assertUnauthorized();
 });
+
+test('администратор находит человека по почте и пишет первым', function () {
+    $this->actingAs($this->admin)
+        ->get('/admin/support/find?email='.strtoupper($this->user->email))
+        ->assertRedirect('/admin/support/'.$this->user->id);
+
+    // Диалога ещё нет — страница открывается пустой
+    $this->actingAs($this->admin)
+        ->get('/admin/support/'.$this->user->id)
+        ->assertInertia(fn (Assert $page) => $page->has('thread.messages', 0));
+
+    $this->actingAs($this->admin)
+        ->post('/admin/support/'.$this->user->id, ['body' => 'Здравствуйте! Как вам презентация?'])
+        ->assertRedirect();
+
+    Mail::assertQueued(SupportReplied::class, fn ($mail) => $mail->hasTo($this->user->email));
+
+    $this->actingAs($this->user)
+        ->get('/presentations')
+        ->assertInertia(fn (Assert $page) => $page->where('support.unread', 1));
+});
+
+test('неизвестная почта — ошибка, а не пустой диалог', function () {
+    $this->actingAs($this->admin)
+        ->get('/admin/support/find?email=nobody@example.com')
+        ->assertRedirect('/admin/support')
+        ->assertSessionHasErrors('email');
+});

@@ -88,6 +88,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Чат с пользователями: список диалогов, диалог, ответ
         Route::get('support', [AdminSupportController::class, 'index'])->name('support');
+        // Написать первым: диалог по почте. До support/{user}, иначе
+        // «find» приняли бы за id пользователя
+        Route::get('support/find', [AdminSupportController::class, 'find'])->name('support.find');
         Route::get('support/{user}', [AdminSupportController::class, 'show'])->name('support.show');
         Route::post('support/{user}', [AdminSupportController::class, 'store'])
             ->middleware('throttle:30,1')

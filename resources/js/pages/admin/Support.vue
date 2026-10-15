@@ -88,6 +88,15 @@ watch(
 
 const form = useForm({ body: '' });
 
+/* Написать первым: находим человека по почте и открываем пустой диалог */
+const finder = useForm({ email: '' });
+
+function find() {
+    if (!finder.email.trim() || finder.processing) return;
+
+    finder.get('/admin/support/find', { preserveScroll: true });
+}
+
 function send() {
     if (!props.thread || !form.body.trim() || form.processing) return;
 
@@ -141,6 +150,32 @@ function when(iso: string | null): string {
                 class="border-border flex min-w-0 flex-col lg:border-r"
                 :class="thread ? 'hidden lg:flex' : 'flex'"
             >
+                <form class="border-border border-b p-3" @submit.prevent="find">
+                    <div class="flex gap-2">
+                        <input
+                            v-model="finder.email"
+                            type="email"
+                            placeholder="Написать по почте…"
+                            class="border-border bg-background focus:ring-ring min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2"
+                        />
+                        <button
+                            type="submit"
+                            class="bg-foreground text-background shrink-0 cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition-opacity disabled:cursor-default disabled:opacity-40"
+                            :disabled="
+                                !finder.email.trim() || finder.processing
+                            "
+                        >
+                            Открыть
+                        </button>
+                    </div>
+                    <p
+                        v-if="finder.errors.email"
+                        class="mt-1.5 text-xs text-red-600"
+                    >
+                        {{ finder.errors.email }}
+                    </p>
+                </form>
+
                 <div
                     v-if="!conversations.items.length"
                     class="text-muted-foreground p-6 text-sm"
@@ -258,6 +293,13 @@ function when(iso: string | null): string {
                     ref="list"
                     class="max-h-[60vh] flex-1 space-y-2 overflow-y-auto px-4 py-4"
                 >
+                    <p
+                        v-if="!thread.messages.length"
+                        class="text-muted-foreground py-8 text-center text-sm leading-relaxed"
+                    >
+                        Сообщений пока нет. Напишите первым — человек увидит
+                        сообщение в чате на сайте и получит письмо.
+                    </p>
                     <div
                         v-for="m in thread.messages"
                         :key="m.id"
