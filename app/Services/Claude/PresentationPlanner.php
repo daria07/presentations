@@ -34,7 +34,7 @@ class PresentationPlanner
     /**
      * Шаг 1. Возвращает список уточняющих вопросов с вариантами ответов.
      *
-     * @return array<int, array{key: string, question: string, options: array<int, string>}>
+     * @return list<array{key: string|null, question: string, options: list<string>}>
      */
     public function askClarifyingQuestions(Presentation $presentation): array
     {
@@ -49,7 +49,93 @@ class PresentationPlanner
 
         $this->record($presentation, 'clarify', $result);
 
-        return $result->data['questions'] ?? [];
+        $questions = self::cleanQuestions($result->data);
+
+        if ($questions === []) {
+            // Сырой ответ — в лог: по нему видно, в каком ещё виде
+            // шлюз умеет ломать структуру
+            Log::warning('Уточнения: в ответе модели нет годных вопросов, ставим стандартные', [
+                'presentation' => $presentation->id,
+                'data' => mb_substr((string) json_encode($result->data, JSON_UNESCAPED_UNICODE), 0, 2000),
+            ]);
+
+            return self::DEFAULT_QUESTIONS;
+        }
+
+        return $questions;
+    }
+
+    /**
+     * Запасные вопросы, если модель прислала негодные. Пустая форма
+     * хуже: на неё нельзя ответить, и кнопка «Собрать» не нажимается.
+     */
+    private const DEFAULT_QUESTIONS = [
+        [
+            'key' => 'audience',
+            'question' => 'Для кого презентация?',
+            'options' => ['5–7 класс', '8–9 класс', '10–11 класс', 'Студенты вуза', 'Коллеги, работа'],
+        ],
+        [
+            'key' => 'depth',
+            'question' => 'Насколько подробно?',
+            'options' => ['Кратко, только главное', 'Средне', 'Подробно, больше текста'],
+        ],
+    ];
+
+    /**
+     * Вопросы из ответа модели, в каком бы виде их ни прислал шлюз.
+     *
+     * Как и у конспекта, структура приходит поломанной по-разному:
+     * весь список строкой с JSON, список из одной такой строки,
+     * каждый вопрос строкой, поля в разметке вызова. Однажды форма
+     * вышла пустой: один «вопрос» без текста и вариантов, и ответить
+     * на неё было нельзя.
+     *
+     * Вопрос без текста или меньше чем с двумя вариантами отбрасываем.
+     *
+     * @return list<array{key: string|null, question: string, options: list<string>}>
+     */
+    public static function cleanQuestions(mixed $data): array
+    {
+        $data = Json::splitLeakedParameters(Json::unwrap($data));
+        $list = Json::unwrap($data['questions'] ?? $data);
+
+        // Обёртка внутри обёртки: {"questions": [...]} строкой
+        if (array_key_exists('questions', $list)) {
+            $list = Json::unwrap($list['questions']);
+        }
+
+        // Один вопрос объектом, а не списком
+        if (array_key_exists('question', $list)) {
+            $list = [$list];
+        }
+
+        $clean = [];
+
+        foreach ($list as $item) {
+            $item = Json::toArray($item);
+            $question = is_string($item['question'] ?? null) ? trim($item['question']) : '';
+
+            $options = [];
+
+            foreach (Json::toArray($item['options'] ?? []) as $option) {
+                $option = is_scalar($option) ? trim((string) $option) : '';
+
+                if ($option !== '' && ! in_array($option, $options, true)) {
+                    $options[] = $option;
+                }
+            }
+
+            if ($question === '' || count($options) < 2) {
+                continue;
+            }
+
+            $key = is_string($item['key'] ?? null) && trim($item['key']) !== '' ? trim($item['key']) : null;
+
+            $clean[] = ['key' => $key, 'question' => $question, 'options' => $options];
+        }
+
+        return $clean;
     }
 
     /**

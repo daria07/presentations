@@ -36,12 +36,9 @@ class PrepareQuestions implements ShouldQueue
         }
 
         $this->presentation->update([
-            'clarifications' => array_map(fn ($q) => [
-                'key' => $q['key'] ?? null,
-                'question' => $q['question'] ?? '',
-                'options' => $q['options'] ?? [],
-                'answer' => null,
-            ], $questions),
+            // Вопросы уже проверены планировщиком: у каждого есть текст
+            // и хотя бы два варианта
+            'clarifications' => array_map(fn ($q) => [...$q, 'answer' => null], $questions),
             'status' => PresentationStatus::Asking,
         ]);
     }
