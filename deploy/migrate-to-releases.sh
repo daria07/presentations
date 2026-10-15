@@ -49,8 +49,12 @@ step "1/7 Каркас $NEXT"
 mkdir -p "$NEXT/releases" "$NEXT/shared"
 chown -R "$U:$U" "$NEXT"
 
+# Адрес GitHub читаем от deploy: от root git откажется работать в чужой
+# папке («dubious ownership») и вернёт пустоту — и repo/ останется без origin
+ORIGIN="$(as_deploy git -C "$APP" remote get-url origin)"
+[ -n "$ORIGIN" ] || { echo "Не удалось прочитать origin в $APP"; exit 1; }
 as_deploy git clone -q "$APP" "$NEXT/repo"
-as_deploy git -C "$NEXT/repo" remote set-url origin "$(git -C "$APP" remote get-url origin)"
+as_deploy git -C "$NEXT/repo" remote set-url origin "$ORIGIN"
 
 cp -p "$APP/.env" "$NEXT/shared/.env"
 
