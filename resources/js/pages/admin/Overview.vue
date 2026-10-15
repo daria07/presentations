@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { duration } from '@/lib/duration';
 import AccessBadge from '@/components/admin/AccessBadge.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,10 @@ import DayColumns from '@/components/admin/DayColumns.vue';
 type Day = { date: string; users: number; presentations: number };
 
 type Period = 'all' | 'today' | 'yesterday' | 'week';
+
+type RecentAccess = 'all' | 'paid' | 'trial';
+
+type RecentStatus = 'all' | 'ready' | 'working' | 'failed';
 
 type Totals = {
     users: number;
@@ -58,15 +62,25 @@ const props = defineProps<{
         }[];
     };
     recent: {
-        id: number;
-        title: string;
-        status: string;
-        statusLabel: string;
-        rating: number | null;
-        duration: number | null;
-        createdAt: string | null;
-        user: { id: number; name: string; email: string } | null;
-    }[];
+        access: RecentAccess;
+        status: RecentStatus;
+        total: number;
+        currentPage: number;
+        lastPage: number;
+        prevUrl: string | null;
+        nextUrl: string | null;
+        items: {
+            id: number;
+            title: string;
+            status: string;
+            statusLabel: string;
+            access: 'trial' | 'unlocked' | 'paid' | null;
+            rating: number | null;
+            duration: number | null;
+            createdAt: string | null;
+            user: { id: number; name: string; email: string } | null;
+        }[];
+    };
 }>();
 
 defineOptions({
@@ -144,6 +158,50 @@ const promoLeader = computed(() => {
 const maxStatus = computed(() =>
     Math.max(1, ...props.statuses.map((s) => s.total)),
 );
+
+/* Фильтры последних генераций */
+const RECENT_ACCESS: { key: RecentAccess; label: string }[] = [
+    { key: 'all', label: 'Все' },
+    { key: 'paid', label: 'Оплаченные' },
+    { key: 'trial', label: 'Пробные' },
+];
+
+const RECENT_STATUS: { key: RecentStatus; label: string }[] = [
+    { key: 'all', label: 'Любой статус' },
+    { key: 'ready', label: 'Готово' },
+    { key: 'working', label: 'В работе' },
+    { key: 'failed', label: 'Ошибка' },
+];
+
+const page = usePage();
+
+/*
+   Смена фильтра: остальные параметры адреса (период, страница
+   отзывов) сохраняем, страницу генераций сбрасываем на первую.
+   Перезапрашиваем только этот блок — сводка не пересчитывается
+*/
+function filterRecent(changes: {
+    recent_access?: RecentAccess;
+    recent_status?: RecentStatus;
+}) {
+    const query = Object.fromEntries(
+        new URLSearchParams(page.url.split('?')[1] ?? ''),
+    );
+
+    delete query.recent_page;
+
+    for (const [key, value] of Object.entries(changes)) {
+        if (value === 'all') delete query[key];
+        else query[key] = value;
+    }
+
+    router.get('/admin', query, {
+        only: ['recent'],
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+    });
+}
 
 function when(iso: string | null): string {
     if (!iso) return '';
@@ -316,11 +374,54 @@ function when(iso: string | null): string {
             <div
                 class="border-border bg-card min-w-0 rounded-xl border p-4 sm:p-5"
             >
-                <h2 class="mb-3 text-sm font-medium">Последние генерации</h2>
+                <div
+                    class="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+                >
+                    <h2 class="text-sm font-medium">Последние генерации</h2>
+                    <p class="text-muted-foreground text-xs tabular-nums">
+                        {{ recent.total }}
+                    </p>
+                </div>
 
-                <div class="divide-border divide-y">
+                <!-- Фильтры: по оплате и по статусу -->
+                <div class="mb-2 space-y-1.5">
+                    <div class="flex flex-wrap gap-1">
+                        <button
+                            v-for="f in RECENT_ACCESS"
+                            :key="f.key"
+                            type="button"
+                            class="cursor-pointer rounded-md border px-2 py-0.5 text-xs transition-colors"
+                            :class="
+                                recent.access === f.key
+                                    ? 'border-foreground bg-foreground text-background'
+                                    : 'border-border hover:bg-secondary'
+                            "
+                            @click="filterRecent({ recent_access: f.key })"
+                        >
+                            {{ f.label }}
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                        <button
+                            v-for="f in RECENT_STATUS"
+                            :key="f.key"
+                            type="button"
+                            class="cursor-pointer rounded-md border px-2 py-0.5 text-xs transition-colors"
+                            :class="
+                                recent.status === f.key
+                                    ? 'border-foreground bg-foreground text-background'
+                                    : 'border-border hover:bg-secondary'
+                            "
+                            @click="filterRecent({ recent_status: f.key })"
+                        >
+                            {{ f.label }}
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="recent.items.length" class="divide-border divide-y">
                     <div
-                        v-for="item in recent"
+                        v-for="item in recent.items"
                         :key="item.id"
                         class="flex items-baseline justify-between gap-4 py-2 text-sm"
                     >
@@ -334,6 +435,10 @@ function when(iso: string | null): string {
                                 </Link>
                             </p>
                             <p class="text-muted-foreground truncate text-xs">
+                                <AccessBadge
+                                    :access="item.access"
+                                    class="mr-1.5"
+                                />
                                 <Link
                                     v-if="item.user"
                                     :href="`/admin/users/${item.user.id}`"
@@ -366,6 +471,43 @@ function when(iso: string | null): string {
                             </p>
                         </div>
                     </div>
+                </div>
+                <p v-else class="text-muted-foreground py-4 text-sm">
+                    Под фильтр ничего не попало
+                </p>
+
+                <!-- Листаем только генерации, как и отзывы -->
+                <div
+                    v-if="recent.lastPage > 1"
+                    class="border-border mt-3 flex items-center justify-between border-t pt-3 text-sm"
+                >
+                    <Link
+                        v-if="recent.prevUrl"
+                        :href="recent.prevUrl"
+                        :only="['recent']"
+                        preserve-scroll
+                        preserve-state
+                        class="border-border hover:bg-secondary cursor-pointer rounded-lg border px-3 py-1.5 transition-colors"
+                    >
+                        Назад
+                    </Link>
+                    <span v-else />
+
+                    <span class="text-muted-foreground tabular-nums">
+                        {{ recent.currentPage }} из {{ recent.lastPage }}
+                    </span>
+
+                    <Link
+                        v-if="recent.nextUrl"
+                        :href="recent.nextUrl"
+                        :only="['recent']"
+                        preserve-scroll
+                        preserve-state
+                        class="border-border hover:bg-secondary cursor-pointer rounded-lg border px-3 py-1.5 transition-colors"
+                    >
+                        Вперёд
+                    </Link>
+                    <span v-else />
                 </div>
             </div>
         </div>

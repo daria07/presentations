@@ -63,22 +63,78 @@ class AdminController extends Controller
             'days' => fn () => $this->daily($since),
             'reviews' => fn () => $this->reviews(),
             'promo' => fn () => $this->promo(),
-            'recent' => fn () => Presentation::with('user:id,name,email')
-                ->latest('id')
-                ->limit(12)
-                ->get()
-                ->map(fn (Presentation $p) => [
-                    'id' => $p->id,
-                    'title' => $p->title ?: $p->topic,
-                    'status' => $p->status->value,
-                    'statusLabel' => $p->status->label(),
-                    'rating' => $p->rating,
-                    'duration' => $p->generationSeconds(),
-                    'createdAt' => $p->created_at?->toIso8601String(),
-                    'user' => $p->user?->only(['id', 'name', 'email']),
-                ])
-                ->all(),
+            'recent' => fn () => $this->recent($request),
         ]);
+    }
+
+    /** Сколько генераций на одной странице сводки */
+    private const RECENT_PER_PAGE = 12;
+
+    /**
+     * Фильтр последних генераций по оплате. Оплаченные — и сделанные
+     * за купленную генерацию, и пробные, открытые потом за генерацию:
+     * за обе заплатили. Пробные — те, что так и остались бесплатными.
+     */
+    public const RECENT_ACCESS = [
+        'paid' => ['credit', 'unlocked'],
+        'trial' => ['trial'],
+    ];
+
+    /** Фильтр последних генераций по статусу: группы статусов */
+    public const RECENT_STATUS = [
+        'ready' => [PresentationStatus::Ready],
+        'working' => [PresentationStatus::Draft, PresentationStatus::Asking, PresentationStatus::Queued, PresentationStatus::Generating],
+        'failed' => [PresentationStatus::Failed],
+    ];
+
+    /**
+     * Последние генерации: свежие сверху, постранично, с фильтрами по
+     * оплате и статусу. Как у отзывов, своя страница в адресе
+     * (recent_page), чтобы листание не сбрасывало остальную сводку.
+     *
+     * @return array{access: string, status: string, total: int, items: array<int, array<string, mixed>>, currentPage: int, lastPage: int, prevUrl: string|null, nextUrl: string|null}
+     */
+    private function recent(Request $request): array
+    {
+        $access = (string) $request->query('recent_access', 'all');
+        $access = array_key_exists($access, self::RECENT_ACCESS) ? $access : 'all';
+
+        $status = (string) $request->query('recent_status', 'all');
+        $status = array_key_exists($status, self::RECENT_STATUS) ? $status : 'all';
+
+        // null — фильтр не выбран
+        $paidWith = self::RECENT_ACCESS[$access] ?? null;
+        $statuses = self::RECENT_STATUS[$status] ?? null;
+
+        $page = Presentation::query()
+            ->with('user:id,name,email')
+            ->when($paidWith !== null, fn ($q) => $q->whereIn('paid_with', (array) $paidWith))
+            ->when($statuses !== null, fn ($q) => $q->whereIn('status', (array) $statuses))
+            ->latest('id')
+            ->paginate(self::RECENT_PER_PAGE, pageName: 'recent_page')
+            ->withQueryString()
+            ->through(fn (Presentation $p) => [
+                'id' => $p->id,
+                'title' => $p->title ?: $p->topic,
+                'status' => $p->status->value,
+                'statusLabel' => $p->status->label(),
+                'access' => $p->access(),
+                'rating' => $p->rating,
+                'duration' => $p->generationSeconds(),
+                'createdAt' => $p->created_at?->toIso8601String(),
+                'user' => $p->user?->only(['id', 'name', 'email']),
+            ]);
+
+        return [
+            'access' => $access,
+            'status' => $status,
+            'total' => $page->total(),
+            'items' => $page->items(),
+            'currentPage' => $page->currentPage(),
+            'lastPage' => $page->lastPage(),
+            'prevUrl' => $page->previousPageUrl(),
+            'nextUrl' => $page->nextPageUrl(),
+        ];
     }
 
     /**
