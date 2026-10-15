@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\SupportMessage;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -48,6 +49,14 @@ class HandleInertiaRequests extends Middleware
                 'isAdmin' => (bool) $request->user()?->isAdmin(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            // Чат с администратором: точка на кнопке «Написать нам» и
+            // число диалогов с непрочитанным в меню админки
+            'support' => fn () => $request->user() ? [
+                'unread' => $request->user()->supportMessages()->unreadByUser()->count(),
+                'adminUnread' => $request->user()->isAdmin()
+                    ? SupportMessage::query()->unreadByAdmin()->distinct()->count('user_id')
+                    : 0,
+            ] : null,
         ];
     }
 }

@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import {
     CreditCard,
     MessageCircle,
+    MessagesSquare,
     Plus,
     Presentation,
     ShieldCheck,
@@ -59,7 +60,16 @@ const mainNavItems = computed<NavItem[]>(() => [
     // Пункт видят только свои — маршрут всё равно закрыт на сервере,
     // это лишь чтобы не мозолил глаза остальным
     ...(isAdmin.value
-        ? [{ title: 'Админка', href: '/admin', icon: ShieldCheck }]
+        ? [
+              { title: 'Админка', href: '/admin', icon: ShieldCheck },
+              {
+                  title: 'Чат',
+                  href: '/admin/support',
+                  icon: MessagesSquare,
+                  // Диалоги, где есть непрочитанное
+                  badge: page.props.support?.adminUnread ?? 0,
+              },
+          ]
         : []),
 ]);
 </script>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ReceiptController;
+use App\Http\Controllers\Admin\SupportController as AdminSupportController;
 use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\HomeController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\Presentations\PresentationController;
 use App\Http\Controllers\Presentations\PublicPresentationController;
+use App\Http\Controllers\SupportController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
 
@@ -83,7 +85,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('receipts', [ReceiptController::class, 'index'])->name('receipts');
         Route::post('receipts/{payment}', [ReceiptController::class, 'store'])
             ->name('receipts.store');
+
+        // Чат с пользователями: список диалогов, диалог, ответ
+        Route::get('support', [AdminSupportController::class, 'index'])->name('support');
+        Route::get('support/{user}', [AdminSupportController::class, 'show'])->name('support.show');
+        Route::post('support/{user}', [AdminSupportController::class, 'store'])
+            ->middleware('throttle:30,1')
+            ->name('support.store');
     });
+
+    // Чат с администратором: окошко опрашивает переписку, пока открыто
+    Route::get('support', [SupportController::class, 'index'])
+        ->middleware('throttle:60,1')
+        ->name('support.index');
+    Route::post('support', [SupportController::class, 'store'])
+        // Спам в чат — это и письма администратору, хоть и не каждое
+        ->middleware('throttle:10,1')
+        ->name('support.store');
 
     // Отзыв о сервисе: форма в кабинете, письмо владельцу
     Route::get('feedback', [FeedbackController::class, 'create'])->name('feedback');

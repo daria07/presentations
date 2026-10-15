@@ -11,4 +11,6 @@ export type NavItem = {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon;
     isActive?: boolean;
+    /* Число справа от пункта, например непрочитанные; 0 — не показывать */
+    badge?: number;
 };

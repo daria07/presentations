@@ -19,6 +19,8 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            /* Чат с администратором; null — не вошёл */
+            support: { unread: number; adminUnread: number } | null;
             [key: string]: unknown;
         };
     }

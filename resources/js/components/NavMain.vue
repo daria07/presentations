@@ -4,6 +4,7 @@ import {
     SidebarGroup,
     SidebarGroupLabel,
     SidebarMenu,
+    SidebarMenuBadge,
     SidebarMenuButton,
     SidebarMenuItem,
     useSidebar,
@@ -58,6 +59,13 @@ function close() {
                         <span>{{ item.title }}</span>
                     </Link>
                 </SidebarMenuButton>
+                <!-- Пункт выше обычного, поэтому число — по центру его высоты -->
+                <SidebarMenuBadge
+                    v-if="item.badge"
+                    class="top-1/2 right-2 -translate-y-1/2 rounded-full bg-red-500 text-white peer-hover/menu-button:text-white peer-data-[active=true]/menu-button:text-white"
+                >
+                    {{ item.badge > 99 ? '99+' : item.badge }}
+                </SidebarMenuBadge>
             </SidebarMenuItem>
         </SidebarMenu>
     </SidebarGroup>
