@@ -52,8 +52,9 @@ activate() {
     echo "→ Убираем старые версии"
     # Имя начинается с даты: по нему и сортируем, новые сверху.
     # Текущую не трогаем, даже если после отката она не самая новая
+    # (grep без совпадений возвращает 1 — для set -e это не ошибка)
     ls -1 "$BASE/releases" | sort -r | tail -n +$((KEEP + 1)) \
-        | grep -vx "$name" | sed "s|^|$BASE/releases/|" | xargs -r rm -rf
+        | { grep -vx "$name" || true; } | sed "s|^|$BASE/releases/|" | xargs -r rm -rf
 
     echo "Готово: $name"
 }
