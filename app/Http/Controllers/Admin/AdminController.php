@@ -34,10 +34,10 @@ class AdminController extends Controller
     private const REVIEWS_PER_PAGE = 10;
 
     /**
-     * Периоды для цифр сводки. Первый — по умолчанию: так страница
-     * открывается такой же, какой была до появления переключателя.
+     * Периоды для цифр сводки. Первый — по умолчанию: админку
+     * открывают посмотреть, что происходит сегодня.
      */
-    public const PERIODS = ['all', 'today', 'yesterday', 'week'];
+    public const PERIODS = ['today', 'yesterday', 'week', 'all'];
 
     public function index(Request $request): Response
     {

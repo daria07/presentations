@@ -97,9 +97,19 @@ test('выручка и статусы тоже режутся периодом'
             ->where('previous.presentations', 1));
 });
 
-test('неизвестный период — всё время, без сравнения', function () {
+test('по умолчанию и при неизвестном периоде — сегодня', function () {
+    $admin = adminUser();
+
+    foreach (['/admin', '/admin?period=../../etc'] as $url) {
+        $this->actingAs($admin)
+            ->get($url)
+            ->assertInertia(fn (Assert $page) => $page->where('period', 'today'));
+    }
+});
+
+test('всё время — по явной ссылке, без сравнения', function () {
     $this->actingAs(adminUser())
-        ->get('/admin?period=../../etc')
+        ->get('/admin?period=all')
         ->assertInertia(fn (Assert $page) => $page
             ->where('period', 'all')
             ->where('previous', null));

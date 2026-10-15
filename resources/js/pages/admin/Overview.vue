@@ -241,7 +241,7 @@ function when(iso: string | null): string {
             <Link
                 v-for="p in PERIODS"
                 :key="p.key"
-                :href="p.key === 'all' ? '/admin' : `/admin?period=${p.key}`"
+                :href="p.key === 'today' ? '/admin' : `/admin?period=${p.key}`"
                 preserve-scroll
                 preserve-state
                 class="cursor-pointer rounded-md px-3 py-1.5 text-sm transition-colors"

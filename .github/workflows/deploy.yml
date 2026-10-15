@@ -53,9 +53,17 @@ jobs:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER: ${{ secrets.DEPLOY_USER }}
           PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        # Сервер, переведённый на версии (есть repo/), выкладывается без
+        # простоя. Ещё не переведённый — по-старому, с техработами:
+        # см. deploy/migrate-to-releases.sh
         run: |
-          ssh -p "$PORT" -o BatchMode=yes "$USER@$HOST" \
-            'cd /var/www/slaidusha && bash deploy/deploy.sh'
+          ssh -p "$PORT" -o BatchMode=yes "$USER@$HOST" '
+            set -e
+            if [ -d /var/www/slaidusha/repo ]; then
+              cd /var/www/slaidusha/repo && git pull --ff-only && bash deploy/deploy.sh
+            else
+              cd /var/www/slaidusha && git pull --ff-only && bash deploy/deploy-inplace.sh
+            fi'
 
       - name: Проверяем, что сайт поднялся
         run: |
