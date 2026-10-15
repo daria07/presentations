@@ -223,7 +223,7 @@ class Illustrator
      * Пережимает картинку в JPEG, кладёт в папку презентации и
      * записывает расход.
      *
-     * @param  array{bytes: string, input: int, output: int}  $result
+     * @param  array{bytes: string, input: int, output: int, cost?: int}  $result
      */
     private function store(Presentation $presentation, int $index, array $result): string
     {
@@ -231,7 +231,7 @@ class Illustrator
 
         Storage::disk(config('deck.disk'))->put($path, Jpeg::compress($result['bytes']));
 
-        $this->record($presentation, $result['input'], $result['output']);
+        $this->record($presentation, $result['input'], $result['output'], $result['cost'] ?? null);
 
         return $path;
     }
@@ -346,7 +346,8 @@ class Illustrator
             && empty($slide['image']['failed']);
     }
 
-    private function record(Presentation $presentation, int $input, int $output): void
+    /** @param  int|null  $cost  цена от шлюза; null — считаем по токенам */
+    private function record(Presentation $presentation, int $input, int $output, ?int $cost = null): void
     {
         $config = config('services.images');
 
@@ -359,7 +360,7 @@ class Illustrator
             'output_tokens' => $output,
             'cached_tokens' => 0,
             // В тех же единицах, что и у текста: сотые доли цента
-            'cost' => (int) round(
+            'cost' => $cost ?? (int) round(
                 $input / 1_000_000 * (int) $config['price_input']
                 + $output / 1_000_000 * (int) $config['price_output']
             ),

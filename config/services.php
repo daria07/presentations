@@ -45,6 +45,16 @@ return [
         'model' => env('IMAGE_MODEL'),
         'base_url' => rtrim((string) env('IMAGE_BASE_URL', env('LLM_BASE_URL', env('ANTHROPIC_BASE_URL', ''))), '/'),
         'key' => env('IMAGE_API_KEY', env('LLM_API_KEY', env('ANTHROPIC_API_KEY'))),
+        /*
+         * Как устроен API картинок:
+         * openai — /v1/images/generations, картинка в ответе на запрос;
+         * async  — /v1/media/generations (sozdai.ai): запрос ставит
+         *          задачу, результат забираем опросом по id. Цену шлюз
+         *          называет сам, IMAGE_PRICE_* для него не нужны
+         */
+        'api' => env('IMAGE_API', 'openai'),
+        // Разрешение для async: 1K, 2K или 4K, каждый шаг вдвое дороже
+        'resolution' => env('IMAGE_RESOLUTION', '1K'),
         'quality' => env('IMAGE_QUALITY', 'medium'),
         // Короткие запросы без служебных фраз: для моделей, которые рисуют
         // текст запроса буквами (grok). Не задано — включается для grok сам
@@ -64,6 +74,9 @@ return [
         'model' => env('IMAGE_FALLBACK_MODEL'),
         'base_url' => env('IMAGE_FALLBACK_BASE_URL') ? rtrim((string) env('IMAGE_FALLBACK_BASE_URL'), '/') : null,
         'key' => env('IMAGE_FALLBACK_API_KEY'),
+        // Не задано: запасной со своим адресом — openai, без своего
+        // адреса — такой же, как основной
+        'api' => env('IMAGE_FALLBACK_API'),
         'stream' => env('IMAGE_FALLBACK_STREAM'),
         'compact_prompt' => env('IMAGE_FALLBACK_COMPACT_PROMPT'),
     ],

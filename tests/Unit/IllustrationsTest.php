@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\Deck\Illustrations;
+use App\Services\Images\Illustrator;
 
 /*
    Где будут картинки: обложка всегда, в теле 2 (до 8 слайдов) или
@@ -120,7 +121,7 @@ test('вертикаль — только если модель отметила
 });
 
 test('в коротком запросе у людей без заданного происхождения — славянская внешность', function () {
-    $prompt = fn (string $scene, string $subject = '') => App\Services\Images\Illustrator::compactPrompt($scene, '', 'square', $subject);
+    $prompt = fn (string $scene, string $subject = '') => Illustrator::compactPrompt($scene, '', 'square', $subject);
 
     expect($prompt('Doctors discussing a patient in a hospital ward'))->toContain('Slavic appearance')
         // Происхождение задано сценой — не трогаем

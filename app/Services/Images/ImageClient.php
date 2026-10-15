@@ -6,10 +6,12 @@ use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Sleep;
 use Throwable;
 
 /**
- * Рисует картинки через OpenAI-совместимый шлюз (/v1/images/generations).
+ * Рисует картинки через OpenAI-совместимый шлюз (/v1/images/generations)
+ * или через асинхронный API задач (IMAGE_API=async, см. attemptAsync).
  *
  * Все картинки презентации запрашиваются одновременно: одна рисуется
  * около 30 секунд, и по очереди четыре заняли бы две минуты.
@@ -40,33 +42,58 @@ class ImageClient
     public array $refused = [];
 
     /**
+     * Ключи, чьи задачи async-шлюз принял, но не дорисовал к концу
+     * отведённого времени. Платится только успех, и такая задача ещё
+     * может закончиться и списать деньги, поэтому на запасной шлюз её
+     * не отправляем: иначе одна картинка оплачивается дважды.
+     *
+     * @var array<int, string>
+     */
+    public array $unfinished = [];
+
+    /**
      * prompt — полный запрос, compact — короткий, для моделей, которые
      * рисуют текст запроса буквами (grok). Какой отправить, решает
      * настройка шлюза: у основного и запасного она своя.
      *
      * @param  array<string, array{prompt: string, size: string, compact?: string}>  $requests
-     * @return array<string, array{bytes: string, input: int, output: int}|null>
-     *                                                                           null — картинку получить не удалось
+     * @return array<string, array{bytes: string, input: int, output: int, cost?: int}|null>
+     *                                                                                       null — картинку получить не удалось;
+     *                                                                                       cost — цена, если шлюз назвал её сам
      */
     public function generateMany(array $requests): array
     {
         $this->refused = [];
+        $this->unfinished = [];
         $started = microtime(true);
         $fallback = self::fallbackConfig();
+        $primary = config('services.images');
 
-        // С запасным шлюзом основному оставляем меньше времени: задача
-        // рисования живёт 280 секунд, и запасному нужен свой заход
+        /*
+           С запасным шлюзом основному оставляем меньше времени: задача
+           рисования живёт 280 секунд, и запасному нужен свой заход.
+           Async-шлюзу (sozdai) — больше: картинка у него рисуется
+           до двух минут, а запасной нужен только на случай, когда он
+           лежит, и тогда это выясняется за первые секунды
+        */
+        $reserve = ($primary['api'] ?? 'openai') === 'async'
+            ? self::ASYNC_FALLBACK_RESERVE
+            : self::FALLBACK_RESERVE;
+
         $results = $this->attempt(
             $requests,
-            config('services.images'),
-            $started + ($fallback ? self::BUDGET - self::FALLBACK_RESERVE : self::BUDGET),
+            $primary,
+            $started + ($fallback ? self::BUDGET - $reserve : self::BUDGET),
         );
 
-        // Не вышли — пробуем запасной шлюз. Кроме отказов по содержанию:
-        // их Illustrator переспросит упрощённой сценой
+        // Не вышли — пробуем запасной шлюз. Кроме отказов по содержанию
+        // (их Illustrator переспросит упрощённой сценой) и задач, которые
+        // основной ещё рисует: за них он может успеть взять деньги
         $missing = array_filter(
             $requests,
-            fn (string $key) => $results[$key] === null && ! in_array($key, $this->refused, true),
+            fn (string $key) => $results[$key] === null
+                && ! in_array($key, $this->refused, true)
+                && ! in_array($key, $this->unfinished, true),
             ARRAY_FILTER_USE_KEY,
         );
 
@@ -104,6 +131,9 @@ class ImageClient
     /** Сколько из них оставить запасному шлюзу */
     private const FALLBACK_RESERVE = 110;
 
+    /** То же при async-шлюзе: ему 190 секунд, запасному 40 */
+    private const ASYNC_FALLBACK_RESERVE = 40;
+
     /**
      * Запасной шлюз картинок (IMAGE_FALLBACK_*), если задан.
      * Незаданные поля берутся у основного.
@@ -118,7 +148,15 @@ class ImageClient
             return null;
         }
 
-        return [...config('services.images'), ...array_filter($fallback, fn ($v) => $v !== null && $v !== '')];
+        $merged = [...config('services.images'), ...array_filter($fallback, fn ($v) => $v !== null && $v !== '')];
+
+        // Свой адрес без явного API — это обычный OpenAI-совместимый
+        // шлюз, а не тот же sozdai, что у основного
+        if (blank($fallback['api'] ?? null) && filled($fallback['base_url'] ?? null)) {
+            $merged['api'] = 'openai';
+        }
+
+        return $merged;
     }
 
     /**
@@ -127,10 +165,16 @@ class ImageClient
      *
      * @param  array<string, array{prompt: string, size: string, compact?: string}>  $requests
      * @param  array<string, mixed>  $config
-     * @return array<string, array{bytes: string, input: int, output: int}|null>
+     * @return array<string, array{bytes: string, input: int, output: int, cost?: int}|null>
+     *
+     * @phpstan-impure заполняет refused и unfinished
      */
     private function attempt(array $requests, array $config, float $deadline): array
     {
+        if (($config['api'] ?? 'openai') === 'async') {
+            return $this->attemptAsync($requests, $config, $deadline);
+        }
+
         $results = array_fill_keys(array_keys($requests), null);
         $pending = $requests;
         $streams = filter_var($config['stream'] ?? true, FILTER_VALIDATE_BOOLEAN);
@@ -256,6 +300,223 @@ class ImageClient
         }
 
         return $results;
+    }
+
+    /** Как часто спрашивать о готовности задачи, секунд */
+    private const POLL_EVERY = 3;
+
+    /**
+     * Асинхронный API (sozdai.ai): POST /v1/media/generations ставит
+     * задачу и сразу отвечает id, GET /v1/media/generations/{id}
+     * сообщает статус: queued, submitted, running, затем succeeded,
+     * failed или timeout. Готовая картинка — ссылкой в result.urls.
+     *
+     * Все задачи ставим разом и опрашиваем пачкой, пока не кончится
+     * время. Платится только успех, поэтому упавшую задачу ставим
+     * заново — до ROUNDS раз. Отказ по контент-политике не повторяем:
+     * его Illustrator переспросит упрощённой сценой.
+     *
+     * @param  array<string, array{prompt: string, size: string, compact?: string}>  $requests
+     * @param  array<string, mixed>  $config
+     * @return array<string, array{bytes: string, input: int, output: int, cost?: int}|null>
+     */
+    private function attemptAsync(array $requests, array $config, float $deadline): array
+    {
+        $results = array_fill_keys(array_keys($requests), null);
+        $endpoint = $config['base_url'].'/v1/media/generations';
+        $compact = self::wantsCompact($config);
+
+        /** @var array<string, array{prompt: string, size: string, compact?: string}> $queue ещё не поставлены */
+        $queue = $requests;
+        /** @var array<string, string> $tasks ключ => id поставленной задачи */
+        $tasks = [];
+        /** @var array<string, int> $submits сколько раз ставили задачу */
+        $submits = array_fill_keys(array_keys($requests), 0);
+
+        while (($queue !== [] || $tasks !== []) && microtime(true) < $deadline) {
+            if ($queue !== []) {
+                $responses = Http::pool(fn (Pool $pool) => array_map(
+                    fn (string $key) => $pool->as($key)
+                        ->withToken((string) $config['key'])
+                        ->timeout(30)
+                        ->connectTimeout(15)
+                        ->post($endpoint, [
+                            'model' => $config['model'],
+                            'prompt' => $compact && isset($queue[$key]['compact'])
+                                ? $queue[$key]['compact']
+                                : $queue[$key]['prompt'],
+                            'aspect_ratio' => self::aspectRatio($queue[$key]['size']),
+                            'resolution' => (string) ($config['resolution'] ?? '1K'),
+                        ]),
+                    array_map('strval', array_keys($queue)),
+                ));
+
+                $submitted = $queue;
+                $queue = [];
+
+                foreach ($submitted as $key => $request) {
+                    $key = (string) $key;
+                    $submits[$key]++;
+                    $response = $responses[$key] ?? null;
+                    $id = $response instanceof Response && $response->successful() ? $response->json('id') : null;
+
+                    if (is_string($id) && $id !== '') {
+                        $tasks[$key] = $id;
+
+                        continue;
+                    }
+
+                    Log::warning('Картинка: задача не поставилась', [
+                        'key' => $key,
+                        'attempt' => $submits[$key],
+                        'status' => $response instanceof Response ? $response->status() : null,
+                        'body' => $response instanceof Response ? mb_substr($response->body(), 0, 500) : null,
+                        'error' => $response instanceof Throwable ? $response->getMessage() : null,
+                        'prompt' => mb_substr($request['prompt'], 0, 300),
+                    ]);
+
+                    if ($response instanceof Response && self::isPolicyRefusal($response)) {
+                        $this->refused[] = $key;
+                    } elseif (! $response instanceof Response || $response->serverError() || $response->status() === 429) {
+                        // Обрыв, 5xx и «слишком часто» — временное
+                        // Поставить ещё раз, если заходы не кончились
+                        if ($submits[$key] < self::ROUNDS) {
+                            $queue[$key] = $requests[$key];
+                        }
+                    }
+                }
+            }
+
+            if ($tasks === []) {
+                // Нечего опрашивать: либо всё кончилось, либо ждём
+                // повторной постановки после временной ошибки
+                if ($queue !== []) {
+                    Sleep::for(self::POLL_EVERY)->seconds();
+                }
+
+                continue;
+            }
+
+            Sleep::for(self::POLL_EVERY)->seconds();
+
+            $responses = Http::pool(fn (Pool $pool) => array_map(
+                fn (string $key) => $pool->as($key)
+                    ->withToken((string) $config['key'])
+                    ->timeout(20)
+                    ->connectTimeout(10)
+                    ->get($endpoint.'/'.$tasks[$key]),
+                array_map('strval', array_keys($tasks)),
+            ));
+
+            foreach ($tasks as $key => $id) {
+                $key = (string) $key;
+                $response = $responses[$key] ?? null;
+
+                // Обрыв или 5xx при опросе — задача от этого не страдает,
+                // спросим на следующем круге
+                if (! $response instanceof Response || $response->serverError()) {
+                    continue;
+                }
+
+                $status = $response->successful() ? (string) $response->json('status') : 'failed';
+
+                if (! in_array($status, ['succeeded', 'failed', 'timeout'], true)) {
+                    continue; // queued, submitted, running
+                }
+
+                unset($tasks[$key]);
+
+                if ($status === 'succeeded') {
+                    $url = $response->json('result.urls.0');
+                    $bytes = is_string($url) ? self::download($url) : false;
+
+                    if ($bytes === false || $bytes === '') {
+                        Log::warning('Картинка: задача готова, но картинки нет', [
+                            'key' => $key,
+                            'id' => $id,
+                            'body' => mb_substr($response->body(), 0, 500),
+                        ]);
+                        // Поставить ещё раз, если заходы не кончились
+                        if ($submits[$key] < self::ROUNDS) {
+                            $queue[$key] = $requests[$key];
+                        }
+
+                        continue;
+                    }
+
+                    $results[$key] = [
+                        'bytes' => $bytes,
+                        'input' => 0,
+                        'output' => 0,
+                        'cost' => self::usdToUnits($response->json('cost')),
+                    ];
+
+                    continue;
+                }
+
+                // failed / timeout, или задачу не нашли (404)
+                $error = $response->json('error');
+                $error = is_array($error) ? (string) json_encode($error, JSON_UNESCAPED_UNICODE) : (string) $error;
+
+                Log::warning('Картинка: задача не удалась', [
+                    'key' => $key,
+                    'id' => $id,
+                    'status' => $status,
+                    'http' => $response->status(),
+                    'error' => mb_substr($error, 0, 500),
+                    'prompt' => mb_substr($requests[$key]['prompt'], 0, 300),
+                ]);
+
+                if (self::isPolicyText($error)) {
+                    $this->refused[] = $key;
+                } else {
+                    // Поставить ещё раз, если заходы не кончились
+                    if ($submits[$key] < self::ROUNDS) {
+                        $queue[$key] = $requests[$key];
+                    }
+                }
+            }
+        }
+
+        // Принятые, но не дорисованные — ещё могут списать деньги
+        $this->unfinished = array_map('strval', array_keys($tasks));
+
+        if ($tasks !== [] || $queue !== []) {
+            Log::warning('Картинка: не дождались задач до конца отведённого времени', [
+                'keys' => array_keys($tasks + $queue),
+                'tasks' => array_values($tasks),
+            ]);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Размер в пикселях (как его задаёт Illustrator) — в пропорцию
+     * для async API: 1536x1024 → 3:2, 1024x1024 → 1:1.
+     */
+    public static function aspectRatio(string $size): string
+    {
+        if (preg_match('/^(\d+)x(\d+)$/', $size, $m) !== 1 || (int) $m[1] === 0 || (int) $m[2] === 0) {
+            return 'auto';
+        }
+
+        [$w, $h] = [(int) $m[1], (int) $m[2]];
+        $gcd = function (int $a, int $b) use (&$gcd): int {
+            return $b === 0 ? $a : $gcd($b, $a % $b);
+        };
+        $d = $gcd($w, $h);
+
+        return ($w / $d).':'.($h / $d);
+    }
+
+    /**
+     * Цена задачи из ответа шлюза («0.0500», доллары) — в сотых долях
+     * цента, как у остальных записей расхода.
+     */
+    private static function usdToUnits(mixed $cost): int
+    {
+        return is_numeric($cost) ? (int) round((float) $cost * 10_000) : 0;
     }
 
     /**

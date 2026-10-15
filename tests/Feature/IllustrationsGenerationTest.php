@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Sleep;
 
 /*
    Картинки к слайдам: рисуются отдельной задачей после структуры,
@@ -37,6 +38,9 @@ beforeEach(function () {
             'price_input' => 15000,
             'price_output' => 90000,
         ],
+        // Запасной шлюз из локального .env сюда не должен попадать:
+        // тесты, которым он нужен, задают его сами
+        'services.images_fallback' => ['model' => null],
     ]);
 });
 
@@ -519,4 +523,163 @@ test('не вышло у основного шлюза — рисует запа
 
     expect($results['0'])->not->toBeNull()
         ->and($backupPrompts)->toBe(['cat, no text']);
+});
+
+/*
+   Асинхронный API (sozdai.ai): POST ставит задачу, GET по id
+   отдаёт статус, готовая картинка — ссылкой на CDN.
+*/
+
+function asyncImages(): void
+{
+    Sleep::fake();
+    config([
+        'services.images.api' => 'async',
+        'services.images.base_url' => 'https://sozdai.test',
+        'services.images.resolution' => '1K',
+    ]);
+}
+
+test('async: ставит задачи, опрашивает до готовности, качает по ссылке и пишет цену шлюза', function () {
+    asyncImages();
+    $posts = [];
+    $polls = [];
+
+    Http::fake(function (Request $r) use (&$posts, &$polls) {
+        if (str_contains($r->url(), 'cdn.test')) {
+            return Http::response(tinyPng());
+        }
+
+        if ($r->method() === 'POST') {
+            $posts[] = $r->data();
+
+            return Http::response(['id' => 'task'.count($posts), 'status' => 'queued']);
+        }
+
+        $id = basename($r->url());
+        $polls[$id] = ($polls[$id] ?? 0) + 1;
+
+        // Первый опрос — ещё рисует, второй — готово
+        return $polls[$id] === 1
+            ? Http::response(['id' => $id, 'status' => 'running', 'cost' => '0.0000'])
+            : Http::response([
+                'id' => $id,
+                'status' => 'succeeded',
+                'result' => ['urls' => ["https://cdn.test/{$id}.png"]],
+                'cost' => '0.0500',
+                'currency' => 'USD',
+            ]);
+    });
+
+    $presentation = deckWithScenes();
+    app(Illustrator::class)->illustrate($presentation);
+
+    $slides = $presentation->refresh()->outline['slides'];
+
+    expect($posts)->toHaveCount(3)
+        ->and(collect($posts)->pluck('aspect_ratio')->sort()->values()->all())->toBe(['1:1', '2:3', '3:2'])
+        ->and($posts[0]['resolution'])->toBe('1K')
+        ->and($posts[0]['model'])->toBe('gpt-image-test')
+        ->and($posts[0])->not->toHaveKey('size')
+        ->and($slides[0]['image']['path'])->not->toBeNull()
+        ->and($slides[1]['image']['path'])->not->toBeNull()
+        ->and($slides[3]['image']['path'])->not->toBeNull()
+        // $0.05 = 500 сотых цента за картинку
+        ->and(ApiCall::where('purpose', 'image')->sum('cost'))->toEqual(3 * 500);
+});
+
+test('async: упавшая задача ставится заново, отказ по политике — нет', function () {
+    asyncImages();
+    $posts = ['кот' => 0, 'пёс' => 0];
+
+    Http::fake(function (Request $r) use (&$posts) {
+        if (str_contains($r->url(), 'cdn.test')) {
+            return Http::response(tinyPng());
+        }
+
+        if ($r->method() === 'POST') {
+            $key = str_contains($r['prompt'], 'кот') ? 'кот' : 'пёс';
+            $posts[$key]++;
+
+            // id латиницей: в адресе опроса кириллица ушла бы в %-кодировку
+            return Http::response(['id' => ($key === 'кот' ? 'cat' : 'dog').$posts[$key], 'status' => 'queued']);
+        }
+
+        return match (basename($r->url())) {
+            // Первая задача кота срывается по таймауту, вторая удаётся
+            'cat1' => Http::response(['status' => 'timeout', 'error' => 'Generation timed out']),
+            'cat2' => Http::response(['status' => 'succeeded', 'result' => ['urls' => ['https://cdn.test/1.png']], 'cost' => '0.0500']),
+            default => Http::response(['status' => 'failed', 'error' => 'Rejected by content policy']),
+        };
+    });
+
+    $client = app(ImageClient::class);
+    $results = $client->generateMany([
+        'a' => ['prompt' => 'кот', 'size' => '1024x1024'],
+        'b' => ['prompt' => 'пёс', 'size' => '1024x1024'],
+    ]);
+
+    expect($posts)->toBe(['кот' => 2, 'пёс' => 1])
+        ->and($results['a'])->not->toBeNull()
+        ->and($results['b'])->toBeNull()
+        ->and($client->refused)->toBe(['b']);
+});
+
+test('async: 5xx при постановке повторяется', function () {
+    asyncImages();
+    $posts = 0;
+
+    Http::fake(function (Request $r) use (&$posts) {
+        if (str_contains($r->url(), 'cdn.test')) {
+            return Http::response(tinyPng());
+        }
+
+        if ($r->method() === 'POST') {
+            return ++$posts === 1
+                ? Http::response(['error' => ['message' => 'unavailable']], 503)
+                : Http::response(['id' => 't1', 'status' => 'queued']);
+        }
+
+        return Http::response(['status' => 'succeeded', 'result' => ['urls' => ['https://cdn.test/1.png']], 'cost' => '0.0500']);
+    });
+
+    $results = app(ImageClient::class)->generateMany(['0' => ['prompt' => 'кот', 'size' => '1536x1024']]);
+
+    expect($posts)->toBe(2)->and($results['0'])->not->toBeNull();
+});
+
+test('async основной, запасной со своим адресом — обычный openai', function () {
+    asyncImages();
+    config(['services.images_fallback' => [
+        'model' => 'gpt-image-2.5-flare',
+        'base_url' => 'https://backup.test',
+        'key' => 'k2',
+        'stream' => false,
+        'compact_prompt' => null,
+        'api' => null,
+    ]]);
+    $backup = [];
+
+    Http::fake(function (Request $r) use (&$backup) {
+        if (str_contains($r->url(), 'backup.test')) {
+            $backup[] = $r->url();
+
+            return Http::response(['data' => [['b64_json' => base64_encode(tinyPng())]]]);
+        }
+
+        // Основной лежит
+        return Http::response(['error' => ['message' => 'down']], 503);
+    });
+
+    $results = app(ImageClient::class)->generateMany(['0' => ['prompt' => 'кот', 'size' => '1024x1024']]);
+
+    expect($results['0'])->not->toBeNull()
+        ->and($backup)->toBe(['https://backup.test/v1/images/generations']);
+});
+
+test('размер в пикселях превращается в пропорцию', function () {
+    expect(ImageClient::aspectRatio('1536x1024'))->toBe('3:2')
+        ->and(ImageClient::aspectRatio('1024x1536'))->toBe('2:3')
+        ->and(ImageClient::aspectRatio('1024x1024'))->toBe('1:1')
+        ->and(ImageClient::aspectRatio('auto'))->toBe('auto');
 });

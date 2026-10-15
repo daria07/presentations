@@ -16,6 +16,11 @@ use Throwable;
  *   php artisan images:test "Замок Диснейленда на закате"
  *   php artisan images:test --quality=high --size=1536x1024
  *   php artisan images:test --endpoint=chat
+ *   php artisan images:test --via-client
+ *
+ * --via-client идёт тем же путём, что и генерация: ImageClient с
+ * настройками IMAGE_* из .env, включая async-API (sozdai) и запасной
+ * шлюз. Остальные опции тогда не действуют, кроме --size.
  *
  * Картинки делаются через /v1/images/generations: чат cheapai для
  * gpt-image не принимает («not supported on the Chat Completions
@@ -32,7 +37,8 @@ class TestImage extends Command
                             {--quality=medium : low, medium или high}
                             {--endpoint=images : images или chat}
                             {--price-in=1.5 : Цена ввода, $ за 1M токенов}
-                            {--price-out=9 : Цена вывода, $ за 1M токенов}';
+                            {--price-out=9 : Цена вывода, $ за 1M токенов}
+                            {--via-client : Через ImageClient и настройки IMAGE_* из .env}';
 
     protected $description = 'Пробная генерация картинки для слайда через шлюз';
 
@@ -47,6 +53,10 @@ class TestImage extends Command
 
     public function handle(): int
     {
+        if ($this->option('via-client')) {
+            return $this->viaClient();
+        }
+
         $config = config('services.anthropic');
 
         if (blank($config['key'])) {
@@ -127,6 +137,54 @@ class TestImage extends Command
         $this->components->error('Три обрыва подряд — шлюз не отдаёт картинку.');
 
         return self::FAILURE;
+    }
+
+    /** Одна картинка тем же путём, что и в генерации презентации */
+    private function viaClient(): int
+    {
+        $config = config('services.images');
+
+        if (blank($config['model'] ?? null) || blank($config['key'] ?? null)) {
+            $this->error('Не заданы IMAGE_MODEL или ключ (IMAGE_API_KEY).');
+
+            return self::FAILURE;
+        }
+
+        $subject = $this->argument('subject') ?: 'Сказочный замок в парке развлечений на закате, вид издалека, гуляющие люди';
+        $size = (string) $this->option('size');
+
+        $this->components->twoColumnDetail('API', (string) ($config['api'] ?? 'openai'));
+        $this->components->twoColumnDetail('Шлюз', (string) $config['base_url']);
+        $this->components->twoColumnDetail('Модель', (string) $config['model']);
+        $this->components->twoColumnDetail('Размер', $size.' → '.ImageClient::aspectRatio($size).', '.($config['resolution'] ?? '1K'));
+        $this->newLine();
+
+        $started = microtime(true);
+        $client = app(ImageClient::class);
+        $result = $client->generateMany(['test' => ['prompt' => $subject.'. '.self::STYLE, 'size' => $size]])['test'] ?? null;
+        $seconds = round(microtime(true) - $started, 1);
+
+        if ($result === null) {
+            $this->components->error("Картинки нет за {$seconds} с".($client->refused !== [] ? ' — отказ по контент-политике' : '').'. Подробности в storage/logs.');
+
+            return self::FAILURE;
+        }
+
+        $path = $this->save(['b64' => base64_encode($result['bytes'])]);
+        [$w, $h] = getimagesizefromstring($result['bytes']) ?: [0, 0];
+
+        $this->components->twoColumnDetail('Время', "{$seconds} с");
+        $this->components->twoColumnDetail('Картинка', "{$w}×{$h}, ".round(strlen($result['bytes']) / 1024).' КБ');
+
+        if (isset($result['cost'])) {
+            $this->components->twoColumnDetail('Стоимость', '$'.number_format($result['cost'] / 10_000, 4));
+        } else {
+            $this->usage(['input_tokens' => $result['input'], 'output_tokens' => $result['output']]);
+        }
+
+        $this->components->info("Готово: {$path}");
+
+        return self::SUCCESS;
     }
 
     private function viaImages(string $base, string $key, string $prompt): Response
