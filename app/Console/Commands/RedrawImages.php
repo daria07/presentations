@@ -10,6 +10,7 @@ use App\Services\Images\Illustrator;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -26,6 +27,9 @@ use Throwable;
  *   php artisan images:redraw                 сделать (спросит)
  *   php artisan images:redraw --id=351        одну презентацию
  *   php artisan images:redraw --since=2026-10-01
+ *   php artisan images:redraw --id=351 --fresh   перерисовать ВСЕ картинки,
+ *                                                 и удачные тоже (например,
+ *                                                 с буквами на картинке)
  */
 class RedrawImages extends Command
 {
@@ -33,6 +37,7 @@ class RedrawImages extends Command
                             {--id=* : Только эти презентации}
                             {--since= : Созданные не раньше этой даты}
                             {--all : И пробные тоже, не только оплаченные}
+                            {--fresh : Перерисовать все картинки заново, а не только несостоявшиеся (только с --id)}
                             {--dry-run : Только показать список}
                             {--force : Не спрашивать подтверждение}';
 
@@ -46,6 +51,13 @@ class RedrawImages extends Command
             return self::FAILURE;
         }
 
+        // Перерисовка всего платная и необратимая — только поимённо
+        if ($this->option('fresh') && ! $this->option('id')) {
+            $this->error('--fresh работает только вместе с --id: перерисовать все картинки у всех — слишком дорого.');
+
+            return self::FAILURE;
+        }
+
         $targets = $this->targets();
 
         if ($targets->isEmpty()) {
@@ -54,7 +66,7 @@ class RedrawImages extends Command
             return self::SUCCESS;
         }
 
-        $images = $targets->sum(fn (Presentation $p) => self::missing($p));
+        $images = $targets->sum(fn (Presentation $p) => $this->missing($p));
 
         $this->table(
             ['id', 'почта', 'оплата', 'создана', 'картинок'],
@@ -63,7 +75,7 @@ class RedrawImages extends Command
                 $p->user->email ?? '—',
                 $p->paid_with ?? '—',
                 $p->created_at?->format('d.m H:i'),
-                self::missing($p),
+                $this->missing($p),
             ])->all(),
         );
 
@@ -97,7 +109,7 @@ class RedrawImages extends Command
             ->when(! $this->option('all'), fn (Builder $q) => $q->whereIn('paid_with', ['credit', 'unlocked']))
             ->orderBy('id')
             ->get()
-            ->filter(fn (Presentation $p) => self::missing($p) > 0)
+            ->filter(fn (Presentation $p) => $this->missing($p) > 0)
             ->values();
     }
 
@@ -105,8 +117,16 @@ class RedrawImages extends Command
      * Сколько картинок дорисовать: помеченные «не вышла» плюс те,
      * которых не хватает до нормы (Illustrations::topUp)
      */
-    private static function missing(Presentation $presentation): int
+    private function missing(Presentation $presentation): int
     {
+        // Заново — все назначенные картинки, удачные тоже
+        if ($this->option('fresh')) {
+            return count(array_filter(
+                $presentation->outline['slides'] ?? [],
+                fn ($s) => is_array($s) && filled($s['image']['scene'] ?? null),
+            ));
+        }
+
         $slides = $presentation->outline['slides'] ?? [];
         $count = self::planned(self::withTopUp($presentation, $slides)) - self::planned($slides);
 
@@ -152,8 +172,27 @@ class RedrawImages extends Command
         // Снимаем отметку «не вышла» — тогда Illustrator возьмётся заново
         $outline = $presentation->outline;
 
+        $disk = Storage::disk(config('deck.disk'));
+
         foreach ($outline['slides'] as $i => $slide) {
-            if (is_array($slide) && ! empty($slide['image']['failed']) && blank($slide['image']['path'] ?? null)) {
+            if (! is_array($slide) || ! isset($slide['image'])) {
+                continue;
+            }
+
+            if ($this->option('fresh')) {
+                // Старый файл больше не нужен: новый ляжет под другим именем
+                $old = $slide['image']['path'] ?? null;
+
+                if (is_string($old) && $old !== '') {
+                    $disk->delete($old);
+                }
+
+                unset($outline['slides'][$i]['image']['path'], $outline['slides'][$i]['image']['failed']);
+
+                continue;
+            }
+
+            if (! empty($slide['image']['failed']) && blank($slide['image']['path'] ?? null)) {
                 unset($outline['slides'][$i]['image']['failed']);
             }
         }
@@ -174,7 +213,11 @@ class RedrawImages extends Command
             return;
         }
 
-        $left = self::missing($presentation->refresh());
+        // Не вышли и в этот раз — помечены failed без файла
+        $left = count(array_filter(
+            $presentation->refresh()->outline['slides'] ?? [],
+            fn ($s) => is_array($s) && ! empty($s['image']['failed']) && blank($s['image']['path'] ?? null),
+        ));
         $this->components->info("№{$presentation->id}: готово".($left ? ", не вышло ещё {$left}" : ''));
     }
 }

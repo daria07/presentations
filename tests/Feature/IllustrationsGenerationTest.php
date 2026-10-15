@@ -438,3 +438,24 @@ test('для grok запрос короткий, без служебных фр�
             ->and($prompt)->toContain('no text');
     }
 });
+
+test('images:redraw --fresh перерисовывает и удачные картинки, но только поимённо', function () {
+    Bus::fake([RenderPresentation::class]);
+    Http::fake(['gw.test/*' => Http::response(['data' => [['b64_json' => base64_encode(tinyPng())]]])]);
+
+    $p = deckWithScenes();
+    $outline = $p->outline;
+    $outline['slides'][1]['image']['path'] = 'presentations/old.jpg';
+    $p->forceFill([
+        'outline' => $outline,
+        'paid_with' => 'credit',
+        'status' => PresentationStatus::Ready,
+        'file_path' => 'presentations/x.pdf',
+    ])->save();
+
+    $this->artisan('images:redraw', ['--fresh' => true, '--force' => true])->assertFailed();
+
+    $this->artisan('images:redraw', ['--id' => [$p->id], '--fresh' => true, '--force' => true])->assertSuccessful();
+
+    expect($p->refresh()->outline['slides'][1]['image']['path'])->not->toBe('presentations/old.jpg');
+});
