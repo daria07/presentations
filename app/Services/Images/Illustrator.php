@@ -232,6 +232,10 @@ class Illustrator
      */
     private function prompt(string $scene, string $style, string $format, string $subject = ''): string
     {
+        if (self::compact()) {
+            return self::compactPrompt($scene, $style, $format, $subject);
+        }
+
         /*
            Картинки рисуются по одной, и художник не знает, о чём
            презентация: «пушистый питомец у щётки» в презентации про
@@ -253,6 +257,50 @@ class Illustrator
         };
 
         return trim($scene, ' .').'.'.$hero.' '.$composition.' '.self::WHOLE_SUBJECT.' '.$style.' '.self::NO_TEXT;
+    }
+
+    /**
+     * Короткий запрос для моделей, которые рисуют текст запроса.
+     *
+     * grok-imagine читает длинный запрос как надпись: служебные фразы
+     * («The presentation is about…», «Show the main subject entirely…»)
+     * появлялись на картинке буквами. Ему — только сцена, герой и стиль,
+     * без инструкций, и сам запрос короткий.
+     */
+    private static function compactPrompt(string $scene, string $style, string $format, string $subject): string
+    {
+        $parts = [trim($scene, ' .')];
+
+        if ($subject !== '') {
+            $parts[] = trim($subject, ' .');
+        }
+
+        $parts[] = match ($format) {
+            'cover' => 'wide shot, subject on the right',
+            'portrait' => 'tall vertical shot, whole subject visible',
+            default => 'centered, whole subject visible',
+        };
+
+        if ($style !== '') {
+            // Из стиля темы берём только первое предложение: остальное — те же инструкции
+            $parts[] = trim((string) strtok($style, '.'), ' .');
+        }
+
+        $parts[] = 'no text, no letters, no captions';
+
+        return implode(', ', array_filter($parts)).'.';
+    }
+
+    /** Модели, которым нужен короткий запрос (IMAGE_COMPACT_PROMPT или grok) */
+    private static function compact(): bool
+    {
+        $flag = config('services.images.compact_prompt');
+
+        if ($flag !== null && $flag !== '') {
+            return filter_var($flag, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return str_starts_with((string) config('services.images.model'), 'grok');
     }
 
     /** @param  mixed  $slide */

@@ -46,6 +46,9 @@ return [
         'base_url' => rtrim((string) env('IMAGE_BASE_URL', env('LLM_BASE_URL', env('ANTHROPIC_BASE_URL', ''))), '/'),
         'key' => env('IMAGE_API_KEY', env('LLM_API_KEY', env('ANTHROPIC_API_KEY'))),
         'quality' => env('IMAGE_QUALITY', 'medium'),
+        // Короткие запросы без служебных фраз: для моделей, которые рисуют
+        // текст запроса буквами (grok). Не задано — включается для grok сам
+        'compact_prompt' => env('IMAGE_COMPACT_PROMPT'),
         'price_input' => env('IMAGE_PRICE_INPUT', 15000),
         'price_output' => env('IMAGE_PRICE_OUTPUT', 90000),
     ],

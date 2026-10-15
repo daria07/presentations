@@ -417,3 +417,24 @@ test('недостающие картинки добираются на подх
         ->and(count(array_filter($result, fn ($s) => isset($s['image']) && $s['image']['side'] !== 'cover')))->toBe(2)
         ->and(isset($result[5]['image']))->toBeFalse();
 });
+
+test('для grok запрос короткий, без служебных фраз, которые он рисует буквами', function () {
+    config(['services.images.model' => 'grok-imagine-image']);
+    $prompts = [];
+
+    Http::fake(function (Request $r) use (&$prompts) {
+        $prompts[] = $r['prompt'];
+
+        return Http::response(['data' => [['b64_json' => base64_encode(tinyPng())]]]);
+    });
+
+    app(Illustrator::class)->illustrate(deckWithScenes());
+
+    expect($prompts)->not->toBeEmpty();
+
+    foreach ($prompts as $prompt) {
+        expect($prompt)->not->toContain('The presentation is about')
+            ->and($prompt)->not->toContain('Show the main subject')
+            ->and($prompt)->toContain('no text');
+    }
+});
