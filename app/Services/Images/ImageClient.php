@@ -40,33 +40,127 @@ class ImageClient
     public array $refused = [];
 
     /**
-     * @param  array<string, array{prompt: string, size: string}>  $requests
+     * prompt — полный запрос, compact — короткий, для моделей, которые
+     * рисуют текст запроса буквами (grok). Какой отправить, решает
+     * настройка шлюза: у основного и запасного она своя.
+     *
+     * @param  array<string, array{prompt: string, size: string, compact?: string}>  $requests
      * @return array<string, array{bytes: string, input: int, output: int}|null>
      *                                                                           null — картинку получить не удалось
      */
     public function generateMany(array $requests): array
     {
-        $config = config('services.images');
+        $this->refused = [];
+        $started = microtime(true);
+        $fallback = self::fallbackConfig();
+
+        // С запасным шлюзом основному оставляем меньше времени: задача
+        // рисования живёт 280 секунд, и запасному нужен свой заход
+        $results = $this->attempt(
+            $requests,
+            config('services.images'),
+            $started + ($fallback ? self::BUDGET - self::FALLBACK_RESERVE : self::BUDGET),
+        );
+
+        // Не вышли — пробуем запасной шлюз. Кроме отказов по содержанию:
+        // их Illustrator переспросит упрощённой сценой
+        $missing = array_filter(
+            $requests,
+            fn (string $key) => $results[$key] === null && ! in_array($key, $this->refused, true),
+            ARRAY_FILTER_USE_KEY,
+        );
+
+        if ($fallback !== null && $missing !== []) {
+            Log::info('Картинка: пробуем запасной шлюз', ['keys' => array_keys($missing), 'model' => $fallback['model']]);
+
+            foreach ($this->attempt($missing, $fallback, $started + self::BUDGET) as $key => $result) {
+                $results[$key] = $result;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Нужен ли шлюзу короткий запрос: явная настройка compact_prompt
+     * или модель grok, которая рисует служебные фразы буквами.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private static function wantsCompact(array $config): bool
+    {
+        $flag = $config['compact_prompt'] ?? null;
+
+        if ($flag !== null && $flag !== '') {
+            return filter_var($flag, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return str_starts_with((string) ($config['model'] ?? ''), 'grok');
+    }
+
+    /** Сколько всего можно рисовать в рамках одной задачи, секунд */
+    private const BUDGET = 230;
+
+    /** Сколько из них оставить запасному шлюзу */
+    private const FALLBACK_RESERVE = 110;
+
+    /**
+     * Запасной шлюз картинок (IMAGE_FALLBACK_*), если задан.
+     * Незаданные поля берутся у основного.
+     *
+     * @return array<string, mixed>|null
+     */
+    private static function fallbackConfig(): ?array
+    {
+        $fallback = config('services.images_fallback');
+
+        if (! is_array($fallback) || blank($fallback['model'] ?? null)) {
+            return null;
+        }
+
+        return [...config('services.images'), ...array_filter($fallback, fn ($v) => $v !== null && $v !== '')];
+    }
+
+    /**
+     * Заходы к одному шлюзу: обрывы и временные ошибки повторяем,
+     * пока есть время и заходы.
+     *
+     * @param  array<string, array{prompt: string, size: string, compact?: string}>  $requests
+     * @param  array<string, mixed>  $config
+     * @return array<string, array{bytes: string, input: int, output: int}|null>
+     */
+    private function attempt(array $requests, array $config, float $deadline): array
+    {
         $results = array_fill_keys(array_keys($requests), null);
         $pending = $requests;
-        $this->refused = [];
+        $streams = filter_var($config['stream'] ?? true, FILTER_VALIDATE_BOOLEAN);
+        $compact = self::wantsCompact($config);
 
         for ($round = 1; $round <= self::ROUNDS && $pending !== []; $round++) {
+            // Ждать дольше, чем осталось до конца задачи, бессмысленно
+            $timeout = (int) min(150, $deadline - microtime(true));
+
+            if ($timeout < 30) {
+                break;
+            }
+
             $responses = Http::pool(fn (Pool $pool) => array_map(
                 fn (string $key) => $pool->as($key)
                     ->withToken((string) $config['key'])
-                    ->timeout(150)
+                    ->timeout($timeout)
                     ->connectTimeout(20)
                     ->post($config['base_url'].'/v1/images/generations', [
                         'model' => $config['model'],
-                        'prompt' => $pending[$key]['prompt'],
+                        'prompt' => $compact && isset($pending[$key]['compact'])
+                            ? $pending[$key]['compact']
+                            : $pending[$key]['prompt'],
                         'size' => $pending[$key]['size'],
                         'quality' => $config['quality'],
                         'n' => 1,
                         // Поток держит соединение живым на долгой картинке,
                         // но не все шлюзы его умеют: codex-api отвечает
                         // «Streaming is not available». Там IMAGE_STREAM=false
-                        ...(self::streams() ? ['stream' => true, 'partial_images' => 3] : []),
+                        ...($streams ? ['stream' => true, 'partial_images' => 3] : []),
                     ]),
                 array_keys($pending),
             ));
@@ -98,6 +192,10 @@ class ImageClient
 
                     if (self::isPolicyRefusal($response)) {
                         $this->refused[] = (string) $key;
+                    } elseif ($response->serverError()) {
+                        // 502/503 у шлюза — «временно недоступно», а не отказ
+                        // по существу: следующий заход часто проходит
+                        $retry[$key] = $request;
                     }
 
                     continue;
@@ -227,12 +325,6 @@ class ImageClient
         }
 
         return $result;
-    }
-
-    /** Просить ли картинку потоком (IMAGE_STREAM, по умолчанию да) */
-    private static function streams(): bool
-    {
-        return filter_var(config('services.images.stream', true), FILTER_VALIDATE_BOOLEAN);
     }
 
     /**

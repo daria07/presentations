@@ -56,6 +56,19 @@ return [
     ],
 
     /*
+     * Запасной шлюз картинок: к нему идут картинки, которые основной
+     * не отдал (обрывы, 5xx, пустые ответы). Без модели запасного нет.
+     * Незаданные поля берутся у основного шлюза.
+     */
+    'images_fallback' => [
+        'model' => env('IMAGE_FALLBACK_MODEL'),
+        'base_url' => env('IMAGE_FALLBACK_BASE_URL') ? rtrim((string) env('IMAGE_FALLBACK_BASE_URL'), '/') : null,
+        'key' => env('IMAGE_FALLBACK_API_KEY'),
+        'stream' => env('IMAGE_FALLBACK_STREAM'),
+        'compact_prompt' => env('IMAGE_FALLBACK_COMPACT_PROMPT'),
+    ],
+
+    /*
      * Яндекс Search API — поиск источников для презентации по теме.
      * Без ключа или каталога поиск выключен, и генерация идёт как
      * раньше: по знаниям модели, без слайда с источниками.

@@ -99,6 +99,7 @@ class Illustrator
 
             $requests[(string) $index] = [
                 'prompt' => $this->prompt((string) $slide['image']['scene'], $style, $format, $subject),
+                'compact' => self::compactPrompt((string) $slide['image']['scene'], $style, $format, $subject),
                 'size' => match ($format) {
                     'cover' => self::SIZE_COVER,
                     'portrait' => self::SIZE_PORTRAIT,
@@ -131,6 +132,7 @@ class Illustrator
 
                 $retry[$key] = [
                     'prompt' => $this->prompt($simple, $style, $cover ? 'cover' : 'square', $subject),
+                    'compact' => self::compactPrompt($simple, $style, $cover ? 'cover' : 'square', $subject),
                     'size' => $cover ? self::SIZE_COVER : self::SIZE_HALF,
                 ];
             }
@@ -187,13 +189,21 @@ class Illustrator
 
         // Ключ строкой, а не «0»: PHP превратил бы «0» в число
         $results = $this->client->generateMany([
-            'cover' => ['prompt' => $this->prompt($scene, $style, 'cover', $subject), 'size' => self::SIZE_COVER],
+            'cover' => [
+                'prompt' => $this->prompt($scene, $style, 'cover', $subject),
+                'compact' => self::compactPrompt($scene, $style, 'cover', $subject),
+                'size' => self::SIZE_COVER,
+            ],
         ]);
 
         // Ложный отказ по контент-политике — пробуем по теме, без деталей
         if (($results['cover'] ?? null) === null && $this->client->refused !== []) {
             $results = $this->client->generateMany([
-                'cover' => ['prompt' => $this->prompt($presentation->topic, $style, 'cover', $subject), 'size' => self::SIZE_COVER],
+                'cover' => [
+                    'prompt' => $this->prompt($presentation->topic, $style, 'cover', $subject),
+                    'compact' => self::compactPrompt($presentation->topic, $style, 'cover', $subject),
+                    'size' => self::SIZE_COVER,
+                ],
             ]);
         }
 
@@ -232,10 +242,6 @@ class Illustrator
      */
     private function prompt(string $scene, string $style, string $format, string $subject = ''): string
     {
-        if (self::compact()) {
-            return self::compactPrompt($scene, $style, $format, $subject);
-        }
-
         /*
            Картинки рисуются по одной, и художник не знает, о чём
            презентация: «пушистый питомец у щётки» в презентации про
@@ -267,7 +273,7 @@ class Illustrator
      * появлялись на картинке буквами. Ему — только сцена, герой и стиль,
      * без инструкций, и сам запрос короткий.
      */
-    private static function compactPrompt(string $scene, string $style, string $format, string $subject): string
+    public static function compactPrompt(string $scene, string $style, string $format, string $subject): string
     {
         $parts = [trim($scene, ' .')];
 
@@ -289,18 +295,6 @@ class Illustrator
         $parts[] = 'no text, no letters, no captions';
 
         return implode(', ', array_filter($parts)).'.';
-    }
-
-    /** Модели, которым нужен короткий запрос (IMAGE_COMPACT_PROMPT или grok) */
-    private static function compact(): bool
-    {
-        $flag = config('services.images.compact_prompt');
-
-        if ($flag !== null && $flag !== '') {
-            return filter_var($flag, FILTER_VALIDATE_BOOLEAN);
-        }
-
-        return str_starts_with((string) config('services.images.model'), 'grok');
     }
 
     /** @param  mixed  $slide */

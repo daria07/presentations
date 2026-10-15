@@ -476,3 +476,47 @@ test('IMAGE_STREAM=false — картинка без потока', function () 
         ->and($bodies[0])->not->toHaveKey('stream')
         ->and($bodies[0])->not->toHaveKey('partial_images');
 });
+
+test('502 у шлюза повторяется, а не сдаётся сразу', function () {
+    $calls = 0;
+
+    Http::fake(function () use (&$calls) {
+        $calls++;
+
+        return $calls === 1
+            ? Http::response(['error' => ['message' => 'temporarily unavailable']], 502)
+            : Http::response(['data' => [['b64_json' => base64_encode(tinyPng())]]]);
+    });
+
+    $results = app(ImageClient::class)->generateMany(['0' => ['prompt' => 'кот', 'size' => '1024x1024']]);
+
+    expect($calls)->toBe(2)->and($results['0'])->not->toBeNull();
+});
+
+test('не вышло у основного шлюза — рисует запасной, с коротким запросом для grok', function () {
+    config(['services.images_fallback' => [
+        'model' => 'grok-imagine-image',
+        'base_url' => 'https://backup.test',
+        'key' => 'k2',
+        'stream' => null,
+        'compact_prompt' => null,
+    ]]);
+    $backupPrompts = [];
+
+    Http::fake(function (Request $r) use (&$backupPrompts) {
+        if (str_contains($r->url(), 'backup.test')) {
+            $backupPrompts[] = $r['prompt'];
+
+            return Http::response(['data' => [['b64_json' => base64_encode(tinyPng())]]]);
+        }
+
+        return Http::response(['error' => ['message' => 'down']], 503);
+    });
+
+    $results = app(ImageClient::class)->generateMany([
+        '0' => ['prompt' => 'Long prompt. The presentation is about cats.', 'compact' => 'cat, no text', 'size' => '1024x1024'],
+    ]);
+
+    expect($results['0'])->not->toBeNull()
+        ->and($backupPrompts)->toBe(['cat, no text']);
+});
