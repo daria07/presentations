@@ -279,6 +279,8 @@ class Illustrator
 
         if ($subject !== '') {
             $parts[] = trim($subject, ' .');
+        } elseif (self::hasUnspecifiedPeople($scene)) {
+            $parts[] = 'people with Slavic appearance';
         }
 
         $parts[] = match ($format) {
@@ -295,6 +297,44 @@ class Illustrator
         $parts[] = 'no text, no letters, no captions';
 
         return implode(', ', array_filter($parts)).'.';
+    }
+
+    /** Слова, по которым видно, что в сцене есть люди */
+    private const PEOPLE = [
+        'person', 'people', 'man', 'men', 'woman', 'women', 'child', 'children', 'kid', 'kids',
+        'boy', 'boys', 'girl', 'girls', 'student', 'students', 'pupil', 'pupils', 'teacher', 'teachers',
+        'doctor', 'doctors', 'nurse', 'nurses', 'patient', 'patients', 'worker', 'workers',
+        'engineer', 'engineers', 'scientist', 'scientists', 'family', 'families', 'crowd',
+        'team', 'colleagues', 'couple', 'customer', 'customers', 'employee', 'employees',
+        'farmer', 'farmers', 'soldier', 'soldiers', 'officer', 'officers', 'technician',
+        'specialist', 'specialists', 'audience', 'parent', 'parents', 'grandmother', 'grandfather',
+    ];
+
+    /** Слова, которыми сцена сама задаёт происхождение или эпоху людей */
+    private const ORIGIN = [
+        'slavic', 'russian', 'ukrainian', 'belarusian', 'japanese', 'chinese', 'korean', 'indian',
+        'african', 'arab', 'arabic', 'egyptian', 'roman', 'greek', 'persian', 'turkish', 'mongol',
+        'mongolian', 'mexican', 'latin', 'american', 'native', 'indigenous', 'asian', 'european',
+        'british', 'english', 'french', 'german', 'italian', 'spanish', 'scandinavian', 'viking',
+        'samurai', 'geisha', 'pharaoh', 'aztec', 'maya', 'mayan', 'inca', 'jewish', 'brazilian',
+        'nigerian', 'tatar', 'caucasian', 'kazakh', 'uzbek', 'georgian', 'armenian',
+    ];
+
+    /**
+     * В сцене есть люди, а кто они — не сказано.
+     *
+     * Аудитория у нас русскоязычная, а модели по умолчанию рисуют людей
+     * «как в американском стоке». Если сцена сама не говорит, кто эти
+     * люди (японцы в презентации про ёкаев, римляне — про Рим), и героя
+     * у презентации нет, просим славянскую внешность. Решаем в коде,
+     * а не условием в запросе: grok рисует такие условия буквами.
+     */
+    private static function hasUnspecifiedPeople(string $scene): bool
+    {
+        $words = preg_split('/[^a-z]+/', mb_strtolower($scene)) ?: [];
+
+        return array_intersect($words, self::PEOPLE) !== []
+            && array_intersect($words, self::ORIGIN) === [];
     }
 
     /** @param  mixed  $slide */

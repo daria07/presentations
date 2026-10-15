@@ -118,3 +118,15 @@ test('вертикаль — только если модель отметила
         ->and($slides[3]['image']['format'])->toBe('square')
         ->and($slides[0]['image'])->not->toHaveKey('format');
 });
+
+test('в коротком запросе у людей без заданного происхождения — славянская внешность', function () {
+    $prompt = fn (string $scene, string $subject = '') => App\Services\Images\Illustrator::compactPrompt($scene, '', 'square', $subject);
+
+    expect($prompt('Doctors discussing a patient in a hospital ward'))->toContain('Slavic appearance')
+        // Происхождение задано сценой — не трогаем
+        ->and($prompt('Japanese villagers at a temple gate'))->not->toContain('Slavic')
+        // Людей нет — не трогаем
+        ->and($prompt('Lighthouse on a cliff at sunset'))->not->toContain('Slavic')
+        // Герой презентации задан — он и определяет, кто на картинке
+        ->and($prompt('A man reading by a window', 'Albert Einstein, old man with white hair'))->not->toContain('Slavic');
+});
