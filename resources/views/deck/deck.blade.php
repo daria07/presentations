@@ -559,12 +559,16 @@
         content: "";
         position: absolute;
         inset: 0;
-        background: linear-gradient(90deg, rgba(10, 12, 16, .82) 0%, rgba(10, 12, 16, .62) 40%, rgba(10, 12, 16, .08) 78%);
+        /* Плотно на всю ширину заголовка (до 62%) и только потом светлеет:
+           раньше к середине названия затемнение было уже слабым, и пёстрый
+           фон проступал сквозь буквы */
+        background: linear-gradient(90deg, rgba(10, 12, 16, .88) 0%, rgba(10, 12, 16, .8) 45%, rgba(10, 12, 16, .45) 66%, rgba(10, 12, 16, .06) 88%);
     }
     .slide.slide--cover-photo .slide-image-note { z-index: 1; }
     .slide.slide--cover-photo > :not(.slide-image) { position: relative; z-index: 1; }
-    .slide.slide--cover-photo h1 { max-width: 62%; color: #fff; }
-    .slide.slide--cover-photo .subheading { max-width: 55%; color: rgba(255, 255, 255, .82); }
+    /* Мягкая тень — страховка, если светлый кусок фото всё же под буквами */
+    .slide.slide--cover-photo h1 { max-width: 62%; color: #fff; text-shadow: 0 2px 18px rgba(0, 0, 0, .45); }
+    .slide.slide--cover-photo .subheading { max-width: 55%; color: rgba(255, 255, 255, .86); text-shadow: 0 1px 10px rgba(0, 0, 0, .5); }
 
     /* ---------- декоративная геометрия обложки ---------- */
 

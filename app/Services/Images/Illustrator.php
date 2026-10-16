@@ -254,8 +254,10 @@ class Illustrator
                 .'of this kind in the image must be exactly this, never a different breed, species or person.';
 
         $composition = match ($format) {
-            'cover' => 'Wide landscape composition: the main subject on the right third, '
-                .'the left half calmer and darker, with room for a title.',
+            'cover' => 'Wide landscape composition: the main subject on the right third. '
+                .'The left half is a plain, calm, uncluttered background (sky, wall, water or soft blur) '
+                .'in darker tones, with no objects, patterns, writing or symbols, '
+                .'because a title will be placed over it.',
             'portrait' => 'Vertical composition for a tall subject: the whole subject from base '
                 .'to top centered in frame, with room above and below it.',
             default => 'Square composition: the main subject centered and fully in frame, '
@@ -284,7 +286,8 @@ class Illustrator
         }
 
         $parts[] = match ($format) {
-            'cover' => 'wide shot, subject on the right',
+            // Короткими словами, а не инструкцией: grok рисует инструкции буквами
+            'cover' => 'wide shot, subject on the right, plain dark empty left side',
             'portrait' => 'tall vertical shot, whole subject visible',
             default => 'centered, whole subject visible',
         };
