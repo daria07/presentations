@@ -38,6 +38,8 @@ use Illuminate\Support\Str;
  * @property Carbon|null $unlocked_at
  * @property Carbon|null $generation_started_at
  * @property Carbon|null $generation_finished_at
+ * @property int $edits_count
+ * @property Carbon|null $edited_at
  */
 #[Fillable([
     'user_id', 'title', 'topic', 'source_text', 'slide_count',
@@ -60,6 +62,7 @@ class Presentation extends Model
             'unlocked_at' => 'datetime',
             'generation_started_at' => 'datetime',
             'generation_finished_at' => 'datetime',
+            'edited_at' => 'datetime',
             'reviewed_at' => 'datetime',
         ];
     }

@@ -493,6 +493,13 @@ class PresentationController extends Controller
 
         $title = $request->string('title')->trim()->value();
 
+        // Для метрик: пользуются ли редактором. Мимо fillable — это наш
+        // учёт, а не данные из формы; сохранится вместе с правками
+        $presentation->forceFill([
+            'edits_count' => $presentation->edits_count + 1,
+            'edited_at' => now(),
+        ]);
+
         $presentation->update([
             'outline' => [
                 'title' => $title,

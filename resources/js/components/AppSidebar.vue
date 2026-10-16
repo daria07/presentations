@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import {
+    ChartColumn,
     CreditCard,
     MessageCircle,
     MessagesSquare,
@@ -62,6 +63,7 @@ const mainNavItems = computed<NavItem[]>(() => [
     ...(isAdmin.value
         ? [
               { title: 'Админка', href: '/admin', icon: ShieldCheck },
+              { title: 'Метрики', href: '/admin/metrics', icon: ChartColumn },
               {
                   title: 'Чат',
                   href: '/admin/support',

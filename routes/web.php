@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\MetricsController;
 use App\Http\Controllers\Admin\ReceiptController;
 use App\Http\Controllers\Admin\SupportController as AdminSupportController;
 use App\Http\Controllers\Billing\BillingController;
@@ -85,6 +86,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('receipts', [ReceiptController::class, 'index'])->name('receipts');
         Route::post('receipts/{payment}', [ReceiptController::class, 'store'])
             ->name('receipts.store');
+
+        // Метрики: метки, с которыми пришли люди, и что из них вышло
+        Route::get('metrics', [MetricsController::class, 'index'])->name('metrics');
+        Route::get('metrics/export', [MetricsController::class, 'export'])
+            ->middleware('throttle:10,1')
+            ->name('metrics.export');
 
         // Чат с пользователями: список диалогов, диалог, ответ
         Route::get('support', [AdminSupportController::class, 'index'])->name('support');
