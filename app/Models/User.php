@@ -33,6 +33,10 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $promo_clicked_at
  * @property Carbon|null $discount_until
  * @property Carbon|null $discount_used_at
+ * @property Carbon|null $update_offer_at
+ * @property Carbon|null $update_offer_until
+ * @property Carbon|null $update_offer_used_at
+ * @property Carbon|null $news_unsubscribed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -59,6 +63,10 @@ class User extends Authenticatable implements PasskeyUser
             'promo_clicked_at' => 'datetime',
             'discount_until' => 'datetime',
             'discount_used_at' => 'datetime',
+            'update_offer_at' => 'datetime',
+            'update_offer_until' => 'datetime',
+            'update_offer_used_at' => 'datetime',
+            'news_unsubscribed_at' => 'datetime',
         ];
     }
 

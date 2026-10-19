@@ -75,6 +75,22 @@ return [
         'hours' => (int) env('BILLING_DISCOUNT_HOURS', 48),
     ],
 
+    /*
+    | Акция «Мы обновились»: скидка на сайте тем, кто зарегистрировался
+    | до обновления с картинками и источниками. Срок идёт с первого
+    | показа, у каждого свой. Подробности — App\Services\Billing\UpdateOffer.
+    |
+    | registered_before — по Москве. Пусто или percent=0 — акции нет.
+    | ends_at — после этой даты новым людям не предлагаем (у кого уже
+    | началась, доживёт свой срок). Пусто — без конца.
+    */
+    'update_offer' => [
+        'percent' => (int) env('UPDATE_OFFER_PERCENT', 50),
+        'days' => (int) env('UPDATE_OFFER_DAYS', 7),
+        'registered_before' => env('UPDATE_OFFER_REGISTERED_BEFORE', '2026-10-13 01:47'),
+        'ends_at' => env('UPDATE_OFFER_ENDS_AT'),
+    ],
+
     'packages' => [
         // Служебный. Скрыт от всех, кроме BILLING_TEST_EMAILS
         'test' => [

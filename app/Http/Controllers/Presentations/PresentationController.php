@@ -13,6 +13,7 @@ use App\Jobs\RenderPresentation;
 use App\Models\Presentation;
 use App\Services\Billing\Discount;
 use App\Services\Billing\UnlockPresentation;
+use App\Services\Billing\UpdateOffer;
 use App\Services\Deck\DeckRenderer;
 use App\Services\Deck\Icons;
 use App\Services\Deck\Looks;
@@ -55,9 +56,13 @@ class PresentationController extends Controller
             ],
             'credits' => $request->user()->credits,
             'trialAvailable' => ! $request->user()->trial_used,
+            // Акция «Мы обновились» для давних пользователей: первый
+            // показ включает скидку и запускает её срок
+            'updateOffer' => $updateOffer = UpdateOffer::forUser($request->user()),
             // Кнопка скидки, когда генерации кончились. Первый показ
-            // записывается — это знаменатель A/B-теста в админке
-            'promo' => Discount::offerable($request->user())
+            // записывается — это знаменатель A/B-теста в админке.
+            // Пока идёт акция, кнопку не показываем: две скидки сразу путают
+            'promo' => $updateOffer === null && Discount::offerable($request->user())
                 ? Discount::offer($request->user())
                 : null,
         ]);

@@ -21,7 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Вебхук платёжного провайдера приходит от сервера, а не из
         // браузера — CSRF-токена у него нет и быть не может.
-        $middleware->validateCsrfTokens(except: ['billing/webhook']);
+        // unsubscribe/* — отписка в один клик из почтового клиента: у него
+        // нет нашей сессии, а ссылка и так подписана
+        $middleware->validateCsrfTokens(except: ['billing/webhook', 'unsubscribe/*']);
 
         $middleware->web(append: [
             CaptureAttribution::class,

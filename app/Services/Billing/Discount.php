@@ -3,6 +3,7 @@
 namespace App\Services\Billing;
 
 use App\Models\User;
+use Illuminate\Support\Carbon;
 
 /**
  * Скидка для тех, у кого закончились генерации.
@@ -83,7 +84,9 @@ final class Discount
      */
     public static function claim(User $user): void
     {
-        if (! self::offerable($user) || $user->promo_clicked_at !== null) {
+        // Идёт акция побольше — кнопка ничего не включает, иначе
+        // человек запутался бы, какая скидка действует
+        if (! self::offerable($user) || $user->promo_clicked_at !== null || UpdateOffer::active($user)) {
             return;
         }
 
@@ -96,12 +99,40 @@ final class Discount
     }
 
     /**
-     * Цена со скидкой в копейках, округлённая вниз до целого рубля:
-     * 599 ₽ → 419 ₽, а не 419,30.
+     * Какая скидка действует для человека прямо сейчас, если их
+     * несколько, — большая. Источник нужен, чтобы после оплаты
+     * погасить именно ту скидку, которой заплатили.
+     *
+     * @return array{percent: int, source: string, until: Carbon}|null
      */
-    public static function apply(int $amount): int
+    public static function current(User $user): ?array
     {
-        $discounted = intdiv($amount * (100 - self::percent()), 100);
+        $options = [];
+
+        if (UpdateOffer::active($user)) {
+            $options[] = ['percent' => UpdateOffer::percent(), 'source' => 'update', 'until' => $user->update_offer_until];
+        }
+
+        if (self::active($user)) {
+            $options[] = ['percent' => self::percent(), 'source' => 'button', 'until' => $user->discount_until];
+        }
+
+        if ($options === []) {
+            return null;
+        }
+
+        usort($options, fn ($a, $b) => $b['percent'] <=> $a['percent']);
+
+        return $options[0]['percent'] > 0 ? $options[0] : null;
+    }
+
+    /**
+     * Цена со скидкой в копейках, округлённая вниз до целого рубля:
+     * 599 ₽ → 419 ₽, а не 419,30. Без процента — скидка кнопки.
+     */
+    public static function apply(int $amount, ?int $percent = null): int
+    {
+        $discounted = intdiv($amount * (100 - ($percent ?? self::percent())), 100);
 
         return intdiv($discounted, 100) * 100;
     }

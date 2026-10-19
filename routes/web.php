@@ -12,6 +12,7 @@ use App\Http\Controllers\LegalController;
 use App\Http\Controllers\Presentations\PresentationController;
 use App\Http\Controllers\Presentations\PublicPresentationController;
 use App\Http\Controllers\SupportController;
+use App\Http\Controllers\UnsubscribeController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +38,13 @@ Route::get('pricing', [LegalController::class, 'pricing'])->name('legal.pricing'
 Route::get('p/{token}', [PublicPresentationController::class, 'show'])
     ->middleware('throttle:60,1')
     ->name('presentations.public');
+
+// Отписка от писем о новостях: по подписанной ссылке из письма, без входа.
+// POST — и кнопка на странице, и «Отписаться» в почтовом клиенте
+Route::middleware(['signed', 'throttle:30,1'])->group(function () {
+    Route::get('unsubscribe/{user}', [UnsubscribeController::class, 'show'])->name('news.unsubscribe');
+    Route::post('unsubscribe/{user}', [UnsubscribeController::class, 'store']);
+});
 
 // Вебхук провайдера: без входа в аккаунт и без CSRF —
 // это машина-машина, подпись проверяется внутри провайдера.

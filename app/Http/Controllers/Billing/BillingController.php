@@ -26,7 +26,9 @@ class BillingController extends Controller
 
         // Скидка показывается на витрине, но считается при оплате
         // заново (Billing::start) — витрина только обещает ту же цену
-        $discount = Discount::active($user);
+        // Большая из действующих скидок: кнопки или акции «Мы обновились»
+        $current = Discount::current($user);
+        $discount = $current !== null;
         $rubles = fn (int $kopecks) => number_format($kopecks / 100, 0, ',', ' ');
 
         // Пришли с закрытой пробной презентации: после оплаты откроем её
@@ -34,8 +36,8 @@ class BillingController extends Controller
         $for = $this->presentationFor($request, $request->integer('for'));
 
         return Inertia::render('billing/Index', [
-            'packages' => collect(Package::all($user->email))->map(function (Package $p) use ($discount, $rubles) {
-                $amount = $discount ? Discount::apply($p->amount) : $p->amount;
+            'packages' => collect(Package::all($user->email))->map(function (Package $p) use ($current, $discount, $rubles) {
+                $amount = $current !== null ? Discount::apply($p->amount, $current['percent']) : $p->amount;
 
                 return [
                     'key' => $p->key,
@@ -48,10 +50,10 @@ class BillingController extends Controller
                     'popular' => $p->popular,
                 ];
             }),
-            'discount' => $discount
+            'discount' => $current !== null
                 ? [
-                    'percent' => Discount::percent(),
-                    'until' => $user->discount_until->toIso8601String(),
+                    'percent' => $current['percent'],
+                    'until' => $current['until']->toIso8601String(),
                 ]
                 : null,
             'credits' => $user->credits,

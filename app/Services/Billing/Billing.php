@@ -42,14 +42,15 @@ class Billing
     {
         // Скидка считается здесь, на сервере, а не берётся с витрины:
         // цену из запроса подменить можно, а условие скидки — нет
-        $discount = Discount::active($user) ? Discount::percent() : 0;
+        $current = Discount::current($user);
+        $discount = $current['percent'] ?? 0;
 
         $payment = $user->payments()->create([
             'provider' => config('billing.provider'),
             // Временный идентификатор: провайдер пришлёт свой, и мы его
             // перезапишем. Уникальность колонки требует чего-то заранее.
             'provider_payment_id' => 'pending_'.Str::uuid(),
-            'amount' => $discount ? Discount::apply($package->amount) : $package->amount,
+            'amount' => $discount ? Discount::apply($package->amount, $discount) : $package->amount,
             'discount_percent' => $discount,
             'currency' => config('billing.currency'),
             'credits_granted' => $package->credits,
@@ -57,6 +58,8 @@ class Billing
             'payload' => array_filter([
                 'package' => $package->key,
                 'unlock' => $unlock?->id,
+                // Какой скидкой платят: после оплаты гасим именно её
+                'discount' => $current['source'] ?? null,
             ]),
         ]);
 
@@ -142,8 +145,13 @@ class Billing
 
             // Скидка — на одну покупку: оплатили со скидкой, значит
             // она использована, и кнопка больше не появится
-            if ($payment->discount_percent > 0 && $payment->user->discount_used_at === null) {
-                $payment->user->forceFill(['discount_used_at' => now()])->save();
+            if ($payment->discount_percent > 0) {
+                $source = $payment->payload['discount'] ?? 'button';
+                $field = $source === 'update' ? 'update_offer_used_at' : 'discount_used_at';
+
+                if ($payment->user->{$field} === null) {
+                    $payment->user->forceFill([$field => now()])->save();
+                }
             }
 
             Log::info('Генерации начислены', [

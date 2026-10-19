@@ -59,6 +59,8 @@ const props = defineProps<{
     credits: number;
     trialAvailable: boolean;
     promo: Promo | null;
+    /* Акция «Мы обновились» для давних пользователей */
+    updateOffer: { percent: number; until: string } | null;
 }>();
 
 /* Кнопка скидки: клик записывается на сервере (A/B-тест) и ведёт
@@ -169,6 +171,37 @@ function destroy() {
                 </Button>
             </template>
         </PageHeader>
+
+        <!-- Мы обновились: давним пользователям — что нового и скидка.
+             Срок пошёл с первого показа этой плашки -->
+        <div
+            v-if="updateOffer"
+            class="bg-card mb-4 overflow-hidden rounded-[13px] border border-[hsl(17_62%_44%/.35)] shadow-[0_6px_18px_rgba(180,82,41,.08)]"
+        >
+            <div
+                class="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+            >
+                <div class="min-w-0">
+                    <p class="font-semibold">
+                        Мы обновились — для вас −{{ updateOffer.percent }}% на
+                        любой пакет
+                    </p>
+                    <p
+                        class="text-muted-foreground mt-1 text-sm leading-relaxed"
+                    >
+                        Теперь у презентаций обложка с изображением, картинки на
+                        слайдах и список источников. Скидка на одну покупку
+                        действует до {{ formatUntil(updateOffer.until) }}.
+                    </p>
+                </div>
+                <Button
+                    as-child
+                    class="h-11 w-full flex-none bg-[hsl(17_62%_44%)] px-5 text-white shadow-[0_6px_16px_rgba(180,82,41,.25)] hover:bg-[hsl(17_66%_38%)] sm:w-auto"
+                >
+                    <Link href="/billing">Выбрать пакет</Link>
+                </Button>
+            </div>
+        </div>
 
         <!-- Генерации кончились — предлагаем скидку. Текст кнопки —
              вариант A/B-теста, у каждого человека он свой и постоянный -->

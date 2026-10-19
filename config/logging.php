@@ -63,6 +63,7 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
+            'permission' => 0664,
         ],
 
         'daily' => [
@@ -71,6 +72,10 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'max_files' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
+            // Пишут двое: сайт (www-data) и воркер с командами (deploy).
+            // Кто первым за день создал файл, тот и владелец — без
+            // группового права записи второй падал с Permission denied
+            'permission' => 0664,
         ],
 
         'monthly' => [
