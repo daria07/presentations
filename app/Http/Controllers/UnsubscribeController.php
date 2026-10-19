@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\MarketingConsent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
@@ -37,6 +38,9 @@ class UnsubscribeController extends Controller
         if ($user->news_unsubscribed_at === null) {
             $user->forceFill(['news_unsubscribed_at' => now()])->save();
         }
+
+        // «Не получать письма» — и рекламные тоже
+        MarketingConsent::revoke($user->refresh());
 
         return view('unsubscribe', ['done' => true, 'action' => self::url($user)]);
     }

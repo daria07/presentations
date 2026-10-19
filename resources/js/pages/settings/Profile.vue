@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { Form, Head, usePage } from '@inertiajs/vue3';
+import { Form, Head, router, usePage } from '@inertiajs/vue3';
 import { Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/DeleteUser.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/profile';
@@ -23,8 +24,33 @@ defineOptions({
     },
 });
 
+const props = defineProps<{
+    /* Согласие на рекламные письма: дано и не отозвано */
+    marketing: boolean;
+    marketingText: string;
+}>();
+
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+
+/* Сохраняется сразу по клику, без кнопки «Сохранить» */
+const marketing = ref(props.marketing);
+const savingMarketing = ref(false);
+
+function toggleMarketing(value: boolean | 'indeterminate') {
+    marketing.value = value === true;
+    savingMarketing.value = true;
+
+    router.patch(
+        '/settings/marketing',
+        { marketing: marketing.value },
+        {
+            preserveScroll: true,
+            onError: () => (marketing.value = !marketing.value),
+            onFinish: () => (savingMarketing.value = false),
+        },
+    );
+}
 </script>
 
 <template>
@@ -99,6 +125,28 @@ const user = computed(() => page.props.auth.user);
                 >
             </div>
         </Form>
+    </div>
+
+    <div class="flex flex-col space-y-6">
+        <Heading
+            variant="small"
+            title="Письма"
+            description="О готовой презентации, оплатах и ответах в чате пишем всегда — без них сервисом не пользоваться"
+        />
+
+        <Label
+            for="marketing"
+            class="flex items-start gap-3 text-sm leading-snug font-normal"
+        >
+            <Checkbox
+                id="marketing"
+                :model-value="marketing"
+                :disabled="savingMarketing"
+                class="mt-0.5"
+                @update:model-value="toggleMarketing"
+            />
+            <span>{{ marketingText }}</span>
+        </Label>
     </div>
 
     <DeleteUser />

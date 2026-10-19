@@ -160,3 +160,19 @@ test('отписка по ссылке: страница с кнопкой, от
     // Без подписи — нельзя
     $this->post('/unsubscribe/'.$user->id)->assertForbidden();
 });
+
+test('подсказка «Открыть за …» показывает цену самого дешёвого пакета со скидкой', function () {
+    $fresh = registered('2026-10-20 12:00');
+
+    $this->actingAs($fresh)
+        ->get(route('presentations.create'))
+        ->assertInertia(fn ($page) => $page->where('entryPrice', '149'));
+
+    // Давний пользователь со скидкой акции 50%: 149 → 74 (вниз до рубля)
+    $old = registered('2026-10-01 12:00');
+    offerOnList($old);
+
+    $this->actingAs($old->refresh())
+        ->get(route('presentations.create'))
+        ->assertInertia(fn ($page) => $page->where('entryPrice', '74'));
+});

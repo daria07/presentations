@@ -209,3 +209,28 @@ test('сохранение в редакторе считается правко
         ->get('/admin/metrics?source=yandex&edited=no')
         ->assertInertia(fn (Assert $page) => $page->where('users.total', 1));
 });
+
+test('LTV: оплаты, повторные покупки, дни до оплаты и когорты по неделям', function () {
+    // Две недели регистрации: 5–11 и 12–18 октября по Москве
+    visitor(['utm_source' => 'yandex'], 1, [14900, 24900], '2026-10-06 12:00');
+    visitor(['utm_source' => 'yandex'], 1, [], '2026-10-07 12:00');
+    visitor(['utm_source' => 'yandex'], 1, [59000], '2026-10-13 12:00');
+
+    $this->actingAs($this->admin)
+        ->get('/admin/metrics?source=yandex')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('totals.paying', 2)
+            ->where('totals.payments', 3)
+            ->where('totals.revenue', 14900 + 24900 + 59000)
+            ->where('totals.repeaters', 1)
+            ->where('totals.daysToPay', fn ($days) => $days > 0)
+            // Свежая неделя сверху
+            ->where('cohorts.0.week', '2026-10-12')
+            ->where('cohorts.0.users', 1)
+            ->where('cohorts.0.revenue', 59000)
+            ->where('cohorts.1.week', '2026-10-05')
+            ->where('cohorts.1.users', 2)
+            ->where('cohorts.1.paying', 1)
+            ->where('cohorts.1.repeaters', 1)
+            ->where('cohorts.1.revenue', 39800));
+});

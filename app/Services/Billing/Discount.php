@@ -127,6 +127,20 @@ final class Discount
     }
 
     /**
+     * Цена самой дешёвой покупки — пакета «Старт» на одну генерацию —
+     * с учётом действующей скидки, для подсказок вида «Открыть за 149 ₽».
+     * Строкой с пробелами между разрядами, без знака рубля.
+     */
+    public static function entryPrice(User $user): string
+    {
+        $package = Package::find('single');
+        $percent = self::current($user)['percent'] ?? 0;
+        $amount = $percent > 0 ? self::apply($package->amount, $percent) : $package->amount;
+
+        return number_format($amount / 100, 0, ',', ' ');
+    }
+
+    /**
      * Цена со скидкой в копейках, округлённая вниз до целого рубля:
      * 599 ₽ → 419 ₽, а не 419,30. Без процента — скидка кнопки.
      */

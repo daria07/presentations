@@ -63,7 +63,22 @@ type Row = {
 const props = defineProps<{
     filters: Filters;
     options: { source: string[]; medium: string[]; campaign: string[] };
-    totals: { users: number; made: number; paying: number; revenue: number };
+    totals: {
+        users: number;
+        made: number;
+        paying: number;
+        revenue: number;
+        payments: number;
+        repeaters: number;
+        daysToPay: number | null;
+    };
+    cohorts: {
+        week: string;
+        users: number;
+        paying: number;
+        revenue: number;
+        repeaters: number;
+    }[];
     groups: Group[];
     users: {
         items: Row[];
@@ -193,6 +208,25 @@ const exportUrl = computed(
 
 const rubles = (kopecks: number) =>
     (kopecks / 100).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+
+/* Деление для LTV и среднего чека: на ноль — прочерк */
+const per = (kopecks: number, count: number) =>
+    count ? rubles(kopecks / count) + ' ₽' : '—';
+
+/* Неделя когорты: «13–19 окт» */
+function week(start: string): string {
+    const from = new Date(start + 'T00:00:00');
+    const to = new Date(from);
+    to.setDate(to.getDate() + 6);
+
+    const day = (d: Date) => d.getDate();
+    const month = (d: Date) =>
+        d.toLocaleDateString('ru-RU', { month: 'short' }).replace('.', '');
+
+    return from.getMonth() === to.getMonth()
+        ? `${day(from)}–${day(to)} ${month(to)}`
+        : `${day(from)} ${month(from)} – ${day(to)} ${month(to)}`;
+}
 
 const percent = (part: number, whole: number) =>
     whole ? ((part / whole) * 100).toFixed(1).replace('.', ',') + '%' : '—';
@@ -407,6 +441,134 @@ const selectClass =
                     ₽
                 </p>
             </div>
+        </div>
+
+        <!-- LTV: сколько в среднем приносит человек за всё время -->
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="border-border bg-card rounded-xl border p-4">
+                <p class="text-muted-foreground text-xs">LTV платящего</p>
+                <p class="mt-1 text-2xl font-semibold tabular-nums">
+                    {{ per(totals.revenue, totals.paying) }}
+                </p>
+                <p class="text-muted-foreground mt-1 text-xs">
+                    сколько в среднем принёс один заплативший
+                </p>
+            </div>
+            <div class="border-border bg-card rounded-xl border p-4">
+                <p class="text-muted-foreground text-xs">Средний чек</p>
+                <p class="mt-1 text-2xl font-semibold tabular-nums">
+                    {{ per(totals.revenue, totals.payments) }}
+                </p>
+                <p class="text-muted-foreground mt-1 text-xs tabular-nums">
+                    оплат: {{ totals.payments }}
+                </p>
+            </div>
+            <div class="border-border bg-card rounded-xl border p-4">
+                <p class="text-muted-foreground text-xs">Купили повторно</p>
+                <p class="mt-1 text-2xl font-semibold tabular-nums">
+                    {{ percent(totals.repeaters, totals.paying) }}
+                </p>
+                <p class="text-muted-foreground mt-1 text-xs tabular-nums">
+                    {{ totals.repeaters }} из {{ totals.paying }} платящих
+                </p>
+            </div>
+            <div class="border-border bg-card rounded-xl border p-4">
+                <p class="text-muted-foreground text-xs">До первой оплаты</p>
+                <p class="mt-1 text-2xl font-semibold tabular-nums">
+                    {{
+                        totals.daysToPay === null
+                            ? '—'
+                            : totals.daysToPay.toLocaleString('ru-RU') + ' дн.'
+                    }}
+                </p>
+                <p class="text-muted-foreground mt-1 text-xs">
+                    в среднем от регистрации
+                </p>
+            </div>
+        </div>
+
+        <!-- Когорты: люди по неделе регистрации и что они принесли на сегодня -->
+        <div class="border-border bg-card min-w-0 rounded-xl border p-4 sm:p-5">
+            <div
+                class="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+            >
+                <h2 class="text-sm font-medium">
+                    Когорты по неделе регистрации
+                </h2>
+                <p class="text-muted-foreground text-xs">
+                    Выручка — за всё время до сегодня. Свежие недели ещё
+                    дозревают
+                </p>
+            </div>
+
+            <div v-if="cohorts.length" class="overflow-x-auto">
+                <table class="w-full min-w-[680px] text-sm">
+                    <thead>
+                        <tr
+                            class="text-muted-foreground border-border border-b text-left text-xs"
+                        >
+                            <th class="py-2 pr-4 font-medium">Неделя</th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Регистраций
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Заплатили
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Конверсия
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Повторно
+                            </th>
+                            <th class="py-2 pr-4 text-right font-medium">
+                                Выручка
+                            </th>
+                            <th
+                                class="py-2 pr-4 text-right font-medium"
+                                title="Выручка на одну регистрацию"
+                            >
+                                На регистрацию
+                            </th>
+                            <th class="py-2 text-right font-medium">
+                                LTV платящего
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-border divide-y">
+                        <tr v-for="c in cohorts" :key="c.week">
+                            <td class="py-2 pr-4 whitespace-nowrap">
+                                {{ week(c.week) }}
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ c.users }}
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ c.paying }}
+                            </td>
+                            <td
+                                class="py-2 pr-4 text-right font-medium tabular-nums"
+                            >
+                                {{ percent(c.paying, c.users) }}
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ c.repeaters }}
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ rubles(c.revenue) }} ₽
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ per(c.revenue, c.users) }}
+                            </td>
+                            <td class="py-2 text-right tabular-nums">
+                                {{ per(c.revenue, c.paying) }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p v-else class="text-muted-foreground py-4 text-sm">
+                Под фильтры никто не попал
+            </p>
         </div>
 
         <!-- Сводка по источникам -->

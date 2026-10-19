@@ -6,6 +6,7 @@ use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
 use App\Support\Attribution;
+use App\Support\MarketingConsent;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
@@ -41,6 +42,11 @@ class CreateNewUser implements CreatesNewUsers
            чтобы их нельзя было подставить формой регистрации.
         */
         $user->forceFill(Attribution::forUser(request()))->save();
+
+        // Отдельная галочка, снятая по умолчанию: без неё регистрация идёт как обычно
+        if (filter_var($input['marketing'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            MarketingConsent::grant($user, request(), 'register');
+        }
 
         return $user;
     }

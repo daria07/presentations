@@ -19,6 +19,8 @@ const props = defineProps<{
     credits: number;
     trialAvailable: boolean;
     maxSource: number;
+    /* Цена самой дешёвой покупки с учётом скидки, без «₽» */
+    entryPrice: string;
 }>();
 
 defineOptions({
@@ -227,7 +229,7 @@ const canSubmit = computed(() =>
                                     <Link
                                         href="/billing"
                                         class="border-border text-muted-foreground/60 hover:border-foreground/40 relative flex h-11 flex-1 items-center justify-center rounded-lg border text-sm font-medium transition-colors"
-                                        :aria-label="`${n} слайдов — доступно в платной версии, перейти к тарифам`"
+                                        :aria-label="`${n} слайдов — открыть за ${entryPrice} ₽, перейти к тарифам`"
                                     >
                                         {{ n }}
                                         <span
@@ -238,7 +240,7 @@ const canSubmit = computed(() =>
                                     </Link>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    Доступно в платной версии
+                                    Открыть за {{ entryPrice }} ₽
                                 </TooltipContent>
                             </Tooltip>
 

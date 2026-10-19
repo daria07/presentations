@@ -42,6 +42,7 @@ class MetricsController extends Controller
             'options' => fn () => $this->options(),
             'totals' => fn () => $this->totals($filters),
             'groups' => fn () => $this->groups($filters),
+            'cohorts' => fn () => $this->cohorts($filters),
             'users' => fn () => $this->users($filters),
         ]);
     }
@@ -321,7 +322,7 @@ class MetricsController extends Controller
     {
         $paid = Payment::query()
             ->where('status', PaymentStatus::Paid)
-            ->selectRaw('user_id, sum(amount) as amount')
+            ->selectRaw('user_id, sum(amount) as amount, count(*) as payments, min(created_at) as first_at')
             ->groupBy('user_id');
 
         $made = Presentation::query()
@@ -337,13 +338,18 @@ class MetricsController extends Controller
      * Итог по выборке.
      *
      * @param  array<string, string>  $filters
-     * @return array{users: int, made: int, paying: int, revenue: int}
+     *                                          LTV считается на фронте делением: выручка / платящих — LTV
+     *                                          платящего, выручка / регистраций — ценность одной регистрации,
+     *                                          выручка / оплат — средний чек.
+     * @return array{users: int, made: int, paying: int, revenue: int, payments: int, repeaters: int, daysToPay: float|null}
      */
     private function totals(array $filters): array
     {
         $row = $this->withOutcomes($filters)
             ->toBase()
             ->selectRaw('count(*) as users, count(pr.user_id) as made, count(pa.user_id) as paying, coalesce(sum(pa.amount), 0) as revenue')
+            ->selectRaw('coalesce(sum(pa.payments), 0) as payments')
+            ->selectRaw('sum(case when pa.payments > 1 then 1 else 0 end) as repeaters')
             ->first();
 
         return [
@@ -351,7 +357,61 @@ class MetricsController extends Controller
             'made' => (int) ($row->made ?? 0),
             'paying' => (int) ($row->paying ?? 0),
             'revenue' => (int) ($row->revenue ?? 0),
+            'payments' => (int) ($row->payments ?? 0),
+            'repeaters' => (int) ($row->repeaters ?? 0),
+            'daysToPay' => $this->daysToPay($filters),
         ];
+    }
+
+    /**
+     * Сколько дней в среднем проходит от регистрации до первой оплаты.
+     * Считаем в PHP, а не в SQL: разница дат в PostgreSQL и SQLite
+     * пишется по-разному, а платящих немного.
+     *
+     * @param  array<string, string>  $filters
+     */
+    private function daysToPay(array $filters): ?float
+    {
+        $days = $this->withOutcomes($filters)
+            ->toBase()
+            ->whereNotNull('pa.first_at')
+            ->select('users.created_at', 'pa.first_at')
+            ->get()
+            ->map(fn ($r) => Date::parse($r->created_at)->diffInMinutes(Date::parse($r->first_at), true) / 1440);
+
+        return $days->isEmpty() ? null : round((float) $days->avg(), 1);
+    }
+
+    /**
+     * Когорты по неделе регистрации: сколько пришло, сколько из них
+     * заплатили и сколько принесли на сегодня. Свежие недели ещё
+     * «дозревают» — их LTV вырастет, это видно при сравнении.
+     *
+     * @param  array<string, string>  $filters
+     * @return list<array{week: string, users: int, paying: int, revenue: int, repeaters: int}>
+     */
+    private function cohorts(array $filters): array
+    {
+        $tz = config('admin.timezone');
+
+        $rows = $this->withOutcomes($filters)
+            ->toBase()
+            ->select('users.created_at', 'pa.amount', 'pa.payments')
+            ->get();
+
+        return array_values($rows
+            ->groupBy(fn ($r) => Date::parse($r->created_at)->timezone($tz)->startOfWeek()->format('Y-m-d'))
+            ->map(fn ($week, $start) => [
+                'week' => (string) $start,
+                'users' => $week->count(),
+                'paying' => $week->filter(fn ($r) => $r->payments !== null)->count(),
+                'revenue' => (int) $week->sum(fn ($r) => (int) $r->amount),
+                'repeaters' => $week->filter(fn ($r) => (int) $r->payments > 1)->count(),
+            ])
+            ->sortKeysDesc()
+            ->take(16)
+            ->values()
+            ->all());
     }
 
     /**

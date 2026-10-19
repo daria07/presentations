@@ -104,6 +104,8 @@ const props = defineProps<{
     presentation: Presentation;
     themes: Theme[];
     palettes: Palette[];
+    /* Цена самой дешёвой покупки с учётом скидки, без «₽» */
+    entryPrice: string;
 }>();
 
 defineOptions({
@@ -859,7 +861,7 @@ async function copyShare() {
                                 {{
                                     hasCredits
                                         ? 'Открыть полную версию за 1 генерацию'
-                                        : 'Доступно в платной версии'
+                                        : `Открыть за ${props.entryPrice} ₽`
                                 }}
                             </TooltipContent>
                         </Tooltip>

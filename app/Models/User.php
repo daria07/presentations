@@ -37,6 +37,11 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $update_offer_until
  * @property Carbon|null $update_offer_used_at
  * @property Carbon|null $news_unsubscribed_at
+ * @property Carbon|null $marketing_consent_at
+ * @property string|null $marketing_consent_ip
+ * @property string|null $marketing_consent_source
+ * @property string|null $marketing_consent_version
+ * @property Carbon|null $marketing_revoked_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -67,6 +72,8 @@ class User extends Authenticatable implements PasskeyUser
             'update_offer_until' => 'datetime',
             'update_offer_used_at' => 'datetime',
             'news_unsubscribed_at' => 'datetime',
+            'marketing_consent_at' => 'datetime',
+            'marketing_revoked_at' => 'datetime',
         ];
     }
 

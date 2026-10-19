@@ -4,6 +4,7 @@ import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -12,6 +13,8 @@ import { store } from '@/routes/register';
 
 defineProps<{
     passwordRules: string;
+    /* Текст согласия на рекламные письма — с сервера, вместе с версией */
+    marketingText: string;
 }>();
 
 defineOptions({
@@ -89,10 +92,28 @@ defineOptions({
                 <InputError :message="errors.password_confirmation" />
             </div>
 
+            <!-- Согласие на рекламные письма: отдельное и добровольное.
+                 Галочка снята по умолчанию — заранее поставленную ФАС
+                 может не признать согласием (ст. 18 закона «О рекламе»).
+                 Без неё регистрироваться можно -->
+            <Label
+                for="marketing"
+                class="text-muted-foreground flex items-start gap-3 text-sm leading-snug font-normal"
+            >
+                <Checkbox
+                    id="marketing"
+                    name="marketing"
+                    value="1"
+                    :tabindex="5"
+                    class="mt-0.5"
+                />
+                <span>{{ marketingText }}</span>
+            </Label>
+
             <Button
                 type="submit"
                 class="mt-2 w-full"
-                tabindex="5"
+                tabindex="6"
                 :disabled="processing"
                 data-test="register-user-button"
             >
@@ -134,7 +155,7 @@ defineOptions({
             <TextLink
                 :href="login()"
                 class="underline underline-offset-4"
-                :tabindex="6"
+                :tabindex="7"
                 >Войти</TextLink
             >
         </div>
