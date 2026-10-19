@@ -79,8 +79,8 @@ test('метки переезжают в аккаунт при регистра�
         ->post(route('register.store'), [
             'name' => 'Тест',
             'email' => 'utm@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'password1',
+            'password_confirmation' => 'password1',
         ]);
 
     $user = User::where('email', 'utm@example.com')->firstOrFail();
@@ -96,8 +96,8 @@ test('метки нельзя подставить формой регистра
     $this->post(route('register.store'), [
         'name' => 'Тест',
         'email' => 'fake@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
+        'password' => 'password1',
+        'password_confirmation' => 'password1',
         'utm_source' => 'подделка',
     ]);
 

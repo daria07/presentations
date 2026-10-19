@@ -40,14 +40,16 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
+        /*
+           Пароль: от 8 символов, хотя бы одна цифра, не из утечек.
+           Заглавные и спецсимволы не требуем: на них бросают регистрацию,
+           а защиты они дают меньше, чем проверка по базе утёкших паролей —
+           она отсекает «qwerty123» и подобные, которые подбирают первыми.
+           Локально утечки не проверяем: это запрос в интернет.
+        */
+        Password::defaults(fn (): Password => app()->isProduction()
+            ? Password::min(8)->numbers()->uncompromised()
+            : Password::min(8)->numbers(),
         );
     }
 }
