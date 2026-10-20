@@ -173,6 +173,8 @@ class MetricsController extends Controller
             if ($value === self::NONE) {
                 $query->whereNull('users.'.$column);
             } elseif ($value !== '') {
+                // Кампанию и объявление вписывают в поле копированием,
+                // поэтому сравнение точное, как у выбора из списка
                 $query->where('users.'.$column, $value);
             }
         }

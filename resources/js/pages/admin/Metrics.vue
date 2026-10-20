@@ -135,8 +135,6 @@ watch(
         form.to,
         form.source,
         form.medium,
-        form.campaign,
-        form.content,
         form.paid,
         form.trial,
         form.discount,
@@ -146,9 +144,26 @@ watch(
     apply,
 );
 
+/* Кампания и объявление — полем, куда значение вставляют копированием;
+   совпадение точное. «Без меток» в поле пишется словами, а в адрес
+   уходит служебным значением */
+const NONE_TEXT = 'без меток';
+
+function textOf(key: 'campaign' | 'content') {
+    return computed({
+        get: () => (form[key] === NONE ? NONE_TEXT : form[key]),
+        set: (value: string) => {
+            form[key] = value.trim().toLowerCase() === NONE_TEXT ? NONE : value;
+        },
+    });
+}
+
+const campaignText = textOf('campaign');
+const contentText = textOf('content');
+
 let timer: number | undefined;
 watch(
-    () => form.search,
+    () => [form.search, form.campaign, form.content],
     () => {
         window.clearTimeout(timer);
         timer = window.setTimeout(apply, 500);
@@ -330,31 +345,39 @@ const selectClass =
                 </label>
                 <label class="space-y-1 text-xs">
                     <span class="text-muted-foreground">Кампания</span>
-                    <select v-model="form.campaign" :class="selectClass">
-                        <option value="">Все</option>
-                        <option :value="NONE">Без меток</option>
+                    <input
+                        v-model="campaignText"
+                        type="search"
+                        placeholder="Поиск…"
+                        list="metrics-campaign"
+                        :class="selectClass"
+                    />
+                    <datalist id="metrics-campaign">
+                        <option value="без меток" />
                         <option
                             v-for="v in options.campaign"
                             :key="v"
                             :value="v"
-                        >
-                            {{ v }}
-                        </option>
-                    </select>
+                        />
+                    </datalist>
                 </label>
                 <label class="space-y-1 text-xs">
                     <span class="text-muted-foreground">Объявление</span>
-                    <select v-model="form.content" :class="selectClass">
-                        <option value="">Все</option>
-                        <option :value="NONE">Без меток</option>
+                    <input
+                        v-model="contentText"
+                        type="search"
+                        placeholder="Поиск…"
+                        list="metrics-content"
+                        :class="selectClass"
+                    />
+                    <datalist id="metrics-content">
+                        <option value="без меток" />
                         <option
                             v-for="v in options.content"
                             :key="v"
                             :value="v"
-                        >
-                            {{ v }}
-                        </option>
-                    </select>
+                        />
+                    </datalist>
                 </label>
                 <label class="space-y-1 text-xs">
                     <span class="text-muted-foreground">Оплата</span>

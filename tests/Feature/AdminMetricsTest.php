@@ -235,7 +235,7 @@ test('LTV: оплаты, повторные покупки, дни до опла
             ->where('cohorts.1.revenue', 39800));
 });
 
-test('фильтр по объявлению (utm_content) и список объявлений', function () {
+test('фильтр по объявлению (utm_content) и кампании — точное совпадение', function () {
     $ad = visitor(['utm_source' => 'yandex', 'utm_campaign' => 'school', 'utm_content' => 'ad-1'], 1, [14900]);
     visitor(['utm_source' => 'yandex', 'utm_campaign' => 'school', 'utm_content' => 'ad-2']);
     visitor(['utm_source' => 'yandex', 'utm_campaign' => 'school']);
@@ -250,6 +250,11 @@ test('фильтр по объявлению (utm_content) и список об�
         ->where('users.items.0.email', $ad->email)
         ->where('totals.revenue', 14900)
         ->where('options.content', ['ad-1', 'ad-2']));
+    // Совпадение точное: значения вставляют копированием, и кусок
+    // названия не должен захватывать соседние кампании
+    $get('content=ad')->assertInertia(fn (Assert $p) => $p->where('users.total', 0));
+    $get('campaign=school')->assertInertia(fn (Assert $p) => $p->where('users.total', 3));
+    $get('campaign=scho')->assertInertia(fn (Assert $p) => $p->where('users.total', 0));
     // «Без меток» у объявления: из яндекса — только третий посетитель
     $get('source=yandex&content=__none')->assertInertia(fn (Assert $p) => $p->where('users.total', 1));
 });
