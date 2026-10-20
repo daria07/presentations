@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight, LayoutGrid } from '@lucide/vue';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+    ChevronLeft,
+    ChevronRight,
+    LayoutGrid,
+    Maximize,
+    X,
+} from '@lucide/vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = withDefaults(
     defineProps<{
@@ -28,11 +34,24 @@ const props = withDefaults(
         feed?: boolean;
         /** Пробная версия: текст нельзя скопировать */
         locked?: boolean;
+        /** Кнопка «На весь экран» рядом со стрелками */
+        presentable?: boolean;
     }>(),
-    { rail: true, controls: true, framed: true, feed: true, locked: false },
+    {
+        rail: true,
+        controls: true,
+        framed: true,
+        feed: true,
+        locked: false,
+        presentable: false,
+    },
 );
 
-const emit = defineEmits<{ 'update:active': [number] }>();
+const emit = defineEmits<{
+    'update:active': [number];
+    /* Показ на весь экран начался — для цели Метрики */
+    present: [];
+}>();
 
 /* Выделение гасит CSS в самой вёрстке; здесь закрываем остальные
    пути: копирование, контекстное меню и перетаскивание картинок */
@@ -77,6 +96,75 @@ function onMediaChange(event: MediaQueryListEvent) {
 const stageHost = ref<HTMLDivElement | null>(null);
 const railHost = ref<HTMLDivElement | null>(null);
 const stage = ref<HTMLDivElement | null>(null);
+const root = ref<HTMLDivElement | null>(null);
+
+/*
+   Показ на весь экран — для выступления. Просмотрщик разворачивается
+   на весь экран браузерным Fullscreen API, а где его нет (iPhone
+   умеет так только с видео) — растягивается поверх страницы. Слайд
+   занимает всё место, лента и кнопки прячутся. Листают стрелками,
+   пробелом и щелчком: правее трети слайда — вперёд, левее — назад.
+   Выход — Esc или крестик в углу.
+*/
+const presenting = ref(false);
+
+async function present() {
+    if (presenting.value || failed.value) return;
+
+    presenting.value = true;
+    sheet.value = false;
+    emit('present');
+
+    try {
+        await root.value?.requestFullscreen?.();
+    } catch {
+        // Браузер отказал — остаёмся в режиме поверх страницы
+    }
+
+    await nextTick();
+    fit();
+}
+
+async function stopPresenting() {
+    if (!presenting.value) return;
+
+    presenting.value = false;
+
+    if (document.fullscreenElement) {
+        await document.exitFullscreen().catch(() => undefined);
+    }
+
+    await nextTick();
+    fit();
+}
+
+/* Esc в настоящем полноэкранном режиме обрабатывает сам браузер:
+   узнаём о выходе по событию */
+function onFullscreenChange() {
+    if (!document.fullscreenElement && presenting.value) {
+        presenting.value = false;
+        nextTick(fit);
+    } else {
+        nextTick(fit);
+    }
+}
+
+function onStageClick(event: MouseEvent) {
+    if (!presenting.value || !stage.value) return;
+
+    // Ссылки на слайде источников должны открываться, а не листать
+    const link = event
+        .composedPath()
+        .some((node) => node instanceof HTMLAnchorElement);
+
+    if (link) return;
+
+    const box = stage.value.getBoundingClientRect();
+
+    show(index.value + (event.clientX - box.left < box.width / 3 ? -1 : 1));
+}
+
+defineExpose({ present });
 
 const total = ref(0);
 const index = ref(0);
@@ -331,9 +419,10 @@ function fit() {
     // Снизу оставляем полосу под кнопки листания, иначе слайд
     // наезжает на них на невысоком окне
     const box = stage.value.getBoundingClientRect();
+    const reserve = presenting.value ? 0 : props.controls ? 72 : 24;
     const scale = Math.min(
-        (box.width - 32) / slideWidth,
-        (box.height - (props.controls ? 72 : 24)) / slideHeight,
+        (box.width - (presenting.value ? 0 : 32)) / slideWidth,
+        (box.height - reserve) / slideHeight,
     );
 
     slides.forEach((slide) => {
@@ -361,6 +450,16 @@ function keys(event: KeyboardEvent) {
         ArrowUp: -1,
         PageUp: -1,
     };
+
+    if (presenting.value) {
+        if (event.key === 'Escape') return void stopPresenting();
+
+        if ([' ', 'Enter'].includes(event.key)) {
+            event.preventDefault();
+
+            return show(index.value + 1);
+        }
+    }
 
     if (event.key === 'Home') return show(0);
     if (event.key === 'End') return show(slides.length - 1);
@@ -407,20 +506,25 @@ onMounted(() => {
     load();
     window.addEventListener('resize', fit);
     document.addEventListener('keydown', keys);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
 });
 
 onBeforeUnmount(() => {
     media?.removeEventListener('change', onMediaChange);
     window.removeEventListener('resize', fit);
     document.removeEventListener('keydown', keys);
+    document.removeEventListener('fullscreenchange', onFullscreenChange);
 });
 </script>
 
 <template>
     <div
-        class="bg-muted/40 flex overflow-hidden"
+        ref="root"
+        class="flex overflow-hidden"
         :class="[
-            framed && 'border-border rounded-xl border',
+            presenting
+                ? 'fixed inset-0 z-[100] bg-black'
+                : ['bg-muted/40', framed && 'border-border rounded-xl border'],
             locked && 'select-none',
         ]"
         @copy="guard"
@@ -436,7 +540,7 @@ onBeforeUnmount(() => {
             и миниатюры пришлось бы строить дважды.
         -->
         <div
-            v-show="rail && (!compact || sheet)"
+            v-show="rail && !presenting && (!compact || sheet)"
             :class="
                 compact
                     ? 'bg-card fixed inset-x-0 bottom-0 z-50 max-h-[70vh] overflow-y-auto rounded-t-2xl border-t shadow-2xl'
@@ -474,12 +578,36 @@ onBeforeUnmount(() => {
         />
 
         <!-- Сцена -->
-        <div ref="stage" class="relative min-w-0 flex-1">
+        <div
+            ref="stage"
+            class="relative min-w-0 flex-1"
+            :class="presenting && 'cursor-pointer'"
+            @click="onStageClick"
+        >
             <div
                 ref="stageHost"
                 class="absolute inset-0 flex items-center justify-center"
-                :class="controls ? 'pb-12' : 'p-3'"
+                :class="presenting ? '' : controls ? 'pb-12' : 'p-3'"
             />
+
+            <!-- Во время показа — только счётчик и выход, неярко,
+                 чтобы не мешать слайду -->
+            <template v-if="presenting">
+                <button
+                    type="button"
+                    class="absolute top-3 right-3 flex size-9 cursor-pointer items-center justify-center rounded-full bg-black/40 text-white/70 transition-colors hover:bg-black/70 hover:text-white"
+                    aria-label="Выйти из показа"
+                    title="Выйти (Esc)"
+                    @click.stop="stopPresenting"
+                >
+                    <X class="size-5" />
+                </button>
+                <p
+                    class="pointer-events-none absolute right-4 bottom-3 rounded bg-black/40 px-2 py-0.5 text-xs text-white/70 tabular-nums"
+                >
+                    {{ index + 1 }} / {{ total }}
+                </p>
+            </template>
 
             <p
                 v-if="failed"
@@ -490,7 +618,7 @@ onBeforeUnmount(() => {
 
             <!-- Управление в пустом поле под слайдом -->
             <div
-                v-else-if="controls && !loading"
+                v-else-if="controls && !loading && !presenting"
                 class="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap"
             >
                 <button
@@ -533,6 +661,17 @@ onBeforeUnmount(() => {
                     @click="show(index + 1)"
                 >
                     <ChevronRight class="size-4" />
+                </button>
+
+                <button
+                    v-if="presentable"
+                    type="button"
+                    class="border-border bg-background/80 text-foreground flex size-8 cursor-pointer items-center justify-center rounded-md border transition-colors"
+                    aria-label="На весь экран"
+                    title="На весь экран"
+                    @click="present"
+                >
+                    <Maximize class="size-4" />
                 </button>
             </div>
         </div>

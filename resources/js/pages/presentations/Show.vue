@@ -11,6 +11,7 @@ import {
     ExternalLink,
     Link2,
     Lock,
+    Maximize,
     Mic,
     Pencil,
     RotateCcw,
@@ -447,6 +448,7 @@ function toggleSources(visible: boolean) {
    Порядок и подписи — как в открытом ряду.
 */
 const lockedActions = [
+    { label: 'На весь экран', icon: Maximize, primary: false },
     { label: 'Ссылка', icon: Link2, primary: false },
     { label: 'Открыть', icon: ExternalLink, primary: false },
     { label: 'Речь докладчика', icon: Mic, primary: false },
@@ -454,6 +456,18 @@ const lockedActions = [
 ];
 
 const unlocking = ref(false);
+
+/* ---------- Показ на весь экран ---------- */
+
+const viewer = ref<InstanceType<typeof DeckViewer> | null>(null);
+
+function present() {
+    viewer.value?.present();
+}
+
+function onPresent() {
+    goal('presentation_present');
+}
 
 /* Купленные генерации есть — закрытые действия открывают полную
    версию сразу, а не отправляют к тарифам */
@@ -889,6 +903,12 @@ async function copyShare() {
                             Редактировать
                         </Link>
                     </Button>
+                    <!-- Для выступления: слайды на весь экран прямо здесь,
+                         без скачивания и чужих смотрелок PDF -->
+                    <Button variant="outline" size="sm" @click="present">
+                        <Maximize class="size-4" />
+                        На весь экран
+                    </Button>
                     <!-- Ссылка ведёт на ту же страницу, что и «Открыть»,
                          а там лежит ещё старый файл: дать её сейчас значит
                          отправить человека смотреть прошлое оформление -->
@@ -1029,6 +1049,11 @@ async function copyShare() {
                                 </Link>
                             </DropdownMenuItem>
 
+                            <DropdownMenuItem @select="present">
+                                <Maximize class="size-4" />
+                                На весь экран
+                            </DropdownMenuItem>
+
                             <DropdownMenuItem
                                 :disabled="reprinting"
                                 @select="copyShare"
@@ -1138,9 +1163,9 @@ async function copyShare() {
                     class="text-muted-foreground hidden size-4 flex-none sm:block"
                 />
                 <p class="text-muted-foreground flex-1 text-sm leading-relaxed">
-                    Это пробная версия: слайды с водяным знаком, а скачивание,
-                    ссылка и речь докладчика закрыты. Полная версия стоит одну
-                    генерацию.
+                    Это пробная версия: слайды с водяным знаком, а показ на весь
+                    экран, скачивание, ссылка и речь докладчика закрыты. Полная
+                    версия стоит одну генерацию.
                 </p>
                 <Button
                     size="sm"
@@ -1169,11 +1194,14 @@ async function copyShare() {
                  миниатюр, справа выбор темы и гаммы -->
             <div class="flex flex-col gap-5 lg:flex-row">
                 <DeckViewer
+                    ref="viewer"
                     :src="current.previewUrl!"
                     :theme="current.theme"
                     :palette="current.palette"
                     :deck-style="styleOf(current.theme)"
                     :locked="current.locked"
+                    :presentable="!current.locked"
+                    @present="onPresent"
                     class="h-[300px] w-full min-w-0 sm:h-[440px] lg:h-[560px] lg:flex-1"
                 />
 
