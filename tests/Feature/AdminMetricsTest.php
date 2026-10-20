@@ -234,3 +234,22 @@ test('LTV: оплаты, повторные покупки, дни до опла
             ->where('cohorts.1.repeaters', 1)
             ->where('cohorts.1.revenue', 39800));
 });
+
+test('фильтр по объявлению (utm_content) и список объявлений', function () {
+    $ad = visitor(['utm_source' => 'yandex', 'utm_campaign' => 'school', 'utm_content' => 'ad-1'], 1, [14900]);
+    visitor(['utm_source' => 'yandex', 'utm_campaign' => 'school', 'utm_content' => 'ad-2']);
+    visitor(['utm_source' => 'yandex', 'utm_campaign' => 'school']);
+
+    $get = fn (string $query) => $this->actingAs($this->admin)
+        ->get('/admin/metrics?'.$query)
+        ->assertOk();
+
+    $get('content=ad-1')->assertInertia(fn (Assert $p) => $p
+        ->where('filters.content', 'ad-1')
+        ->where('users.total', 1)
+        ->where('users.items.0.email', $ad->email)
+        ->where('totals.revenue', 14900)
+        ->where('options.content', ['ad-1', 'ad-2']));
+    // «Без меток» у объявления: из яндекса — только третий посетитель
+    $get('source=yandex&content=__none')->assertInertia(fn (Assert $p) => $p->where('users.total', 1));
+});

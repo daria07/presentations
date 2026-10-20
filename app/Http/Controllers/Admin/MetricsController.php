@@ -29,7 +29,7 @@ class MetricsController extends Controller
     public const NONE = '__none';
 
     /** Поля меток, по которым можно фильтровать и группировать */
-    private const UTM = ['source' => 'utm_source', 'medium' => 'utm_medium', 'campaign' => 'utm_campaign'];
+    private const UTM = ['source' => 'utm_source', 'medium' => 'utm_medium', 'campaign' => 'utm_campaign', 'content' => 'utm_content'];
 
     private const PER_PAGE = 50;
 
@@ -114,7 +114,7 @@ class MetricsController extends Controller
     /**
      * Фильтры из адреса — только известные значения.
      *
-     * @return array{from: string, to: string, source: string, medium: string, campaign: string, paid: string, trial: string, discount: string, edited: string, search: string, sort: string}
+     * @return array{from: string, to: string, source: string, medium: string, campaign: string, content: string, paid: string, trial: string, discount: string, edited: string, search: string, sort: string}
      */
     private function filters(Request $request): array
     {
@@ -134,6 +134,8 @@ class MetricsController extends Controller
             'source' => mb_substr(trim((string) $request->query('source', '')), 0, 255),
             'medium' => mb_substr(trim((string) $request->query('medium', '')), 0, 255),
             'campaign' => mb_substr(trim((string) $request->query('campaign', '')), 0, 255),
+            // Объявление: в Директе сюда подставляют {ad_id} или название
+            'content' => mb_substr(trim((string) $request->query('content', '')), 0, 255),
             'paid' => in_array($paid, ['yes', 'no'], true) ? $paid : '',
             'trial' => in_array($trial, ['yes', 'no'], true) ? $trial : '',
             // Кнопка скидки: не видел, видел, нажал, купил со скидкой

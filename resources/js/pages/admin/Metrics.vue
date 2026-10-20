@@ -9,6 +9,7 @@ type Filters = {
     source: string;
     medium: string;
     campaign: string;
+    content: string;
     paid: '' | 'yes' | 'no';
     trial: '' | 'yes' | 'no';
     discount: '' | 'unseen' | 'shown' | 'clicked' | 'used';
@@ -62,7 +63,12 @@ type Row = {
 
 const props = defineProps<{
     filters: Filters;
-    options: { source: string[]; medium: string[]; campaign: string[] };
+    options: {
+        source: string[];
+        medium: string[];
+        campaign: string[];
+        content: string[];
+    };
     totals: {
         users: number;
         made: number;
@@ -130,6 +136,7 @@ watch(
         form.source,
         form.medium,
         form.campaign,
+        form.content,
         form.paid,
         form.trial,
         form.discount,
@@ -184,6 +191,7 @@ function reset() {
         source: '',
         medium: '',
         campaign: '',
+        content: '',
         paid: '',
         trial: '',
         discount: '',
@@ -198,6 +206,7 @@ function pick(g: Group) {
     form.source = g.source ?? NONE;
     form.medium = g.medium ?? NONE;
     form.campaign = g.campaign ?? NONE;
+    form.content = '';
     document.getElementById('people')?.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -299,7 +308,7 @@ const selectClass =
             </div>
 
             <div
-                class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-9"
+                class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5"
             >
                 <label class="space-y-1 text-xs">
                     <span class="text-muted-foreground">Источник</span>
@@ -328,6 +337,20 @@ const selectClass =
                         <option :value="NONE">Без меток</option>
                         <option
                             v-for="v in options.campaign"
+                            :key="v"
+                            :value="v"
+                        >
+                            {{ v }}
+                        </option>
+                    </select>
+                </label>
+                <label class="space-y-1 text-xs">
+                    <span class="text-muted-foreground">Объявление</span>
+                    <select v-model="form.content" :class="selectClass">
+                        <option value="">Все</option>
+                        <option :value="NONE">Без меток</option>
+                        <option
+                            v-for="v in options.content"
                             :key="v"
                             :value="v"
                         >
@@ -564,6 +587,33 @@ const selectClass =
                             </td>
                         </tr>
                     </tbody>
+                    <!-- Итог — по всей выборке под фильтры -->
+                    <tfoot>
+                        <tr class="border-border border-t-2 font-semibold">
+                            <td class="py-2 pr-4">Итого</td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ totals.users }}
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ totals.paying }}
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ percent(totals.paying, totals.users) }}
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ totals.repeaters }}
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ rubles(totals.revenue) }} ₽
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ per(totals.revenue, totals.users) }}
+                            </td>
+                            <td class="py-2 text-right tabular-nums">
+                                {{ per(totals.revenue, totals.paying) }}
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
             <p v-else class="text-muted-foreground py-4 text-sm">
@@ -652,6 +702,26 @@ const selectClass =
                             </td>
                         </tr>
                     </tbody>
+                    <tfoot>
+                        <tr class="border-border border-t-2 font-semibold">
+                            <td class="py-2 pr-4" colspan="3">Итого</td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ totals.users }}
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ totals.made }}
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ totals.paying }}
+                            </td>
+                            <td class="py-2 pr-4 text-right tabular-nums">
+                                {{ percent(totals.paying, totals.users) }}
+                            </td>
+                            <td class="py-2 text-right tabular-nums">
+                                {{ rubles(totals.revenue) }} ₽
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
             <p v-else class="text-muted-foreground py-4 text-sm">
@@ -877,6 +947,29 @@ const selectClass =
                             </td>
                         </tr>
                     </tbody>
+                    <!-- Итог — по всем людям под фильтры, не только
+                         по этой странице списка -->
+                    <tfoot>
+                        <tr class="border-border border-t-2 font-semibold">
+                            <td class="py-2.5 pr-4" colspan="6">
+                                Итого: {{ totals.users }}
+                                <span class="text-muted-foreground font-normal"
+                                    >— по всем страницам списка</span
+                                >
+                            </td>
+                            <td
+                                class="py-2.5 pr-4 text-right whitespace-nowrap tabular-nums"
+                            >
+                                {{ rubles(totals.revenue) }} ₽
+                                <p
+                                    class="text-muted-foreground text-xs font-normal"
+                                >
+                                    {{ totals.payments }} шт.
+                                </p>
+                            </td>
+                            <td class="py-2.5"></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
             <p v-else class="text-muted-foreground py-4 text-sm">
