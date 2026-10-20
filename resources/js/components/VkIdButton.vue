@@ -21,7 +21,7 @@ defineProps<{
             href="/auth/vk?provider=mail_ru"
             class="border-border hover:bg-secondary flex h-10 w-full items-center justify-center rounded-md border px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-[#005FF9]/40 focus-visible:outline-none"
         >
-            Войти через почту Mail
+            Войти через почту Mail.ru
         </a>
         <p
             v-if="consent"

@@ -797,7 +797,8 @@ const audiences = [
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 flex-none" />
-                                без водяного знака, PDF, ссылка и показ на весь экран
+                                без водяного знака, PDF, ссылка и показ на весь
+                                экран
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 flex-none" />
