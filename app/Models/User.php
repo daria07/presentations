@@ -42,6 +42,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $marketing_consent_source
  * @property string|null $marketing_consent_version
  * @property Carbon|null $marketing_revoked_at
+ * @property string|null $vk_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */

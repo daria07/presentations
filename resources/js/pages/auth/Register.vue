@@ -3,6 +3,7 @@ import { Form, Head } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TextLink from '@/components/TextLink.vue';
+import VkIdButton from '@/components/VkIdButton.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,8 @@ defineProps<{
     passwordRules: string;
     /* Текст согласия на рекламные письма — с сервера, вместе с версией */
     marketingText: string;
+    /* Настроен ли вход через VK ID */
+    vkId: boolean;
 }>();
 
 defineOptions({
@@ -27,6 +30,8 @@ defineOptions({
 
 <template>
     <Head title="Регистрация" />
+
+    <VkIdButton v-if="vkId" consent class="mb-6" />
 
     <Form
         v-bind="store.form()"

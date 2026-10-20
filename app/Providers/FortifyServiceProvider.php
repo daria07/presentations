@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Services\Auth\VkId;
 use App\Support\MarketingConsent;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -51,6 +52,8 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/Login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
+            // Кнопка «Войти через VK ID» — только если приложение VK настроено
+            'vkId' => VkId::enabled(),
             'status' => $request->session()->get('status'),
         ]));
 
@@ -72,6 +75,7 @@ class FortifyServiceProvider extends ServiceProvider
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
             // Текст галочки берём оттуда же, где записана его версия
             'marketingText' => MarketingConsent::TEXT,
+            'vkId' => VkId::enabled(),
         ]));
 
         // Экран двухфакторной проверки: возможность выключена

@@ -91,6 +91,15 @@ return [
         'folder' => env('YANDEX_FOLDER_ID'),
     ],
 
+    /*
+     * Вход через VK ID (id.vk.com). Без номера приложения кнопки «Войти
+     * через VK» нет. Номер — в кабинете id.vk.com → приложение → «ID
+     * приложения». Секретный ключ не нужен: вход идёт по PKCE.
+     */
+    'vkid' => [
+        'client_id' => env('VKID_CLIENT_ID'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

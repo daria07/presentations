@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\MetricsController;
 use App\Http\Controllers\Admin\ReceiptController;
 use App\Http\Controllers\Admin\SupportController as AdminSupportController;
+use App\Http\Controllers\Auth\VkIdController;
 use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\HomeController;
@@ -27,6 +28,17 @@ Route::get('/', HomeController::class)->name('home');
 Route::get('l/{slug}', LandingController::class)
     ->where('slug', '[a-z0-9-]+')
     ->name('landing');
+
+/*
+   Вход и регистрация через VK ID. Только для гостей: вошедший сюда
+   не попадёт. Подробности — App\Http\Controllers\Auth\VkIdController.
+*/
+Route::middleware(['guest', 'throttle:20,1'])->prefix('auth/vk')->name('auth.vk.')->group(function () {
+    Route::get('/', [VkIdController::class, 'redirect'])->name('redirect');
+    Route::get('callback', [VkIdController::class, 'callback'])->name('callback');
+    Route::get('email', [VkIdController::class, 'email'])->name('email');
+    Route::post('email', [VkIdController::class, 'storeEmail'])->name('email.store');
+});
 
 // Правовые документы: открыты всем, реквизиты берутся из config/legal.php
 Route::get('offer', [LegalController::class, 'offer'])->name('legal.offer');
