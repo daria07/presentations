@@ -48,7 +48,7 @@
                 МЫ ОБНОВИЛИСЬ
               </div>
               <h1 style="margin:20px 0 12px; font-size:32px; line-height:40px; font-weight:700; color:#15161a;">
-                Презентации стали нагляднее
+                Презентации стали ярче
               </h1>
               <p style="margin:0; font-size:17px; line-height:27px; color:#6f6b62;">
                 Рассказываем, что изменилось в&nbsp;Слайдуше.
@@ -85,7 +85,7 @@
                   </td>
                   <td valign="top" style="padding:2px 0 18px 10px;">
                     <div style="font-size:15px; line-height:22px; font-weight:700; color:#15161a;">Обложка с изображением</div>
-                    <div style="font-size:14px; line-height:22px; color:#6f6b62; padding-top:3px;">Презентация открывается картинкой по вашей теме, а&nbsp;не пустым слайдом.</div>
+                    <div style="font-size:14px; line-height:22px; color:#6f6b62; padding-top:3px;">На&nbsp;обложке презентации картинка по&nbsp;вашей теме, а&nbsp;не&nbsp;просто заголовок на&nbsp;пустом листе.</div>
                   </td>
                 </tr>
                 <tr>
@@ -104,6 +104,26 @@
                   <td valign="top" style="padding:2px 0 0 10px;">
                     <div style="font-size:15px; line-height:22px; font-weight:700; color:#15161a;">Список источников</div>
                     <div style="font-size:14px; line-height:22px; color:#6f6b62; padding-top:3px;">Последний слайд — ссылки на материалы, по которым собрана презентация.</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Пример: настоящая презентация по публичной ссылке.
+               #view=Fit — встроенная смотрелка PDF покажет слайд целиком -->
+          <tr>
+            <td style="padding:14px 32px 0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#faf0eb; border-radius:14px;">
+                <tr>
+                  <td style="padding:18px 20px;">
+                    <div style="font-size:15px; line-height:22px; font-weight:700; color:#15161a;">
+                      Наши презентации теперь выглядят так
+                    </div>
+                    <div style="padding-top:6px; font-size:14px; line-height:22px;">
+                      <a href="https://slaidusha.ru/p/j2bzo0zncojq#view=Fit" target="_blank"
+                        style="color:#b65229; font-weight:700; text-decoration:underline;">Посмотреть пример презентации&nbsp;&rarr;</a>
+                    </div>
                   </td>
                 </tr>
               </table>

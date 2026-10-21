@@ -18,9 +18,18 @@ use Throwable;
  *   php artisan news:update --test=me@example.com   — одно письмо сразу, на этот адрес
  *   php artisan news:update --send                  — всем, через очередь
  *
- * Шлём только подтвердившим почту и не отписавшимся: письма на
- * непроверенные адреса возвращаются, и почтовые службы начинают
- * считать нас спамерами. Кому письмо уже ушло, записано в mail_sends —
+ * Получатели — те, чьи презентации собраны ещё без картинок: делали
+ * их до обновления. Им есть что сравнить, и именно им положена
+ * скидка 50% (App\Services\Billing\UpdateOffer). Сделавшие хоть одну
+ * презентацию — живые люди с рабочей почтой, а не случайные адреса:
+ * подтверждение почты на сайте не включено, по нему не отобрать.
+ * Вместе с письмом каждому возвращаем пробную презентацию: пусть
+ * увидит картинки на своей теме, а не только на примере. В письме об
+ * этом ни слова — подарок уже реклама, а согласия на неё у давних
+ * пользователей нет. Пробную они найдут на сайте сами, скидка 50%
+ * остаётся как была.
+ *
+ * Отписавшимся не шлём. Кому письмо уже ушло, записано в mail_sends —
  * повторный --send продолжит с того же места, а не начнёт сначала.
  */
 class SendUpdateNews extends Command
@@ -51,9 +60,10 @@ class SendUpdateNews extends Command
 
         $total = $this->recipients()->count();
 
-        $this->components->twoColumnDetail('Зарегистрировались до', $cutoff->timezone(config('admin.timezone'))->format('d.m.Y H:i').' (МСК)');
+        $this->components->twoColumnDetail('Презентации без картинок — до', $cutoff->timezone(config('admin.timezone'))->format('d.m.Y H:i').' (МСК)');
         $this->components->twoColumnDetail('Уже получили', (string) DB::table('mail_sends')->where('campaign', self::CAMPAIGN)->count());
         $this->components->twoColumnDetail('Осталось отправить', (string) $total);
+        $this->components->twoColumnDetail('Из них вернём пробную', (string) $this->recipients()->where('trial_used', true)->count());
 
         foreach ($this->recipients()->limit(5)->pluck('email') as $email) {
             $this->line('  · '.$email);
@@ -75,7 +85,7 @@ class SendUpdateNews extends Command
         $perMinute = max(1, (int) $this->option('per-minute'));
         $minutes = (int) ceil($total / $perMinute);
 
-        if (! $this->option('force') && ! $this->confirm("Отправить {$total} писем? Уйдут примерно за {$minutes} мин.")) {
+        if (! $this->option('force') && ! $this->confirm("Отправить {$total} писем и вернуть пробную? Уйдут примерно за {$minutes} мин.")) {
             return self::FAILURE;
         }
 
@@ -96,6 +106,12 @@ class SendUpdateNews extends Command
                     continue;
                 }
 
+                // Пробная — вместе с письмом: кто его получит, придёт
+                // уже к бесплатной презентации с водяным знаком
+                if ($user->trial_used) {
+                    $user->forceFill(['trial_used' => false])->save();
+                }
+
                 Mail::to($user->email)->later(
                     now()->addSeconds((int) floor($queued * 60 / $perMinute)),
                     new UpdateNews($user),
@@ -111,16 +127,18 @@ class SendUpdateNews extends Command
     }
 
     /**
-     * Получатели: до обновления, почта подтверждена, не отписались,
-     * письмо ещё не уходило.
+     * Получатели: делали презентации до обновления, то есть без
+     * картинок; не отписались; письмо ещё не уходило.
      *
      * @return Builder<User>
      */
     private function recipients(): Builder
     {
+        $cutoff = UpdateOffer::cutoff();
+
         return User::query()
-            ->where('created_at', '<', UpdateOffer::cutoff())
-            ->whereNotNull('email_verified_at')
+            ->where('created_at', '<', $cutoff)
+            ->whereHas('presentations', fn ($q) => $q->where('created_at', '<', $cutoff))
             ->whereNull('news_unsubscribed_at')
             ->whereNotExists(fn ($q) => $q->selectRaw('1')
                 ->from('mail_sends')

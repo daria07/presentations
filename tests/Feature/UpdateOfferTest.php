@@ -2,10 +2,12 @@
 
 use App\Mail\UpdateNews;
 use App\Models\Payment;
+use App\Models\Presentation;
 use App\Models\User;
 use App\Services\Billing\Billing;
 use App\Services\Billing\Discount;
 use App\Services\Billing\Package;
+use App\Services\Billing\UpdateOffer;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -115,13 +117,29 @@ test('из двух скидок при оплате берётся больша
     expect(Discount::current($user->refresh()))->toMatchArray(['percent' => 50, 'source' => 'update']);
 });
 
-test('письмо: только до обновления, с подтверждённой почтой, не отписавшимся и по одному разу', function () {
+/** Презентация, сделанная в это время по Москве */
+function madeAt(User $user, string $moscowTime): void
+{
+    $presentation = Presentation::create(['user_id' => $user->id, 'topic' => 'Тема']);
+    $presentation->forceFill(['created_at' => Carbon::parse($moscowTime, 'Europe/Moscow')->utc()])->save();
+}
+
+test('письмо: тем, чьи презентации были без картинок, не отписавшимся и по одному разу', function () {
     Mail::fake();
 
-    $old = registered('2026-10-01 12:00');
-    registered('2026-10-20 12:00');
-    registered('2026-10-01 12:00', ['email_verified_at' => null]);
-    registered('2026-10-01 12:00', ['news_unsubscribed_at' => now()]);
+    // Делал презентацию до обновления — почта не подтверждена, но
+    // подтверждение на сайте выключено, и это не помеха
+    $old = registered('2026-10-01 12:00', ['email_verified_at' => null]);
+    madeAt($old, '2026-10-02 12:00');
+
+    // Зарегистрировался до, но первую презентацию сделал уже с картинками
+    madeAt(registered('2026-10-01 12:00'), '2026-10-15 12:00');
+    // Не делал ни одной
+    registered('2026-10-01 12:00');
+    // После обновления
+    madeAt(registered('2026-10-20 12:00'), '2026-10-20 13:00');
+    // Отписался
+    madeAt(registered('2026-10-01 12:00', ['news_unsubscribed_at' => now()]), '2026-10-02 12:00');
 
     $this->artisan('news:update')->assertSuccessful();
     Mail::assertNothingQueued();
@@ -132,6 +150,27 @@ test('письмо: только до обновления, с подтверж�
     Mail::assertQueuedCount(1);
     Mail::assertQueued(UpdateNews::class, fn ($mail) => $mail->hasTo($old->email));
     expect(DB::table('mail_sends')->count())->toBe(1);
+});
+
+test('с письмом получатель снова получает пробную, остальные — нет', function () {
+    Mail::fake();
+
+    $old = registered('2026-10-01 12:00', ['trial_used' => true, 'credits' => 0]);
+    madeAt($old, '2026-10-02 12:00');
+    $unsubscribed = registered('2026-10-01 12:00', ['trial_used' => true, 'news_unsubscribed_at' => now()]);
+    madeAt($unsubscribed, '2026-10-02 12:00');
+
+    // Пробное письмо пробную не возвращает
+    $this->artisan('news:update --test='.$old->email)->assertSuccessful();
+    expect($old->refresh()->trial_used)->toBeTrue();
+
+    $this->artisan('news:update --send --force')->assertSuccessful();
+
+    expect($old->refresh()->trial_used)->toBeFalse()
+        ->and($unsubscribed->refresh()->trial_used)->toBeTrue();
+
+    // Скидка 50% при этом на месте
+    expect(UpdateOffer::eligible($old))->toBeTrue();
 });
 
 test('в письме нет скидки, есть отписка и реквизиты', function () {
