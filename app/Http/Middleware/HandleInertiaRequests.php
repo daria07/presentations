@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\SupportMessage;
+use App\Support\MetrikaGoal;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -48,6 +49,8 @@ class HandleInertiaRequests extends Middleware
                 // Ссылка на кабинет показывается только своим
                 'isAdmin' => (bool) $request->user()?->isAdmin(),
             ],
+            // Цели Метрики от сервера: регистрация и подобное — App\Support\MetrikaGoal
+            'goals' => fn () => $request->hasSession() ? (array) $request->session()->get(MetrikaGoal::SESSION, []) : [],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             // Чат с администратором: точка на кнопке «Написать нам» и
             // число диалогов с непрочитанным в меню админки

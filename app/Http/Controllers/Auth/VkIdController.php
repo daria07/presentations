@@ -41,9 +41,12 @@ class VkIdController extends Controller
 
         $state = Str::random(40);
         $verifier = VkId::verifier();
+        $provider = (string) $request->query('provider', 'vkid');
         $request->session()->put(self::SESSION, ['state' => $state, 'verifier' => $verifier]);
+        // Через какую кнопку пришли — для цели регистрации в Метрике
+        $request->session()->put('vkid_provider', $provider === 'mail_ru' ? 'mail_ru' : 'vkid');
 
-        return redirect()->away(VkId::authorizeUrl($state, $verifier, (string) $request->query('provider', 'vkid')));
+        return redirect()->away(VkId::authorizeUrl($state, $verifier, $provider));
     }
 
     public function callback(Request $request): RedirectResponse
