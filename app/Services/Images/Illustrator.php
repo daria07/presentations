@@ -264,7 +264,11 @@ class Illustrator
                 .'with some breathing room around it, nothing important near the edges.',
         };
 
-        return trim($scene, ' .').'.'.$hero.' '.$composition.' '.self::WHOLE_SUBJECT.' '.$style.' '.self::NO_TEXT;
+        // Запасной шлюз (gpt-image) получает этот, длинный запрос —
+        // правило о внешности людей нужно и здесь, а не только у grok
+        $people = self::needsSlavic($scene, $subject) ? ' The people in the image are '.self::SLAVIC.'.' : '';
+
+        return trim($scene, ' .').'.'.$hero.$people.' '.$composition.' '.self::WHOLE_SUBJECT.' '.$style.' '.self::NO_TEXT;
     }
 
     /**
@@ -281,8 +285,10 @@ class Illustrator
 
         if ($subject !== '') {
             $parts[] = trim($subject, ' .');
-        } elseif (self::hasUnspecifiedPeople($scene)) {
-            $parts[] = 'people with Slavic appearance';
+        }
+
+        if (self::needsSlavic($scene, $subject)) {
+            $parts[] = self::SLAVIC;
         }
 
         $parts[] = match ($format) {
@@ -302,6 +308,9 @@ class Illustrator
         return implode(', ', array_filter($parts)).'.';
     }
 
+    /** Как просим внешность: «Slavic appearance» одно grok пропускал */
+    private const SLAVIC = 'Russian people of Slavic appearance';
+
     /** Слова, по которым видно, что в сцене есть люди */
     private const PEOPLE = [
         'person', 'people', 'man', 'men', 'woman', 'women', 'child', 'children', 'kid', 'kids',
@@ -311,6 +320,13 @@ class Illustrator
         'team', 'colleagues', 'couple', 'customer', 'customers', 'employee', 'employees',
         'farmer', 'farmers', 'soldier', 'soldiers', 'officer', 'officers', 'technician',
         'specialist', 'specialists', 'audience', 'parent', 'parents', 'grandmother', 'grandfather',
+        'grandmothers', 'grandfathers', 'grandparents', 'grandchildren', 'grandchild', 'grandma',
+        'grandpa', 'mother', 'mothers', 'father', 'fathers', 'mom', 'dad', 'son', 'sons',
+        'daughter', 'daughters', 'brother', 'brothers', 'sister', 'sisters', 'siblings',
+        'relatives', 'baby', 'babies', 'toddler', 'toddlers', 'teenager', 'teenagers', 'teen',
+        'teens', 'schoolchildren', 'schoolboy', 'schoolgirl', 'classmates', 'friends', 'adults',
+        'elderly', 'youth', 'volunteers', 'athlete', 'athletes', 'player', 'players', 'lady',
+        'guy', 'guys', 'human', 'humans', 'villagers', 'citizens', 'residents', 'tourists',
     ];
 
     /** Слова, которыми сцена сама задаёт происхождение или эпоху людей */
@@ -327,14 +343,24 @@ class Illustrator
      * В сцене есть люди, а кто они — не сказано.
      *
      * Аудитория у нас русскоязычная, а модели по умолчанию рисуют людей
-     * «как в американском стоке». Если сцена сама не говорит, кто эти
-     * люди (японцы в презентации про ёкаев, римляне — про Рим), и героя
-     * у презентации нет, просим славянскую внешность. Решаем в коде,
-     * а не условием в запросе: grok рисует такие условия буквами.
+     * «как в американском стоке». Если ни сцена, ни герой не говорят,
+     * кто эти люди (японцы в презентации про ёкаев, римляне — про Рим),
+     * просим славянскую внешность. Решаем в коде, а не условием в
+     * запросе: grok рисует такие условия буквами.
+     *
+     * Раньше правило выключалось при любом герое презентации — и в теме
+     * «Семья» с героем «family» рисовались люди любой внешности. Теперь
+     * выключает только герой с именем (Albert Einstein, Peter the Great):
+     * его внешность задана самим героем. Имя видно по заглавной букве —
+     * общие слова модель пишет со строчной.
      */
-    private static function hasUnspecifiedPeople(string $scene): bool
+    private static function needsSlavic(string $scene, string $subject): bool
     {
-        $words = preg_split('/[^a-z]+/', mb_strtolower($scene)) ?: [];
+        if (preg_match('/[A-Z]/', $subject) === 1) {
+            return false;
+        }
+
+        $words = preg_split('/[^a-z]+/', mb_strtolower($scene.' '.$subject)) ?: [];
 
         return array_intersect($words, self::PEOPLE) !== []
             && array_intersect($words, self::ORIGIN) === [];

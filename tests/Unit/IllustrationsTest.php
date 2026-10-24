@@ -131,3 +131,16 @@ test('в коротком запросе у людей без заданного
         // Герой презентации задан — он и определяет, кто на картинке
         ->and($prompt('A man reading by a window', 'Albert Einstein, old man with white hair'))->not->toContain('Slavic');
 });
+
+test('славянская внешность и при общем герое, и для семейных слов', function () {
+    $prompt = fn (string $scene, string $subject = '') => Illustrator::compactPrompt($scene, '', 'square', $subject);
+
+    // Тема «Семья»: герой — общее слово, а не человек с именем
+    expect($prompt('Grandparents playing a board game with grandchildren', 'family'))->toContain('Slavic appearance')
+        // Люди только в герое, в сцене — нет
+        ->and($prompt('A cozy kitchen table at dinner time', 'big family with children'))->toContain('Slavic appearance')
+        // Девочка с собакой: герой — собака, люди всё равно славяне
+        ->and($prompt('A girl walking a dog in the park', 'white standard poodle'))->toContain('Slavic appearance')
+        // Герой с именем задаёт внешность сам
+        ->and($prompt('Soldiers on a battlefield', 'Napoleon Bonaparte in a grey coat'))->not->toContain('Slavic');
+});
