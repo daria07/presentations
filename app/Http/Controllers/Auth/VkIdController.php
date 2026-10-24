@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\Auth\Concerns\SignsInSocially;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\VkId;
-use App\Support\Attribution;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -27,11 +25,12 @@ use RuntimeException;
  * 3. иначе создаём аккаунт. Если VK почту не отдал, спрашиваем её
  *    отдельной страницей: без почты не уйдут чеки и письма.
  *
- * Пароля у такого аккаунта нет (записан случайный). Захочет входить
- * по почте — «Забыли пароль?» задаст его.
+ * Создание аккаунта и вход — общие с Google (Concerns\SignsInSocially).
  */
 class VkIdController extends Controller
 {
+    use SignsInSocially;
+
     private const SESSION = 'vkid';
 
     private const PENDING = 'vkid_pending';
@@ -141,30 +140,6 @@ class VkIdController extends Controller
 
     private function register(Request $request, string $vkId, string $name, string $email): User
     {
-        $user = User::create([
-            'name' => $name,
-            'email' => $email,
-            'password' => Str::random(48),
-        ]);
-
-        // Те же метки рекламы, что и при обычной регистрации
-        $user->forceFill([...Attribution::forUser($request), 'vk_id' => $vkId])->save();
-
-        event(new Registered($user));
-
-        return $user;
-    }
-
-    private function login(Request $request, User $user): RedirectResponse
-    {
-        Auth::login($user, remember: true);
-        $request->session()->regenerate();
-
-        return redirect()->intended(config('fortify.home'));
-    }
-
-    private function fail(string $message): RedirectResponse
-    {
-        return to_route('login')->with('status', $message);
+        return $this->createSocialUser($request, ['vk_id' => $vkId], $name, $email);
     }
 }

@@ -100,6 +100,16 @@ return [
         'client_id' => env('VKID_CLIENT_ID'),
     ],
 
+    /*
+     * Вход через Google. Без номера и секрета кнопки «Войти через
+     * Google» нет. Оба — в Google Cloud Console → APIs & Services →
+     * Credentials → OAuth client ID (тип «Web application»).
+     */
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

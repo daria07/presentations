@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\MetricsController;
 use App\Http\Controllers\Admin\ReceiptController;
 use App\Http\Controllers\Admin\SupportController as AdminSupportController;
+use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\VkIdController;
 use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\FeedbackController;
@@ -38,6 +39,12 @@ Route::middleware(['guest', 'throttle:20,1'])->prefix('auth/vk')->name('auth.vk.
     Route::get('callback', [VkIdController::class, 'callback'])->name('callback');
     Route::get('email', [VkIdController::class, 'email'])->name('email');
     Route::post('email', [VkIdController::class, 'storeEmail'])->name('email.store');
+});
+
+// Вход и регистрация через Google — App\Http\Controllers\Auth\GoogleController
+Route::middleware(['guest', 'throttle:20,1'])->prefix('auth/google')->name('auth.google.')->group(function () {
+    Route::get('/', [GoogleController::class, 'redirect'])->name('redirect');
+    Route::get('callback', [GoogleController::class, 'callback'])->name('callback');
 });
 
 // Правовые документы: открыты всем, реквизиты берутся из config/legal.php

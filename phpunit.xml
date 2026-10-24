@@ -36,6 +36,8 @@
         <env name="YANDEX_SEARCH_API_KEY" value=""/>
         <env name="IMAGE_API" value="openai"/>
         <env name="VKID_CLIENT_ID" value=""/>
+        <env name="GOOGLE_CLIENT_ID" value=""/>
+        <env name="GOOGLE_CLIENT_SECRET" value=""/>
         <env name="IMAGE_FALLBACK_MODEL" value=""/>
         <!-- Акцию «Мы обновились» тесты включают явно, через config() -->
         <env name="UPDATE_OFFER_PERCENT" value="0"/>
