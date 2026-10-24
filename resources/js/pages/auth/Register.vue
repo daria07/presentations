@@ -32,13 +32,8 @@ defineOptions({
 <template>
     <Head title="Регистрация" />
 
-    <SocialLogin
-        v-if="vkId || google"
-        :vk="vkId"
-        :google="google"
-        consent
-        class="mb-6"
-    />
+    <!-- Под «или по почте» — 32px: столько раскладка ставит между блоками -->
+    <SocialLogin v-if="vkId || google" :vk="vkId" :google="google" consent />
 
     <Form
         v-bind="store.form()"
@@ -135,9 +130,7 @@ defineOptions({
 
             <!-- Согласие фиксируется самим фактом регистрации: отдельная
                  галочка ничего не добавляет юридически, но добавляет шаг -->
-            <p
-                class="text-muted-foreground text-center text-xs leading-relaxed"
-            >
+            <p class="text-muted-foreground text-left text-xs leading-relaxed">
                 Создавая аккаунт, вы принимаете
                 <a
                     href="/offer"

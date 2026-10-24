@@ -39,13 +39,8 @@ defineProps<{
         {{ status }}
     </div>
 
-    <SocialLogin
-        v-if="vkId || google"
-        :vk="vkId"
-        :google="google"
-        consent
-        class="mb-6"
-    />
+    <!-- Под «или по почте» — 32px: столько раскладка ставит между блоками -->
+    <SocialLogin v-if="vkId || google" :vk="vkId" :google="google" consent />
 
     <Form
         v-bind="store.form()"
