@@ -42,10 +42,16 @@ rsync -a --delete -e "$SSH" \
 # supervisor не запускает воркер вовсе
 install -d -o deploy -g www-data -m 2775 "$APP/shared/storage/logs"
 
-# Браузер для печати PDF — ставится в домашнюю папку deploy
+# Браузер для печати PDF. На боевом он лежит в /opt/puppeteer (путь —
+# в .env, CHROME_PATH), на старых установках — в домашней
+# папке deploy. Берём оба места, какое есть
+rsync -a --delete -e "$SSH" "root@$OLD:/opt/puppeteer/" /opt/puppeteer/ 2>/dev/null || true
 mkdir -p /home/deploy/.cache
-rsync -a --delete -e "$SSH" "root@$OLD:/home/deploy/.cache/puppeteer/" /home/deploy/.cache/puppeteer/ || true
+rsync -a --delete -e "$SSH" "root@$OLD:/home/deploy/.cache/puppeteer/" /home/deploy/.cache/puppeteer/ 2>/dev/null || true
 chown -R deploy:deploy /home/deploy/.cache
+
+# Обёртка artisan: cd в current и запуск под deploy
+rsync -a -e "$SSH" "root@$OLD:/usr/local/bin/artisan" /usr/local/bin/artisan 2>/dev/null || true
 
 # Сертификаты: продлевает их боевой, копия берёт свежие
 rsync -a --delete -e "$SSH" "root@$OLD:/etc/letsencrypt/" /etc/letsencrypt/
