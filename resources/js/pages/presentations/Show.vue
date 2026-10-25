@@ -1333,27 +1333,35 @@ async function copyShare() {
                     Состояние: {{ current.statusLabel }}
                 </p>
             </div>
-            <div class="flex justify-center gap-2">
+            <!-- На телефоне три кнопки в ряд не влезают: «Попробовать
+                 снова» — главное действие, отдельной строкой во всю
+                 ширину, остальные две под ним -->
+            <div
+                class="mx-auto flex w-full max-w-xs flex-col gap-2 sm:max-w-none sm:flex-row sm:justify-center"
+            >
                 <Button
                     v-if="current.status === 'failed'"
                     variant="outline"
+                    class="w-full sm:w-auto"
                     @click="router.post(`/presentations/${current.id}/retry`)"
                 >
                     <RotateCcw class="size-4" />
                     Попробовать снова
                 </Button>
-                <Button variant="ghost" as-child>
-                    <Link href="/presentations">К списку</Link>
-                </Button>
-                <Button
-                    variant="ghost"
-                    class="text-muted-foreground"
-                    :disabled="deleting"
-                    @click="destroy"
-                >
-                    <Trash2 class="size-4" />
-                    Удалить
-                </Button>
+                <div class="flex justify-center gap-2">
+                    <Button variant="ghost" as-child>
+                        <Link href="/presentations">К списку</Link>
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        class="text-muted-foreground"
+                        :disabled="deleting"
+                        @click="destroy"
+                    >
+                        <Trash2 class="size-4" />
+                        Удалить
+                    </Button>
+                </div>
             </div>
         </div>
     </div>

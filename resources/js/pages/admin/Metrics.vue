@@ -270,7 +270,9 @@ function when(iso: string | null): string {
 const label = (value: string | null) => value ?? 'без меток';
 
 const selectClass =
-    'border-border bg-background focus:ring-ring w-full rounded-lg border px-2.5 py-1.5 text-sm outline-none focus:ring-2';
+    // 16px на телефоне: iPhone приближает страницу при фокусе на поле
+    // со шрифтом меньше 16px
+    'border-border bg-background focus:ring-ring w-full rounded-lg border px-2.5 py-1.5 text-base outline-none focus:ring-2 sm:text-sm';
 </script>
 
 <template>
@@ -312,13 +314,13 @@ const selectClass =
                 <input
                     v-model="form.from"
                     type="date"
-                    class="border-border bg-background rounded-md border px-2 py-1 text-xs"
+                    class="border-border bg-background rounded-md border px-2 py-1 text-base sm:text-xs"
                 />
                 <span class="text-muted-foreground text-xs">по</span>
                 <input
                     v-model="form.to"
                     type="date"
-                    class="border-border bg-background rounded-md border px-2 py-1 text-xs"
+                    class="border-border bg-background rounded-md border px-2 py-1 text-base sm:text-xs"
                 />
             </div>
 

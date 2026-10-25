@@ -207,7 +207,7 @@ function toggleAll(all: boolean) {
                         <input
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png"
-                            class="border-input bg-card h-11 w-full cursor-pointer rounded-lg border px-3 py-2 text-[15px] file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium"
+                            class="border-input bg-card h-11 w-full cursor-pointer rounded-lg border px-3 py-2 text-base file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium sm:text-[15px]"
                             @change="pickFile"
                         />
                         <p

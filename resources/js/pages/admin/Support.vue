@@ -156,7 +156,7 @@ function when(iso: string | null): string {
                             v-model="finder.email"
                             type="email"
                             placeholder="Написать по почте…"
-                            class="border-border bg-background focus:ring-ring min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2"
+                            class="border-border bg-background focus:ring-ring min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-base outline-none focus:ring-2 sm:text-sm"
                         />
                         <button
                             type="submit"
@@ -338,8 +338,8 @@ function when(iso: string | null): string {
                             v-model="form.body"
                             rows="2"
                             maxlength="2000"
-                            placeholder="Ответ… Enter — отправить, Shift+Enter — новая строка"
-                            class="border-border bg-background focus:ring-ring max-h-40 min-h-[44px] flex-1 resize-y rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2"
+                            placeholder="Ответ…"
+                            class="border-border bg-background focus:ring-ring max-h-40 min-h-[44px] min-w-0 flex-1 resize-y rounded-xl border px-3 py-2 text-base outline-none focus:ring-2 sm:text-sm"
                             @keydown="onKeydown"
                         />
                         <button
@@ -354,6 +354,11 @@ function when(iso: string | null): string {
                     <p class="text-muted-foreground mt-1.5 text-xs">
                         Человек получит ответ в чате на сайте и письмом на
                         почту.
+                        <!-- Подсказка про клавиши — только там, где есть клавиатура -->
+                        <span class="hidden sm:inline"
+                            >Enter — отправить, Shift+Enter — новая
+                            строка.</span
+                        >
                     </p>
                 </form>
             </div>
