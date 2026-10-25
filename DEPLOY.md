@@ -373,11 +373,11 @@ scp root@slaidusha.ru:/var/backups/slaidusha/db-$(date +%F).sql.gz ~/backups/
    `ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519 && cat /root/.ssh/id_ed25519.pub`
 2. Этот ключ — на основной, в `/root/.ssh/authorized_keys`.
 3. На новом:
-   ```bash
-   scp -r root@<основной>:/var/www/slaidusha/repo/deploy /root/deploy
-   bash /root/deploy/bootstrap.sh
-   OLD=<основной> bash /root/deploy/standby-setup.sh
-   ```
+    ```bash
+    scp -r root@<основной>:/var/www/slaidusha/repo/deploy /root/deploy
+    bash /root/deploy/bootstrap.sh
+    OLD=<основной> bash /root/deploy/standby-setup.sh
+    ```
 4. В DNS снизить TTL A-записей до 300 секунд — иначе переключение
    домена растянется на часы.
 
