@@ -38,6 +38,10 @@ rsync -a --delete -e "$SSH" \
     --exclude '/shared/storage/logs/' \
     "root@$OLD:$APP/" "$APP/"
 
+# Логи не копируем, но папка нужна: в неё пишут сайт и воркер, без неё
+# supervisor не запускает воркер вовсе
+install -d -o deploy -g www-data -m 2775 "$APP/shared/storage/logs"
+
 # Браузер для печати PDF — ставится в домашнюю папку deploy
 mkdir -p /home/deploy/.cache
 rsync -a --delete -e "$SSH" "root@$OLD:/home/deploy/.cache/puppeteer/" /home/deploy/.cache/puppeteer/ || true
