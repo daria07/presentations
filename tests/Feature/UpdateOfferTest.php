@@ -205,13 +205,13 @@ test('подсказка «Открыть за …» показывает цен
 
     $this->actingAs($fresh)
         ->get(route('presentations.create'))
-        ->assertInertia(fn ($page) => $page->where('entryPrice', '149'));
+        ->assertInertia(fn ($page) => $page->where('entryPrice', '199'));
 
-    // Давний пользователь со скидкой акции 50%: 149 → 74 (вниз до рубля)
+    // Давний пользователь со скидкой акции 50%: 199 → 99 (вниз до рубля)
     $old = registered('2026-10-01 12:00');
     offerOnList($old);
 
     $this->actingAs($old->refresh())
         ->get(route('presentations.create'))
-        ->assertInertia(fn ($page) => $page->where('entryPrice', '74'));
+        ->assertInertia(fn ($page) => $page->where('entryPrice', '99'));
 });

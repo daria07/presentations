@@ -5,7 +5,9 @@ import {
     Clock,
     CircleDollarSign,
     Download,
+    Image as ImageIcon,
     Info,
+    Layers,
     Presentation,
     ReceiptText,
 } from '@lucide/vue';
@@ -17,6 +19,10 @@ import { plural } from '@/lib/plural';
 /* «1 генерация», «3 генерации», «10 генераций» */
 const generationsWord = (n: number) =>
     plural(n, ['генерация', 'генерации', 'генераций']);
+
+/* В карточках тарифов — понятным словом: «3 презентации» */
+const presentationsWord = (n: number) =>
+    plural(n, ['презентация', 'презентации', 'презентаций']);
 
 type Package = {
     key: string;
@@ -246,7 +252,9 @@ function formatDate(iso: string | null): string {
                         : 'border-rule bg-panel'
                 "
             >
-                <div class="flex min-h-[26px] items-center gap-2.5">
+                <div
+                    class="flex min-h-[26px] flex-wrap items-center gap-x-2.5 gap-y-1.5"
+                >
                     <span class="text-[19px] font-bold tracking-[-0.01em]">
                         {{ pack.title }}
                     </span>
@@ -254,7 +262,7 @@ function formatDate(iso: string | null): string {
                         v-if="pack.popular"
                         class="bg-action-soft text-action-ink rounded-full px-2.5 py-1 text-[12.5px] font-bold"
                     >
-                        чаще берут
+                        Вдвое выгоднее
                     </span>
                 </div>
 
@@ -278,15 +286,18 @@ function formatDate(iso: string | null): string {
                 <div class="bg-rule mt-5 mb-4 h-px" />
 
                 <ul class="flex flex-col gap-2.5 text-[15.5px]">
-                    <li class="flex items-center gap-[9px]">
+                    <!-- Главное в тарифе — сколько презентаций: крупнее остальных пунктов -->
+                    <li
+                        class="flex items-center gap-[9px] text-lg font-semibold"
+                    >
                         <Presentation
-                            class="text-action size-[17px] flex-none"
+                            class="text-action size-[20px] flex-none"
                         />
                         <span>
-                            <strong class="font-semibold">{{
+                            <strong class="font-bold">{{
                                 pack.credits
                             }}</strong>
-                            {{ generationsWord(pack.credits) }}
+                            {{ presentationsWord(pack.credits) }}
                         </span>
                     </li>
                     <li class="flex items-center gap-[9px]">
@@ -295,10 +306,16 @@ function formatDate(iso: string | null): string {
                         />
                         <span>{{ pack.perCredit }} ₽ за презентацию</span>
                     </li>
-                    <li
-                        class="text-muted-foreground flex items-center gap-[9px]"
-                    >
-                        <Download class="size-[17px] flex-none" />
+                    <li class="flex items-center gap-[9px]">
+                        <ImageIcon class="text-action size-[17px] flex-none" />
+                        <span>Слайды с картинками</span>
+                    </li>
+                    <li class="flex items-center gap-[9px]">
+                        <Layers class="text-action size-[17px] flex-none" />
+                        <span>Презентации до 15 слайдов</span>
+                    </li>
+                    <li class="flex items-center gap-[9px]">
+                        <Download class="text-action size-[17px] flex-none" />
                         <span>PDF и редактирование</span>
                     </li>
                 </ul>

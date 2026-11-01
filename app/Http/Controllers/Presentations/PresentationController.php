@@ -130,7 +130,7 @@ class PresentationController extends Controller
             'palettes' => Looks::palettes(),
             'credits' => $request->user()->credits,
             'trialAvailable' => ! $request->user()->trial_used,
-            // Для подсказки на закрытых кнопках: «Открыть за 149 ₽»
+            // Для подсказки на закрытых кнопках: «Открыть за 199 ₽»
             'entryPrice' => Discount::entryPrice($request->user()),
         ]);
     }

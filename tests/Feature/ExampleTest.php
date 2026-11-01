@@ -14,7 +14,7 @@ test('на лендинге тарифы из конфига и без служ�
         ->component('Welcome')
         ->where('freeSlides', 8)
         ->where('packages', fn ($packages) => collect($packages)->pluck('key')->doesntContain('test')
-            && collect($packages)->firstWhere('key', 'single')['amount'] === '149'));
+            && collect($packages)->firstWhere('key', 'single')['amount'] === '199'));
 });
 
 test('у лендинга заголовок, описание и разметка для поиска прямо в HTML', function () {

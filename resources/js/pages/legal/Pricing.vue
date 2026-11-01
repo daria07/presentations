@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { plural } from '@/lib/plural';
 import Layout from './Layout.vue';
+
+/* «1 презентация», «3 презентации», «10 презентаций» */
+const presentationsWord = (n: number) =>
+    plural(n, ['презентация', 'презентации', 'презентаций']);
 
 /**
  * Открытая страница тарифов.
@@ -53,7 +58,9 @@ defineProps<{
                         : 'border-rule bg-panel'
                 "
             >
-                <div class="flex min-h-[26px] items-center gap-2.5">
+                <div
+                    class="flex min-h-[26px] flex-wrap items-center gap-x-2.5 gap-y-1.5"
+                >
                     <span class="text-[19px] font-bold tracking-[-0.01em]">
                         {{ pack.title }}
                     </span>
@@ -61,7 +68,7 @@ defineProps<{
                         v-if="pack.popular"
                         class="bg-action-soft text-action-ink rounded-full px-2.5 py-1 text-[12.5px] font-bold"
                     >
-                        чаще берут
+                        Вдвое выгоднее
                     </span>
                 </div>
 
@@ -77,8 +84,8 @@ defineProps<{
                 </p>
 
                 <p class="text-muted-foreground mt-3 mb-0 flex-1 text-[15px]">
-                    {{ pack.credits }} генераций · {{ pack.perCredit }} ₽ за
-                    презентацию
+                    {{ pack.credits }} {{ presentationsWord(pack.credits) }} ·
+                    {{ pack.perCredit }} ₽ за презентацию
                 </p>
             </div>
         </div>

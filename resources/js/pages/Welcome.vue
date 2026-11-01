@@ -775,7 +775,7 @@ const audiences = [
                                 v-if="pack.popular"
                                 class="bg-brand rounded-full px-2 py-0.5 text-[11px] font-medium text-white"
                             >
-                                Выгодно
+                                Вдвое выгоднее
                             </span>
                         </div>
                         <p class="mt-3 text-3xl font-extrabold tabular-nums">
@@ -793,7 +793,11 @@ const audiences = [
                         >
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 flex-none" />
-                                до 15 слайдов
+                                слайды с картинками
+                            </li>
+                            <li class="flex gap-2">
+                                <Check class="mt-0.5 size-4 flex-none" />
+                                презентации до 15 слайдов
                             </li>
                             <li class="flex gap-2">
                                 <Check class="mt-0.5 size-4 flex-none" />
