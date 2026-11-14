@@ -64,6 +64,10 @@
         @endisset
     </head>
     <body class="font-sans antialiased">
+        @if (config('app.site_notice'))
+            @include('partials.site-notice')
+        @endif
+
         <x-inertia::app />
 
         @include('partials.metrika')

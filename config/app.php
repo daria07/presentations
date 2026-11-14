@@ -16,6 +16,12 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
+    | Объявление над всеми страницами сайта (resources/views/partials/site-notice.blade.php).
+    | Выключить: SITE_NOTICE=false в .env и artisan config:cache.
+    */
+    'site_notice' => (bool) env('SITE_NOTICE', true),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
