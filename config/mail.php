@@ -53,6 +53,19 @@ return [
             'transport' => 'ses',
         ],
 
+        /*
+         * Yandex Cloud Postbox через HTTPS (API, совместимый с Amazon SES).
+         * Почтовые порты 587/465 хостинг закрывает, а 443 открыт всегда.
+         * Ключ — статический ключ сервисного аккаунта с ролью postbox.sender.
+         */
+        'postbox' => [
+            'transport' => 'ses-v2',
+            'key' => env('POSTBOX_KEY_ID'),
+            'secret' => env('POSTBOX_SECRET'),
+            'region' => 'ru-central1',
+            'endpoint' => env('POSTBOX_ENDPOINT', 'https://postbox.cloud.yandex.net'),
+        ],
+
         'postmark' => [
             'transport' => 'postmark',
             // 'message_stream_id' => env('POSTMARK_MESSAGE_STREAM_ID'),

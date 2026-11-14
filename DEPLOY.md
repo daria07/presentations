@@ -386,3 +386,25 @@ scp root@slaidusha.ru:/var/backups/slaidusha/db-$(date +%F).sql.gz ~/backups/
 **Переключение** — на запасном `bash /var/www/slaidusha/repo/deploy/failover.sh`,
 затем A-записи slaidusha.ru и www — на адрес запасного. Скрипт подскажет
 остальное: остановить старый, поменять адрес автодеплоя в GitHub.
+
+## 15. Раннер GitHub на сервере
+
+Входящие SSH-подключения от GitHub до сервера не доходят (VDSina,
+таймаут), поэтому деплой выполняет раннер, установленный на самом
+сервере: он сам подключается к GitHub и забирает задание.
+
+Установка (один раз). Токен и точные команды — в репозитории:
+Settings → Actions → Runners → New self-hosted runner → Linux x64.
+
+```bash
+sudo -u deploy -i
+mkdir -p ~/actions-runner && cd ~/actions-runner
+# curl ... и tar ... — из страницы GitHub
+./config.sh --url https://github.com/daria07/presentations --token <ТОКЕН> \
+  --name slaidusha-prod --labels slaidusha --unattended
+exit
+cd /home/deploy/actions-runner && ./svc.sh install deploy && ./svc.sh start
+```
+
+Проверка: в Settings → Actions → Runners раннер `slaidusha-prod`
+в статусе Idle. Секреты DEPLOY_* больше не нужны.

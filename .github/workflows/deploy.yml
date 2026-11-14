@@ -23,7 +23,11 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Раннер стоит на самом сервере и сам ходит в GitHub за заданиями:
+    # входящие подключения из-за рубежа до сервера не доходят, а
+    # исходящие к GitHub работают. Поэтому без ssh — всё выполняется
+    # прямо на сервере от пользователя deploy. Установка: DEPLOY.md.
+    runs-on: [self-hosted, slaidusha]
 
     # Красная сборка на сервер не едет. Кнопка «Run workflow» этой
     # проверки не касается — ей веришь ты сама.
@@ -35,40 +39,22 @@ jobs:
       name: production
       url: https://slaidusha.ru
 
-    steps:
-      - name: Подключаем ключ
-        env:
-          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+    env:
+      # У сервера нет IPv6: без этого сборка падает на скачивании шрифтов
+      NODE_OPTIONS: --dns-result-order=ipv4first --network-family-autoselection-attempt-timeout=5000
 
+    steps:
       - name: Выкладываем
-        env:
-          HOST: ${{ secrets.DEPLOY_HOST }}
-          USER: ${{ secrets.DEPLOY_USER }}
-          PORT: ${{ secrets.DEPLOY_PORT || '22' }}
-        # Сервер, переведённый на версии (есть repo/), выкладывается без
-        # простоя. Ещё не переведённый — по-старому, с техработами:
-        # см. deploy/migrate-to-releases.sh
         run: |
-          ssh -p "$PORT" -o BatchMode=yes "$USER@$HOST" '
-            set -e
-            if [ -d /var/www/slaidusha/repo ]; then
-              cd /var/www/slaidusha/repo && git pull --ff-only && bash deploy/deploy.sh
-            else
-              cd /var/www/slaidusha && git pull --ff-only && bash deploy/deploy-inplace.sh
-            fi'
+          set -e
+          cd /var/www/slaidusha/repo
+          git pull --ff-only
+          bash deploy/deploy.sh
 
       - name: Проверяем, что сайт поднялся
         run: |
           for i in $(seq 1 10); do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' https://slaidusha.ru/up || true)
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --resolve slaidusha.ru:443:127.0.0.1 https://slaidusha.ru/up || true)
             if [ "$code" = "200" ]; then
               echo "Сайт отвечает"
               exit 0
