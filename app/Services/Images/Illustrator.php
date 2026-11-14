@@ -266,7 +266,11 @@ class Illustrator
 
         // Запасной шлюз (gpt-image) получает этот, длинный запрос —
         // правило о внешности людей нужно и здесь, а не только у grok
-        $people = self::needsSlavic($scene, $subject) ? ' The people in the image are '.self::SLAVIC.'.' : '';
+        $people = match (true) {
+            self::needsSlavic($scene, $subject) => ' The people in the image are '.self::SLAVIC.'.',
+            self::noPeople($scene, $subject) => ' There are no people in the image.',
+            default => '',
+        };
 
         return trim($scene, ' .').'.'.$hero.$people.' '.$composition.' '.self::WHOLE_SUBJECT.' '.$style.' '.self::NO_TEXT;
     }
@@ -289,6 +293,10 @@ class Illustrator
 
         if (self::needsSlavic($scene, $subject)) {
             $parts[] = self::SLAVIC;
+        } elseif (self::noPeople($scene, $subject)) {
+            // Без этого grok сам дорисовывает в пустую комнату человека —
+            // и почти всегда азиатскую девушку
+            $parts[] = 'no people';
         }
 
         $parts[] = match ($format) {
@@ -327,6 +335,18 @@ class Illustrator
         'teens', 'schoolchildren', 'schoolboy', 'schoolgirl', 'classmates', 'friends', 'adults',
         'elderly', 'youth', 'volunteers', 'athlete', 'athletes', 'player', 'players', 'lady',
         'guy', 'guys', 'human', 'humans', 'villagers', 'citizens', 'residents', 'tourists',
+        'someone', 'figure', 'figures', 'silhouette', 'silhouettes', 'hand', 'hands', 'face', 'faces',
+        'portrait', 'wife', 'husband', 'bride', 'groom', 'infant', 'newborn', 'chef', 'cook', 'waiter',
+        'driver', 'pilot', 'astronaut', 'cosmonaut', 'sailor', 'firefighter', 'policeman', 'police',
+        'mechanic', 'builder', 'artist', 'painter', 'musician', 'singer', 'dancer', 'writer', 'poet',
+        'author', 'reader', 'journalist', 'photographer', 'researcher', 'chemist', 'biologist',
+        'physicist', 'surgeon', 'dentist', 'pharmacist', 'veterinarian', 'psychologist', 'therapist',
+        'librarian', 'lawyer', 'judge', 'manager', 'businessman', 'businesswoman', 'entrepreneur',
+        'programmer', 'developer', 'coach', 'runner', 'swimmer', 'hiker', 'traveler', 'explorer',
+        'shopper', 'buyer', 'seller', 'merchant', 'peasant', 'monk', 'priest', 'king', 'queen',
+        'prince', 'princess', 'tsar', 'emperor', 'knight', 'warrior', 'hero', 'heroes', 'speaker',
+        'presenter', 'lecturer', 'cyclist', 'skier', 'climber', 'gardener', 'housewife', 'owner',
+        'staff', 'pupils', 'learner', 'learners', 'volunteer', 'friend', 'neighbor', 'neighbours',
     ];
 
     /** Слова, которыми сцена сама задаёт происхождение или эпоху людей */
@@ -364,6 +384,25 @@ class Illustrator
 
         return array_intersect($words, self::PEOPLE) !== []
             && array_intersect($words, self::ORIGIN) === [];
+    }
+
+    /**
+     * В сцене людей нет — так и говорим модели.
+     *
+     * Сцена «светлая комната с растениями» без этого получала девушку
+     * на полу: grok дорисовывает людей сам, и внешность у них своя.
+     * Героя с именем (заглавная буква) не трогаем: человек может быть
+     * задан им, а не словами сцены.
+     */
+    private static function noPeople(string $scene, string $subject): bool
+    {
+        if (preg_match('/[A-Z]/', $subject) === 1) {
+            return false;
+        }
+
+        $words = preg_split('/[^a-z]+/', mb_strtolower($scene.' '.$subject)) ?: [];
+
+        return array_intersect($words, self::PEOPLE) === [];
     }
 
     /** @param  mixed  $slide */

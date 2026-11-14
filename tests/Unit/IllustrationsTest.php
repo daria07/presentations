@@ -144,3 +144,15 @@ test('славянская внешность и при общем герое, �
         // Герой с именем задаёт внешность сам
         ->and($prompt('Soldiers on a battlefield', 'Napoleon Bonaparte in a grey coat'))->not->toContain('Slavic');
 });
+
+test('в сцене без людей просим не рисовать людей', function () {
+    $prompt = fn (string $scene, string $subject = '') => Illustrator::compactPrompt($scene, '', 'cover', $subject);
+
+    // Обложка «Комнатные растения»: людей в сцене нет — grok дорисовал девушку
+    expect($prompt('Wide shot of a bright Russian apartment living room with lush potted plants'))
+        ->toContain('no people')->not->toContain('Slavic')
+        // Люди есть — славяне, а не «без людей»
+        ->and($prompt('A woman watering plants on a windowsill'))->toContain('Slavic')->not->toContain('no people')
+        // Герой с именем — не запрещаем людей
+        ->and($prompt('A desk with old books and a candle', 'Alexander Pushkin'))->not->toContain('no people');
+});
