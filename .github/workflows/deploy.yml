@@ -1,60 +1,57 @@
-# Выкладка на боевой сервер.
+# Выкладка на боевой сервер из GitHub Actions — СЕЙЧАС НЕ ИСПОЛЬЗУЕТСЯ.
 #
-# Запускается сама после зелёной сборки в main и вручную кнопкой
-# «Run workflow». Руками на сервер заходить больше не нужно: всё, что
-# раньше делалось через ssh и bash deploy/deploy.sh, делает этот файл.
+# После переезда на VDSina подключения от серверов GitHub (они за
+# рубежом) до нашего сервера не доходят: ssh падает по таймауту.
+# Поэтому деплоим с Mac: bash deploy/remote.sh (см. DEPLOY.md, раздел 15).
+#
+# Автозапуск после тестов выключен, осталась только ручная кнопка
+# «Run workflow» — на случай, если сервер снова станет доступен снаружи.
 name: deploy
 
 on:
-  workflow_run:
-    workflows: [tests]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Две выкладки одновременно — это гонка за один и тот же каталог на
-# сервере. Вторая ждёт, пока закончится первая.
 concurrency:
   group: deploy-production
   cancel-in-progress: false
 
 jobs:
   deploy:
-    # Раннер стоит на самом сервере и сам ходит в GitHub за заданиями:
-    # входящие подключения из-за рубежа до сервера не доходят, а
-    # исходящие к GitHub работают. Поэтому без ssh — всё выполняется
-    # прямо на сервере от пользователя deploy. Установка: DEPLOY.md.
-    runs-on: [self-hosted, slaidusha]
-
-    # Красная сборка на сервер не едет. Кнопка «Run workflow» этой
-    # проверки не касается — ей веришь ты сама.
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
 
     environment:
       name: production
       url: https://slaidusha.ru
 
-    env:
-      # У сервера нет IPv6: без этого сборка падает на скачивании шрифтов
-      NODE_OPTIONS: --dns-result-order=ipv4first --network-family-autoselection-attempt-timeout=5000
-
     steps:
-      - name: Выкладываем
+      - name: Подключаем ключ
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          set -e
-          cd /var/www/slaidusha/repo
-          git pull --ff-only
-          bash deploy/deploy.sh
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Выкладываем
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+        run: |
+          ssh -p "$PORT" -o BatchMode=yes "$USER@$HOST" \
+            'cd /var/www/slaidusha/repo && git pull --ff-only && bash deploy/deploy.sh'
 
       - name: Проверяем, что сайт поднялся
         run: |
           for i in $(seq 1 10); do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --resolve slaidusha.ru:443:127.0.0.1 https://slaidusha.ru/up || true)
+            code=$(curl -sS -o /dev/null -w '%{http_code}' https://slaidusha.ru/up || true)
             if [ "$code" = "200" ]; then
               echo "Сайт отвечает"
               exit 0

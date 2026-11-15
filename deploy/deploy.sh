@@ -21,6 +21,10 @@
 #   --activate <имя>    включить уже собранную версию
 set -euo pipefail
 
+# У сервера нет IPv6: без этого Node при сборке пытается скачать шрифты
+# по IPv6, не дожидается ответа и падает с ETIMEDOUT
+export NODE_OPTIONS="${NODE_OPTIONS:---dns-result-order=ipv4first --network-family-autoselection-attempt-timeout=5000}"
+
 BASE="$(cd "$(dirname "$0")/../.." && pwd)"
 REPO="$BASE/repo"
 KEEP=3

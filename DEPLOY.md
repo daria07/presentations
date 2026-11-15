@@ -387,24 +387,23 @@ scp root@slaidusha.ru:/var/backups/slaidusha/db-$(date +%F).sql.gz ~/backups/
 затем A-записи slaidusha.ru и www — на адрес запасного. Скрипт подскажет
 остальное: остановить старый, поменять адрес автодеплоя в GitHub.
 
-## 15. Раннер GitHub на сервере
+## 15. Деплой с Mac
 
-Входящие SSH-подключения от GitHub до сервера не доходят (VDSina,
-таймаут), поэтому деплой выполняет раннер, установленный на самом
-сервере: он сам подключается к GitHub и забирает задание.
+Деплой из GitHub Actions после переезда на VDSina не работает:
+подключения от серверов GitHub (они за рубежом) до сервера не доходят,
+ssh падает по таймауту. Раннер на самом сервере тоже не подошёл:
+файлы с GitHub качаются на сервер очень медленно.
 
-Установка (один раз). Токен и точные команды — в репозитории:
-Settings → Actions → Runners → New self-hosted runner → Linux x64.
+Поэтому после `git push` деплоим с Mac:
 
 ```bash
-sudo -u deploy -i
-mkdir -p ~/actions-runner && cd ~/actions-runner
-# curl ... и tar ... — из страницы GitHub
-./config.sh --url https://github.com/daria07/presentations --token <ТОКЕН> \
-  --name slaidusha-prod --labels slaidusha --unattended
-exit
-cd /home/deploy/actions-runner && ./svc.sh install deploy && ./svc.sh start
+bash deploy/remote.sh
 ```
 
-Проверка: в Settings → Actions → Runners раннер `slaidusha-prod`
-в статусе Idle. Секреты DEPLOY_* больше не нужны.
+Скрипт проверяет, что всё запушено, заходит на сервер под root,
+забирает main из GitHub и запускает deploy/deploy.sh под deploy.
+В конце проверяет slaidusha.ru/up (200 — всё хорошо).
+
+Workflow deploy.yml оставлен только с ручной кнопкой — на случай,
+если сервер снова станет доступен снаружи (нужно будет обновить
+секреты DEPLOY_HOST и DEPLOY_KNOWN_HOSTS).
